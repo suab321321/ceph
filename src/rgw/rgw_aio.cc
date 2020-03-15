@@ -49,9 +49,14 @@ Aio::OpFunc aio_abstract(Op&& op) {
   return [op = std::move(op)] (Aio* aio, AioResult& r) mutable {
       constexpr bool read = std::is_same_v<std::decay_t<Op>, librados::ObjectReadOperation>;
       auto s = new (&r.user_data) state(aio, r);
+      jTracer tracer;
       if constexpr (read) {
+        tracer.initTracer("Reading Started");
+        auto span=tracer.newSpan("Aio Read Operation started");
         r.result = r.obj.aio_operate(s->c, &op, &r.data);
       } else {
+        tracer.initTracer("Writing Started");
+        auto span=tracer.newSpan("Aio Write Operation started");
         r.result = r.obj.aio_operate(s->c, &op);
       }
       if (r.result < 0) {
