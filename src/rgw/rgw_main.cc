@@ -38,6 +38,9 @@
 #include "rgw_frontend.h"
 #include "rgw_http_client_curl.h"
 #include "rgw_perf_counters.h"
+
+#include "common/jaegerTracer.h"
+
 #ifdef WITH_RADOSGW_AMQP_ENDPOINT
 #include "rgw_amqp.h"
 #endif
@@ -679,6 +682,9 @@ extern "C" {
 
 int radosgw_main(int argc, const char** argv)
 {
+  //loading the yaml configuration file for rgw
+  jTracer tracer;
+  tracer.loadYamlConfigFile("tracerConfiguration.yaml");
   return radosgw_Main(argc, argv);
 }
 
