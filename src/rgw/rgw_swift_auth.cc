@@ -620,6 +620,129 @@ SignedTokenEngine::authenticate(const DoutPrefixProvider* dpp,
 } /* namespace rgw */
 
 
+void RGW_SWIFT_Auth_Get::execute(JTracer& tracer,const Span& parentSpan)
+{
+  Span span=tracer.childSpan("rgw_swift_auth.cc RGW_SWIFT_Auth_Get::execute()",parentSpan);
+  int ret = -EPERM;
+
+  const char *key = s->info.env->get("HTTP_X_AUTH_KEY");
+  const char *user = s->info.env->get("HTTP_X_AUTH_USER");
+
+  s->prot_flags |= RGW_REST_SWIFT;
+
+  string user_str;
+  RGWUserInfo info;
+  bufferlist bl;
+  RGWAccessKey *swift_key;
+  map<string, RGWAccessKey>::iterator siter;
+
+  string swift_url = g_conf()->rgw_swift_url;
+  string swift_prefix = g_conf()->rgw_swift_url_prefix;
+  string tenant_path;
+
+  /*
+   * We did not allow an empty Swift prefix before, but we want it now.
+   * So, we take rgw_swift_url_prefix = "/" to yield the empty prefix.
+   * The rgw_swift_url_prefix = "" is the default and yields "/swift"
+   * in a backwards-compatible way.
+   */
+  if (swift_prefix.size() == 0) {
+    swift_prefix = DEFAULT_SWIFT_PREFIX;
+  } else if (swift_prefix == "/") {
+    swift_prefix.clear();
+  } else {
+    if (swift_prefix[0] != '/') {
+      swift_prefix.insert(0, "/");
+    }
+  }
+
+  if (swift_url.size() == 0) {
+    bool add_port = false;
+    const char *server_port = s->info.env->get("SERVER_PORT_SECURE");
+    const char *protocol;
+    if (server_port) {
+      add_port = (strcmp(server_port, "443") != 0);
+      protocol = "https";
+    } else {
+      server_port = s->info.env->get("SERVER_PORT");
+      add_port = (strcmp(server_port, "80") != 0);
+      protocol = "http";
+    }
+    const char *host = s->info.env->get("HTTP_HOST");
+    if (!host) {
+      dout(0) << "NOTICE: server is misconfigured, missing rgw_swift_url_prefix or rgw_swift_url, HTTP_HOST is not set" << dendl;
+      ret = -EINVAL;
+      goto done;
+    }
+    swift_url = protocol;
+    swift_url.append("://");
+    swift_url.append(host);
+    if (add_port && !strchr(host, ':')) {
+      swift_url.append(":");
+      swift_url.append(server_port);
+    }
+  }
+
+  if (!key || !user)
+    goto done;
+
+  user_str = user;
+
+  if ((ret = store->ctl()->user->get_info_by_swift(user_str, &info, s->yield)) < 0)
+  {
+    ret = -EACCES;
+    goto done;
+  }
+
+  siter = info.swift_keys.find(user_str);
+  if (siter == info.swift_keys.end()) {
+    ret = -EPERM;
+    goto done;
+  }
+  swift_key = &siter->second;
+
+  if (swift_key->key.compare(key) != 0) {
+    dout(0) << "NOTICE: RGW_SWIFT_Auth_Get::execute(): bad swift key" << dendl;
+    ret = -EPERM;
+    goto done;
+  }
+
+  if (!g_conf()->rgw_swift_tenant_name.empty()) {
+    tenant_path = "/AUTH_";
+    tenant_path.append(g_conf()->rgw_swift_tenant_name);
+  } else if (g_conf()->rgw_swift_account_in_url) {
+    tenant_path = "/AUTH_";
+    tenant_path.append(info.user_id.to_str());
+  }
+
+  dump_header(s, "X-Storage-Url", swift_url + swift_prefix + "/v1" +
+              tenant_path);
+
+  using rgw::auth::swift::encode_token;
+  if ((ret = encode_token(s->cct, swift_key->id, swift_key->key, bl)) < 0)
+    goto done;
+
+  {
+    static constexpr size_t PREFIX_LEN = sizeof("AUTH_rgwtk") - 1;
+    char token_val[PREFIX_LEN + bl.length() * 2 + 1];
+
+    snprintf(token_val, PREFIX_LEN + 1, "AUTH_rgwtk");
+    buf_to_hex((const unsigned char *)bl.c_str(), bl.length(),
+	       token_val + PREFIX_LEN);
+
+    dump_header(s, "X-Storage-Token", token_val);
+    dump_header(s, "X-Auth-Token", token_val);
+  }
+
+  ret = STATUS_NO_CONTENT;
+
+done:
+  set_req_state_err(s, ret);
+  dump_errno(s);
+  end_header(s);
+}
+
+
 void RGW_SWIFT_Auth_Get::execute()
 {
   int ret = -EPERM;
@@ -741,6 +864,18 @@ done:
   end_header(s);
 }
 
+
+int RGWHandler_SWIFT_Auth::init(rgw::sal::RGWRadosStore *store, struct req_state *state,
+				rgw::io::BasicClient *cio,JTracer& tracer,const Span& parentSpan)
+{
+  Span span=tracer.childSpan("rgw_swift_auth.cc RGWHandler_SWIFT_Auth::init",parentSpan);
+  state->dialect = "swift-auth";
+  state->formatter = new JSONFormatter;
+  state->format = RGW_FORMAT_JSON;
+
+  return RGWHandler::init(store, state, cio);
+}
+
 int RGWHandler_SWIFT_Auth::init(rgw::sal::RGWRadosStore *store, struct req_state *state,
 				rgw::io::BasicClient *cio)
 {
@@ -760,4 +895,3 @@ RGWOp *RGWHandler_SWIFT_Auth::op_get()
 {
   return new RGW_SWIFT_Auth_Get;
 }
-

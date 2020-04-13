@@ -14,6 +14,7 @@
 #include <boost/utility/string_ref.hpp>
 
 #include "include/types.h"
+#include "include/tracer.h"
 #include "rgw_common.h"
 
 

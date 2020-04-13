@@ -22,6 +22,7 @@
 #include "include/ceph_assert.h"
 #include "common/code_environment.h"
 #include "common/common_init.h"
+#include "include/tracer.h"
 
 /*
  * global_init is the first initialization function that
@@ -38,6 +39,18 @@ global_init(
   const char *data_dir_option = 0,
   bool run_pre_init = true);
 
+boost::intrusive_ptr<CephContext>
+global_init(
+  const std::map<std::string,std::string> *defaults,
+  std::vector < const char* >& args,
+  uint32_t module_type,
+  code_environment_t code_env,
+  int flags,
+  JTracer&,
+  const Span&,
+  const char *data_dir_option = 0,
+  bool run_pre_init = true);
+
 namespace TOPNSPC::common {
   void intrusive_ptr_add_ref(CephContext* cct);
   void intrusive_ptr_release(CephContext* cct);
@@ -49,6 +62,10 @@ void global_pre_init(const std::map<std::string,std::string> *defaults,
 		     std::vector < const char* >& args,
 		     uint32_t module_type, code_environment_t code_env,
 		     int flags);
+void global_pre_init(const std::map<std::string,std::string> *defaults,
+        std::vector < const char* >& args,
+        uint32_t module_type, code_environment_t code_env,
+        int flags,JTracer&,const Span&);
 
 /*
  * perform all of the steps that global_init_daemonize performs just prior
@@ -70,7 +87,7 @@ void global_init_postfork_finish(CephContext *cct);
 
 
 /*
- * global_init_daemonize handles daemonizing a process. 
+ * global_init_daemonize handles daemonizing a process.
  *
  * If this is called, it *must* be called before common_init_finish.
  * Note that this is equivalent to calling _prefork(), daemon(), and

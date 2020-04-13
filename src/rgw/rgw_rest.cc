@@ -213,7 +213,7 @@ void rgw_rest_init(CephContext *cct, const RGWZoneGroup& zone_group)
   /* TODO: We should have a sanity check that no hostname matches the end of
    * any other hostname, otherwise we will get ambigious results from
    * rgw_find_host_in_domains.
-   * Eg: 
+   * Eg:
    * Hostnames: [A, B.A]
    * Inputs: [Z.A, X.B.A]
    * Z.A clearly splits to subdomain=Z, domain=Z
@@ -633,7 +633,7 @@ void end_header(struct req_state* s, RGWOp* op, const char *content_type,
 static void build_redirect_url(req_state *s, const string& redirect_base, string *redirect_url)
 {
   string& dest_uri = *redirect_url;
-  
+
   dest_uri = redirect_base;
   /*
    * reqest_uri is always start with slash, so we need to remove
@@ -1519,7 +1519,7 @@ std::tuple<int, bufferlist > rgw_rest_read_all_input(struct req_state *s,
     }
 
     bufferptr bp(cl + 1);
-  
+
     len = recv_body(s, bp.c_str(), cl);
     if (len < 0) {
       return std::make_tuple(len, std::move(bl));
@@ -1578,7 +1578,7 @@ int RGWListMultipart_ObjStore::get_params()
       return op_ret;
     }
   }
-  
+
   string str = s->info.args.get("max-parts");
   op_ret = parse_value_and_bound(str, max_parts, 0,
 			g_conf().get_val<uint64_t>("rgw_max_listing_results"),
@@ -1693,7 +1693,7 @@ int RGWHandler_REST::allocate_formatter(struct req_state *s,
 					int default_type,
 					bool configurable)
 {
-  s->format = -1; // set to invalid value to allocation happens anyway 
+  s->format = -1; // set to invalid value to allocation happens anyway
   auto type = default_type;
   if (configurable) {
     string format_str = s->info.args.get("format");
@@ -1842,6 +1842,35 @@ static http_op op_from_method(const char *method)
   return OP_UNKNOWN;
 }
 
+int RGWHandler_REST::init_permissions(RGWOp* op,JTracer& tracer,const Span& parentSpan)
+{
+  Span span=tracer.childSpan("rgw_rest.cc  RGWHandler_REST::init_permissions()",parentSpan);
+  if (op->get_type() == RGW_OP_CREATE_BUCKET) {
+    // We don't need user policies in case of STS token returned by AssumeRole, hence the check for user type
+    if (! s->user->get_id().empty() && s->auth.identity->get_identity_type() != TYPE_ROLE) {
+      try {
+        map<string, bufferlist> uattrs;
+        if (auto ret = store->ctl()->user->get_attrs_by_uid(s->user->get_id(), &uattrs, null_yield); ! ret) {
+          if (s->iam_user_policies.empty()) {
+            s->iam_user_policies = get_iam_user_policy_from_attr(s->cct, store, uattrs, s->user->get_tenant());
+          } else {
+          // This scenario can happen when a STS token has a policy, then we need to append other user policies
+          // to the existing ones. (e.g. token returned by GetSessionToken)
+          auto user_policies = get_iam_user_policy_from_attr(s->cct, store, uattrs, s->user->get_tenant());
+          s->iam_user_policies.insert(s->iam_user_policies.end(), user_policies.begin(), user_policies.end());
+          }
+        }
+      } catch (const std::exception& e) {
+        lderr(s->cct) << "Error reading IAM User Policy: " << e.what() << dendl;
+      }
+    }
+    rgw_build_iam_environment(store, s);
+    return 0;
+  }
+
+  return do_init_permissions();
+}
+
 int RGWHandler_REST::init_permissions(RGWOp* op)
 {
   if (op->get_type() == RGW_OP_CREATE_BUCKET) {
@@ -1869,6 +1898,51 @@ int RGWHandler_REST::init_permissions(RGWOp* op)
 
   return do_init_permissions();
 }
+
+int RGWHandler_REST::read_permissions(RGWOp* op_obj,JTracer& tracer,const Span& parentSpan)
+{
+  Span span=tracer.childSpan("rgw_rest.cc RGWHandler_REST::read_permissions()",parentSpan);
+  bool only_bucket = false;
+
+  switch (s->op) {
+  case OP_HEAD:
+  case OP_GET:
+    only_bucket = false;
+    break;
+  case OP_PUT:
+  case OP_POST:
+  case OP_COPY:
+    /* is it a 'multi-object delete' request? */
+    if (s->info.args.exists("delete")) {
+      only_bucket = true;
+      break;
+    }
+    if (is_obj_update_op()) {
+      only_bucket = false;
+      break;
+    }
+    /* is it a 'create bucket' request? */
+    if (op_obj->get_type() == RGW_OP_CREATE_BUCKET)
+      return 0;
+    only_bucket = true;
+    break;
+  case OP_DELETE:
+    if (!s->info.args.exists("tagging")){
+      only_bucket = true;
+    }
+    break;
+  case OP_OPTIONS:
+    only_bucket = true;
+    break;
+  default:
+    return -EINVAL;
+  }
+
+  return do_read_permissions(op_obj, only_bucket);
+}
+
+
+
 
 int RGWHandler_REST::read_permissions(RGWOp* op_obj)
 {
@@ -2073,10 +2147,10 @@ int RGWREST::preprocess(struct req_state *s, rgw::io::BasicClient* cio)
     }
 
     ldout(s->cct, 20)
-      << "subdomain=" << subdomain 
-      << " domain=" << domain 
-      << " in_hosted_domain=" << in_hosted_domain 
-      << " in_hosted_domain_s3website=" << in_hosted_domain_s3website 
+      << "subdomain=" << subdomain
+      << " domain=" << domain
+      << " in_hosted_domain=" << in_hosted_domain
+      << " in_hosted_domain_s3website=" << in_hosted_domain_s3website
       << dendl;
 
     if (g_conf()->rgw_resolve_cname
@@ -2112,10 +2186,10 @@ int RGWREST::preprocess(struct req_state *s, rgw::io::BasicClient* cio)
         }
 
         ldout(s->cct, 20)
-          << "subdomain=" << subdomain 
-          << " domain=" << domain 
-          << " in_hosted_domain=" << in_hosted_domain 
-          << " in_hosted_domain_s3website=" << in_hosted_domain_s3website 
+          << "subdomain=" << subdomain
+          << " domain=" << domain
+          << " in_hosted_domain=" << in_hosted_domain
+          << " in_hosted_domain_s3website=" << in_hosted_domain_s3website
           << dendl;
       }
     }
@@ -2270,6 +2344,313 @@ int RGWREST::preprocess(struct req_state *s, rgw::io::BasicClient* cio)
 
   return 0;
 }
+
+
+
+
+int RGWREST::preprocess(struct req_state *s, rgw::io::BasicClient* cio,JTracer& tracer,const Span& parentSpan)
+{
+  Span span=tracer.childSpan("rgw_rest.cc RGWREST::preprocess()",parentSpan);
+  req_info& info = s->info;
+
+  /* save the request uri used to hash on the client side. request_uri may suffer
+     modifications as part of the bucket encoding in the subdomain calling format.
+     request_uri_aws4 will be used under aws4 auth */
+  s->info.request_uri_aws4 = s->info.request_uri;
+
+  s->cio = cio;
+
+  // We need to know if this RGW instance is running the s3website API with a
+  // higher priority than regular S3 API, or possibly in place of the regular
+  // S3 API.
+  // Map the listing of rgw_enable_apis in REVERSE order, so that items near
+  // the front of the list have a higher number assigned (and -1 for items not in the list).
+  list<string> apis;
+  get_str_list(g_conf()->rgw_enable_apis, apis);
+  int api_priority_s3 = -1;
+  int api_priority_s3website = -1;
+  auto api_s3website_priority_rawpos = std::find(apis.begin(), apis.end(), "s3website");
+  auto api_s3_priority_rawpos = std::find(apis.begin(), apis.end(), "s3");
+  if (api_s3_priority_rawpos != apis.end()) {
+    api_priority_s3 = apis.size() - std::distance(apis.begin(), api_s3_priority_rawpos);
+  }
+  if (api_s3website_priority_rawpos != apis.end()) {
+    api_priority_s3website = apis.size() - std::distance(apis.begin(), api_s3website_priority_rawpos);
+  }
+  ldout(s->cct, 10) << "rgw api priority: s3=" << api_priority_s3 << " s3website=" << api_priority_s3website << dendl;
+  bool s3website_enabled = api_priority_s3website >= 0;
+
+  if (info.host.size()) {
+    ssize_t pos;
+    if (info.host.find('[') == 0) {
+      pos = info.host.find(']');
+      if (pos >=1) {
+        info.host = info.host.substr(1, pos-1);
+      }
+    } else {
+      pos = info.host.find(':');
+      if (pos >= 0) {
+        info.host = info.host.substr(0, pos);
+      }
+    }
+    ldout(s->cct, 10) << "host=" << info.host << dendl;
+    string domain;
+    string subdomain;
+    bool in_hosted_domain_s3website = false;
+    bool in_hosted_domain = rgw_find_host_in_domains(info.host, &domain, &subdomain, hostnames_set);
+
+    string s3website_domain;
+    string s3website_subdomain;
+
+    if (s3website_enabled) {
+      in_hosted_domain_s3website = rgw_find_host_in_domains(info.host, &s3website_domain, &s3website_subdomain, hostnames_s3website_set);
+      if (in_hosted_domain_s3website) {
+	in_hosted_domain = true; // TODO: should hostnames be a strict superset of hostnames_s3website?
+        domain = s3website_domain;
+        subdomain = s3website_subdomain;
+      }
+    }
+
+    ldout(s->cct, 20)
+      << "subdomain=" << subdomain
+      << " domain=" << domain
+      << " in_hosted_domain=" << in_hosted_domain
+      << " in_hosted_domain_s3website=" << in_hosted_domain_s3website
+      << dendl;
+
+    if (g_conf()->rgw_resolve_cname
+	&& !in_hosted_domain
+	&& !in_hosted_domain_s3website) {
+      string cname;
+      bool found;
+      int r = rgw_resolver->resolve_cname(info.host, cname, &found);
+      if (r < 0) {
+	ldout(s->cct, 0)
+	  << "WARNING: rgw_resolver->resolve_cname() returned r=" << r
+	  << dendl;
+      }
+
+      if (found) {
+	ldout(s->cct, 5) << "resolved host cname " << info.host << " -> "
+			 << cname << dendl;
+	in_hosted_domain =
+	  rgw_find_host_in_domains(cname, &domain, &subdomain, hostnames_set);
+
+        if (s3website_enabled
+	    && !in_hosted_domain_s3website) {
+	  in_hosted_domain_s3website =
+	    rgw_find_host_in_domains(cname, &s3website_domain,
+				     &s3website_subdomain,
+				     hostnames_s3website_set);
+	  if (in_hosted_domain_s3website) {
+	    in_hosted_domain = true; // TODO: should hostnames be a
+				     // strict superset of hostnames_s3website?
+	    domain = s3website_domain;
+	    subdomain = s3website_subdomain;
+	  }
+        }
+
+        ldout(s->cct, 20)
+          << "subdomain=" << subdomain
+          << " domain=" << domain
+          << " in_hosted_domain=" << in_hosted_domain
+          << " in_hosted_domain_s3website=" << in_hosted_domain_s3website
+          << dendl;
+      }
+    }
+
+    // Handle A/CNAME records that point to the RGW storage, but do match the
+    // CNAME test above, per issue http://tracker.ceph.com/issues/15975
+    // If BOTH domain & subdomain variables are empty, then none of the above
+    // cases matched anything, and we should fall back to using the Host header
+    // directly as the bucket name.
+    // As additional checks:
+    // - if the Host header is an IP, we're using path-style access without DNS
+    // - Also check that the Host header is a valid bucket name before using it.
+    // - Don't enable virtual hosting if no hostnames are configured
+    if (subdomain.empty()
+        && (domain.empty() || domain != info.host)
+        && !looks_like_ip_address(info.host.c_str())
+        && RGWHandler_REST::validate_bucket_name(info.host) == 0
+        && !(hostnames_set.empty() && hostnames_s3website_set.empty())) {
+      subdomain.append(info.host);
+      in_hosted_domain = 1;
+    }
+
+    if (s3website_enabled && api_priority_s3website > api_priority_s3) {
+      in_hosted_domain_s3website = 1;
+    }
+
+    if (in_hosted_domain_s3website) {
+      s->prot_flags |= RGW_REST_WEBSITE;
+    }
+
+
+    if (in_hosted_domain && !subdomain.empty()) {
+      string encoded_bucket = "/";
+      encoded_bucket.append(subdomain);
+      if (s->info.request_uri[0] != '/')
+        encoded_bucket.append("/");
+      encoded_bucket.append(s->info.request_uri);
+      s->info.request_uri = encoded_bucket;
+    }
+
+    if (!domain.empty()) {
+      s->info.domain = domain;
+    }
+
+    ldout(s->cct, 20)
+      << "final domain/bucket"
+      << " subdomain=" << subdomain
+      << " domain=" << domain
+      << " in_hosted_domain=" << in_hosted_domain
+      << " in_hosted_domain_s3website=" << in_hosted_domain_s3website
+      << " s->info.domain=" << s->info.domain
+      << " s->info.request_uri=" << s->info.request_uri
+      << dendl;
+  }
+
+  if (s->info.domain.empty()) {
+    s->info.domain = s->cct->_conf->rgw_dns_name;
+  }
+
+  s->decoded_uri = url_decode(s->info.request_uri);
+  /* Validate for being free of the '\0' buried in the middle of the string. */
+  if (std::strlen(s->decoded_uri.c_str()) != s->decoded_uri.length()) {
+    return -ERR_ZERO_IN_URL;
+  }
+
+  /* FastCGI specification, section 6.3
+   * http://www.fastcgi.com/devkit/doc/fcgi-spec.html#S6.3
+   * ===
+   * The Authorizer application receives HTTP request information from the Web
+   * server on the FCGI_PARAMS stream, in the same format as a Responder. The
+   * Web server does not send CONTENT_LENGTH, PATH_INFO, PATH_TRANSLATED, and
+   * SCRIPT_NAME headers.
+   * ===
+   * Ergo if we are in Authorizer role, we MUST look at HTTP_CONTENT_LENGTH
+   * instead of CONTENT_LENGTH for the Content-Length.
+   *
+   * There is one slight wrinkle in this, and that's older versions of
+   * nginx/lighttpd/apache setting BOTH headers. As a result, we have to check
+   * both headers and can't always simply pick A or B.
+   */
+  const char* content_length = info.env->get("CONTENT_LENGTH");
+  const char* http_content_length = info.env->get("HTTP_CONTENT_LENGTH");
+  if (!http_content_length != !content_length) {
+    /* Easy case: one or the other is missing */
+    s->length = (content_length ? content_length : http_content_length);
+  } else if (s->cct->_conf->rgw_content_length_compat &&
+	     content_length && http_content_length) {
+    /* Hard case: Both are set, we have to disambiguate */
+    int64_t content_length_i, http_content_length_i;
+
+    content_length_i = parse_content_length(content_length);
+    http_content_length_i = parse_content_length(http_content_length);
+
+    // Now check them:
+    if (http_content_length_i < 0) {
+      // HTTP_CONTENT_LENGTH is invalid, ignore it
+    } else if (content_length_i < 0) {
+      // CONTENT_LENGTH is invalid, and HTTP_CONTENT_LENGTH is valid
+      // Swap entries
+      content_length = http_content_length;
+    } else {
+      // both CONTENT_LENGTH and HTTP_CONTENT_LENGTH are valid
+      // Let's pick the larger size
+      if (content_length_i < http_content_length_i) {
+	// prefer the larger value
+	content_length = http_content_length;
+      }
+    }
+    s->length = content_length;
+    // End of: else if (s->cct->_conf->rgw_content_length_compat &&
+    //   content_length &&
+    // http_content_length)
+  } else {
+    /* no content length was defined */
+    s->length = NULL;
+  }
+
+  if (s->length) {
+    if (*s->length == '\0') {
+      s->content_length = 0;
+    } else {
+      string err;
+      s->content_length = strict_strtoll(s->length, 10, &err);
+      if (!err.empty()) {
+	ldout(s->cct, 10) << "bad content length, aborting" << dendl;
+	return -EINVAL;
+      }
+    }
+  }
+
+  if (s->content_length < 0) {
+    ldout(s->cct, 10) << "negative content length, aborting" << dendl;
+    return -EINVAL;
+  }
+
+  map<string, string>::iterator giter;
+  for (giter = generic_attrs_map.begin(); giter != generic_attrs_map.end();
+       ++giter) {
+    const char *env = info.env->get(giter->first.c_str());
+    if (env) {
+      s->generic_attrs[giter->second] = env;
+    }
+  }
+
+  if (g_conf()->rgw_print_continue) {
+    const char *expect = info.env->get("HTTP_EXPECT");
+    s->expect_cont = (expect && !strcasecmp(expect, "100-continue"));
+  }
+  s->op = op_from_method(info.method);
+
+  info.init_meta_info(&s->has_bad_meta);
+
+  return 0;
+}
+
+RGWHandler_REST* RGWREST::get_handler(
+  rgw::sal::RGWRadosStore * const store,
+  struct req_state* const s,
+  const rgw::auth::StrategyRegistry& auth_registry,
+  const std::string& frontend_prefix,
+  RGWRestfulIO* const rio,
+  RGWRESTMgr** const pmgr,
+  int* const init_error,
+  JTracer& tracer,const Span& parentSpan
+) {
+  Span span=tracer.childSpan("rgw_resr.cc RGWHandler_REST* RGWREST::get_handler()",parentSpan);
+  *init_error = preprocess(s, rio,tracer,span);
+  if (*init_error < 0) {
+    return nullptr;
+  }
+
+  RGWRESTMgr *m = mgr.get_manager(s, frontend_prefix, s->decoded_uri,
+                                  &s->relative_uri);
+  if (! m) {
+    *init_error = -ERR_METHOD_NOT_ALLOWED;
+    return nullptr;
+  }
+
+  if (pmgr) {
+    *pmgr = m;
+  }
+
+  RGWHandler_REST* handler = m->get_handler(s, auth_registry, frontend_prefix);
+  if (! handler) {
+    *init_error = -ERR_METHOD_NOT_ALLOWED;
+    return NULL;
+  }
+  *init_error = handler->init(store, s, rio,tracer,span);
+  if (*init_error < 0) {
+    m->put_handler(handler);
+    return nullptr;
+  }
+
+  return handler;
+}
+
 
 RGWHandler_REST* RGWREST::get_handler(
   rgw::sal::RGWRadosStore * const store,

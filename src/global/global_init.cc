@@ -31,6 +31,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <errno.h>
+#include<fstream>
 
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
@@ -84,8 +85,9 @@ void global_pre_init(
   const std::map<std::string,std::string> *defaults,
   std::vector < const char* >& args,
   uint32_t module_type, code_environment_t code_env,
-  int flags)
+  int flags,JTracer& tracer,const Span& parentSpan)
 {
+  Span span=tracer.childSpan("global_init.cc global_pre_init",parentSpan);
   std::string conf_file_list;
   std::string cluster = "";
 
@@ -96,7 +98,7 @@ void global_pre_init(
     args, module_type,
     &cluster, &conf_file_list);
 
-  CephContext *cct = common_preinit(iparams, code_env, flags);
+  CephContext *cct = common_preinit(iparams, code_env, flags,tracer,span);
   cct->_conf->cluster = cluster;
   global_init_set_globals(cct);
   auto& conf = cct->_conf;
@@ -165,6 +167,337 @@ void global_pre_init(
   g_conf().complain_about_parse_error(g_ceph_context);
 }
 
+#ifdef WITH_JAEGER
+  void global_pre_init(
+    const std::map<std::string,std::string> *defaults,
+    std::vector < const char* >& args,
+    uint32_t module_type, code_environment_t code_env,
+    int flags)
+  {
+    std::string conf_file_list;
+    std::string cluster = "";
+
+    // ensure environment arguments are included in early processing
+    env_to_vec(args);
+
+    CephInitParameters iparams = ceph_argparse_early_args(
+      args, module_type,
+      &cluster, &conf_file_list);
+
+    CephContext *cct = common_preinit(iparams, code_env, flags);
+    cct->_conf->cluster = cluster;
+    global_init_set_globals(cct);
+    auto& conf = cct->_conf;
+
+    if (flags & (CINIT_FLAG_NO_DEFAULT_CONFIG_FILE|
+  	       CINIT_FLAG_NO_MON_CONFIG)) {
+      conf->no_mon_config = true;
+    }
+
+    // alternate defaults
+    if (defaults) {
+      for (auto& i : *defaults) {
+        conf.set_val_default(i.first, i.second);
+      }
+    }
+
+    if (conf.get_val<bool>("no_config_file")) {
+      flags |= CINIT_FLAG_NO_DEFAULT_CONFIG_FILE;
+    }
+
+    int ret = conf.parse_config_files(c_str_or_null(conf_file_list),
+  				    &cerr, flags);
+    if (ret == -EDOM) {
+      cct->_log->flush();
+      cerr << "global_init: error parsing config file." << std::endl;
+      _exit(1);
+    }
+    else if (ret == -ENOENT) {
+      if (!(flags & CINIT_FLAG_NO_DEFAULT_CONFIG_FILE)) {
+        if (conf_file_list.length()) {
+  	cct->_log->flush();
+  	cerr << "global_init: unable to open config file from search list "
+  	     << conf_file_list << std::endl;
+          _exit(1);
+        } else {
+  	cerr << "did not load config file, using default settings."
+  	     << std::endl;
+        }
+      }
+    }
+    else if (ret) {
+      cct->_log->flush();
+      cerr << "global_init: error reading config file." << std::endl;
+      _exit(1);
+    }
+
+    // environment variables override (CEPH_ARGS, CEPH_KEYRING)
+    conf.parse_env(cct->get_module_type());
+
+    // command line (as passed by caller)
+    conf.parse_argv(args);
+
+    if (conf->log_early &&
+        !cct->_log->is_started()) {
+      cct->_log->start();
+    }
+
+    if (!cct->_log->is_started()) {
+      cct->_log->start();
+    }
+
+    // do the --show-config[-val], if present in argv
+    conf.do_argv_commands();
+
+    // Now we're ready to complain about config file parse errors
+    g_conf().complain_about_parse_error(g_ceph_context);
+  }
+#endif
+
+#ifdef WITH_JAEGER
+boost::intrusive_ptr<CephContext>
+global_init(const std::map<std::string,std::string> *defaults,
+	    std::vector < const char* >& args,
+	    uint32_t module_type, code_environment_t code_env,
+	    int flags,
+      JTracer& tracer,const Span& parentSpan,
+	    const char *data_dir_option, bool run_pre_init)
+{
+  Span span=tracer.childSpan("global_init.cc global_init()",parentSpan);
+  // Ensure we're not calling the global init functions multiple times.
+  static bool first_run = true;
+  if (run_pre_init) {
+    // We will run pre_init from here (default).
+    ceph_assert(!g_ceph_context && first_run);
+    global_pre_init(defaults, args, module_type, code_env, flags);
+  } else {
+    // Caller should have invoked pre_init manually.
+    ceph_assert(g_ceph_context && first_run);
+  }
+  first_run = false;
+
+  // Verify flags have not changed if global_pre_init() has been called
+  // manually. If they have, update them.
+  if (g_ceph_context->get_init_flags() != flags) {
+    g_ceph_context->set_init_flags(flags);
+  }
+
+  // signal stuff
+  int siglist[] = { SIGPIPE, 0 };
+  block_signals(siglist, NULL);
+
+  if (g_conf()->fatal_signal_handlers) {
+    install_standard_sighandlers();
+  }
+  register_assert_context(g_ceph_context);
+
+  if (g_conf()->log_flush_on_exit)
+    g_ceph_context->_log->set_flush_on_exit();
+
+  // drop privileges?
+  ostringstream priv_ss;
+
+  // consider --setuser root a no-op, even if we're not root
+  if (getuid() != 0) {
+    if (g_conf()->setuser.length()) {
+      cerr << "ignoring --setuser " << g_conf()->setuser << " since I am not root"
+	   << std::endl;
+    }
+    if (g_conf()->setgroup.length()) {
+      cerr << "ignoring --setgroup " << g_conf()->setgroup
+	   << " since I am not root" << std::endl;
+    }
+  } else if (g_conf()->setgroup.length() ||
+             g_conf()->setuser.length()) {
+    uid_t uid = 0;  // zero means no change; we can only drop privs here.
+    gid_t gid = 0;
+    std::string uid_string;
+    std::string gid_string;
+    std::string home_directory;
+    if (g_conf()->setuser.length()) {
+      char buf[4096];
+      struct passwd pa;
+      struct passwd *p = 0;
+
+      uid = atoi(g_conf()->setuser.c_str());
+      if (uid) {
+        getpwuid_r(uid, &pa, buf, sizeof(buf), &p);
+      } else {
+	getpwnam_r(g_conf()->setuser.c_str(), &pa, buf, sizeof(buf), &p);
+        if (!p) {
+	  cerr << "unable to look up user '" << g_conf()->setuser << "'"
+	       << std::endl;
+	  exit(1);
+        }
+
+        uid = p->pw_uid;
+        gid = p->pw_gid;
+        uid_string = g_conf()->setuser;
+      }
+
+      if (p && p->pw_dir != nullptr) {
+        home_directory = std::string(p->pw_dir);
+      }
+    }
+    if (g_conf()->setgroup.length() > 0) {
+      gid = atoi(g_conf()->setgroup.c_str());
+      if (!gid) {
+	char buf[4096];
+	struct group gr;
+	struct group *g = 0;
+	getgrnam_r(g_conf()->setgroup.c_str(), &gr, buf, sizeof(buf), &g);
+	if (!g) {
+	  cerr << "unable to look up group '" << g_conf()->setgroup << "'"
+	       << ": " << cpp_strerror(errno) << std::endl;
+	  exit(1);
+	}
+	gid = g->gr_gid;
+	gid_string = g_conf()->setgroup;
+      }
+    }
+    if ((uid || gid) &&
+	g_conf()->setuser_match_path.length()) {
+      // induce early expansion of setuser_match_path config option
+      string match_path = g_conf()->setuser_match_path;
+      g_conf().early_expand_meta(match_path, &cerr);
+      struct stat st;
+      int r = ::stat(match_path.c_str(), &st);
+      if (r < 0) {
+	cerr << "unable to stat setuser_match_path "
+	     << g_conf()->setuser_match_path
+	     << ": " << cpp_strerror(errno) << std::endl;
+	exit(1);
+      }
+      if ((uid && uid != st.st_uid) ||
+	  (gid && gid != st.st_gid)) {
+	cerr << "WARNING: will not setuid/gid: " << match_path
+	     << " owned by " << st.st_uid << ":" << st.st_gid
+	     << " and not requested " << uid << ":" << gid
+	     << std::endl;
+	uid = 0;
+	gid = 0;
+	uid_string.erase();
+	gid_string.erase();
+      } else {
+	priv_ss << "setuser_match_path "
+		<< match_path << " owned by "
+		<< st.st_uid << ":" << st.st_gid << ". ";
+      }
+    }
+    g_ceph_context->set_uid_gid(uid, gid);
+    g_ceph_context->set_uid_gid_strings(uid_string, gid_string);
+    if ((flags & CINIT_FLAG_DEFER_DROP_PRIVILEGES) == 0) {
+      if (setgid(gid) != 0) {
+	cerr << "unable to setgid " << gid << ": " << cpp_strerror(errno)
+	     << std::endl;
+	exit(1);
+      }
+      if (setuid(uid) != 0) {
+	cerr << "unable to setuid " << uid << ": " << cpp_strerror(errno)
+	     << std::endl;
+	exit(1);
+      }
+      if (setenv("HOME", home_directory.c_str(), 1) != 0) {
+	cerr << "warning: unable to set HOME to " << home_directory << ": "
+             << cpp_strerror(errno) << std::endl;
+      }
+      priv_ss << "set uid:gid to " << uid << ":" << gid << " (" << uid_string << ":" << gid_string << ")";
+    } else {
+      priv_ss << "deferred set uid:gid to " << uid << ":" << gid << " (" << uid_string << ":" << gid_string << ")";
+    }
+  }
+
+#if defined(HAVE_SYS_PRCTL_H)
+  if (prctl(PR_SET_DUMPABLE, 1) == -1) {
+    cerr << "warning: unable to set dumpable flag: " << cpp_strerror(errno) << std::endl;
+  }
+#  if defined(PR_SET_THP_DISABLE)
+  if (!g_conf().get_val<bool>("thp") && prctl(PR_SET_THP_DISABLE, 1, 0, 0, 0) == -1) {
+    cerr << "warning: unable to disable THP: " << cpp_strerror(errno) << std::endl;
+  }
+#  endif
+#endif
+
+  //
+  // Utterly important to run first network connection after setuid().
+  // In case of rdma transport uverbs kernel module starts returning
+  // -EACCESS on each operation if credentials has been changed, see
+  // callers of ib_safe_file_access() for details.
+  //
+  // fork() syscall also matters, so daemonization won't work in case
+  // of rdma.
+  //
+  if (!g_conf()->no_mon_config) {
+    // make sure our mini-session gets legacy values
+    g_conf().apply_changes(nullptr);
+
+    MonClient mc_bootstrap(g_ceph_context);
+    if (mc_bootstrap.get_monmap_and_config() < 0) {
+      g_ceph_context->_log->flush();
+      cerr << "failed to fetch mon config (--no-mon-config to skip)"
+	   << std::endl;
+      _exit(1);
+    }
+  }
+
+  // Expand metavariables. Invoke configuration observers. Open log file.
+  g_conf().apply_changes(nullptr);
+
+  if (g_conf()->run_dir.length() &&
+      code_env == CODE_ENVIRONMENT_DAEMON &&
+      !(flags & CINIT_FLAG_NO_DAEMON_ACTIONS)) {
+    int r = ::mkdir(g_conf()->run_dir.c_str(), 0755);
+    if (r < 0 && errno != EEXIST) {
+      cerr << "warning: unable to create " << g_conf()->run_dir << ": " << cpp_strerror(errno) << std::endl;
+    }
+  }
+
+  // call all observers now.  this has the side-effect of configuring
+  // and opening the log file immediately.
+  g_conf().call_all_observers();
+
+  if (priv_ss.str().length()) {
+    dout(0) << priv_ss.str() << dendl;
+  }
+
+  if ((flags & CINIT_FLAG_DEFER_DROP_PRIVILEGES) &&
+      (g_ceph_context->get_set_uid() || g_ceph_context->get_set_gid())) {
+    // Fix ownership on log files and run directories if needed.
+    // Admin socket files are chown()'d during the common init path _after_
+    // the service thread has been started. This is sadly a bit of a hack :(
+    chown_path(g_conf()->run_dir,
+	       g_ceph_context->get_set_uid(),
+	       g_ceph_context->get_set_gid(),
+	       g_ceph_context->get_set_uid_string(),
+	       g_ceph_context->get_set_gid_string());
+    g_ceph_context->_log->chown_log_file(
+      g_ceph_context->get_set_uid(),
+      g_ceph_context->get_set_gid());
+  }
+
+  // Now we're ready to complain about config file parse errors
+  g_conf().complain_about_parse_error(g_ceph_context);
+
+  // test leak checking
+  if (g_conf()->debug_deliberately_leak_memory) {
+    derr << "deliberately leaking some memory" << dendl;
+    char *s = new char[1234567];
+    (void)s;
+    // cppcheck-suppress memleak
+  }
+
+  if (code_env == CODE_ENVIRONMENT_DAEMON && !(flags & CINIT_FLAG_NO_DAEMON_ACTIONS))
+    output_ceph_version();
+
+  if (g_ceph_context->crush_location.init_on_startup()) {
+    cerr << " failed to init_on_startup : " << cpp_strerror(errno) << std::endl;
+    exit(1);
+  }
+
+  return boost::intrusive_ptr<CephContext>{g_ceph_context, false};
+}
+#endif
+
 boost::intrusive_ptr<CephContext>
 global_init(const std::map<std::string,std::string> *defaults,
 	    std::vector < const char* >& args,
@@ -204,7 +537,7 @@ global_init(const std::map<std::string,std::string> *defaults,
 
   // drop privileges?
   ostringstream priv_ss;
- 
+
   // consider --setuser root a no-op, even if we're not root
   if (getuid() != 0) {
     if (g_conf()->setuser.length()) {
@@ -460,7 +793,10 @@ void global_init_daemonize(CephContext *cct)
 	 << cpp_strerror(ret) << dendl;
     exit(1);
   }
- 
+  ofstream file;
+  file.open("/home/abhinav/Desktop/suab.txt",std::ios::app|std::ios::out);
+  file<<"global_init.cc 798.\n";
+  file.close();
   global_init_postfork_start(cct);
   global_init_postfork_finish(cct);
 #else
@@ -578,7 +914,7 @@ int global_init_preload_erasure_code(const CephContext *cct)
 	string plugin_name = *i;
 	string replacement = "";
 
-	if (plugin_name == "jerasure_generic" || 
+	if (plugin_name == "jerasure_generic" ||
 	    plugin_name == "jerasure_sse3" ||
 	    plugin_name == "jerasure_sse4" ||
 	    plugin_name == "jerasure_neon") {

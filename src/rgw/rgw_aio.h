@@ -26,7 +26,7 @@
 #include "services/svc_rados.h" // cant forward declare RGWSI_RADOS::Obj
 
 #include "rgw_common.h"
-#include "common/jaegerTracer.h"
+#include "include/tracer.h"
 
 #include "include/function2.hpp"
 

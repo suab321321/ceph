@@ -99,6 +99,23 @@ bool fe_inits_ssl(boost::optional <const fe_map_t&> m, long& curl_global_flags){
 
 std::once_flag curl_init_flag;
 
+// #ifdef WITH_JAEGER
+// void setup_curl(boost::optional<const fe_map_t&> m,JTracer& tracer,const Span& parentSpan) {
+//   // Span span=tracer.childSpan("rgw_http_client_curl.cc setup_curl",parentSpan);
+//   check_curl();
+
+//   long curl_global_flags = CURL_GLOBAL_ALL;
+
+//   #if defined(WITH_CURL_OPENSSL) && OPENSSL_API_COMPAT < 0x10100000L
+//   if (!fe_inits_ssl(m, curl_global_flags))
+//     init_ssl();
+//   #endif
+
+//   std::call_once(curl_init_flag, curl_global_init, curl_global_flags);
+//   rgw_setup_saved_curl_handles();
+// }
+// #endif
+
 void setup_curl(boost::optional<const fe_map_t&> m) {
   check_curl();
 

@@ -104,7 +104,7 @@ public:
       req_wq(this, g_conf()->rgw_op_thread_timeout,
 	     g_conf()->rgw_op_thread_suicide_timeout, &m_tp) {
   }
-  
+
   virtual ~RGWProcess() = default;
 
   virtual void run() = 0;
@@ -183,6 +183,13 @@ extern int process_request(rgw::sal::RGWRadosStore* store,
                            optional_yield y,
                            rgw::dmclock::Scheduler *scheduler,
                            int* http_ret = nullptr);
+
+extern int rgw_process_authenticated(RGWHandler_REST* handler,
+                                      RGWOp*& op,
+                                      RGWRequest* req,
+                                      req_state* s,
+                                      JTracer&,const Span&,
+                                      bool skip_retarget = false);
 
 extern int rgw_process_authenticated(RGWHandler_REST* handler,
                                      RGWOp*& op,

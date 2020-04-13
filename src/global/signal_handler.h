@@ -17,6 +17,7 @@
 
 #include <signal.h>
 #include "acconfig.h"
+#include "include/tracer.h"
 
 typedef void (*signal_handler_t)(int);
 
@@ -37,6 +38,7 @@ void install_standard_sighandlers(void);
 
 /// initialize async signal handler framework
 void init_async_signal_handler();
+void init_async_signal_handler(JTracer&,const Span&);
 
 /// shutdown async signal handler framework
 void shutdown_async_signal_handler();
@@ -46,6 +48,8 @@ void queue_async_signal(int signum);
 
 /// install a safe, async, callback for the given signal
 void register_async_signal_handler(int signum, signal_handler_t handler);
+void register_async_signal_handler(int signum, signal_handler_t handler,JTracer& tracer,const Span& parentSpan);
+
 void register_async_signal_handler_oneshot(int signum, signal_handler_t handler);
 
 /// uninstall a safe async signal callback

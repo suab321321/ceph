@@ -19,6 +19,7 @@
 
 #include "include/common_fwd.h"
 #include "common/code_environment.h"
+#include "include/tracer.h"
 
 enum common_init_flags_t {
   // Set up defaults that make sense for an unprivileged daemon
@@ -65,6 +66,8 @@ class CephInitParameters;
  */
 CephContext *common_preinit(const CephInitParameters &iparams,
 			    enum code_environment_t code_env, int flags);
+CephContext *common_preinit(const CephInitParameters &iparams,
+          enum code_environment_t code_env, int flags,JTracer&,const Span&);
 #endif // #ifndef WITH_SEASTAR
 
 /* Print out some parse error. */

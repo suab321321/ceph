@@ -5,6 +5,7 @@
 #include "common/Throttle.h"
 #include "common/WorkQueue.h"
 #include "include/scope_guard.h"
+#include "include/tracer.h"
 
 #include "rgw_rados.h"
 #include "rgw_dmclock_scheduler.h"
@@ -16,6 +17,7 @@
 #include "rgw_client_io.h"
 #include "rgw_opa.h"
 #include "rgw_perf_counters.h"
+#include<fstream>
 
 #include "services/svc_zone_utils.h"
 
@@ -40,8 +42,36 @@ void RGWProcess::RGWWQ::_dump_queue()
   }
 } /* RGWProcess::RGWWQ::_dump_queue */
 
+
+auto schedule_request(Scheduler *scheduler, req_state *s, RGWOp *op,JTracer& tracer,const Span& parentSpan)
+{
+  Span span=tracer.childSpan("rgw_process.cc schedule_request()",parentSpan);
+  ofstream file;
+  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
+  file<<" 47.\n";
+  file.close();
+  using rgw::dmclock::SchedulerCompleter;
+  if (!scheduler)
+    return std::make_pair(0,SchedulerCompleter{});
+
+  const auto client = op->dmclock_client();
+  const auto cost = op->dmclock_cost();
+  ldpp_dout(op,10) << "scheduling with dmclock client=" << static_cast<int>(client)
+		   << " cost=" << cost << dendl;
+  return scheduler->schedule_request(client, {},
+                                     req_state::Clock::to_double(s->time),
+                                     cost,
+                                     s->yield);
+}
+
+
+
 auto schedule_request(Scheduler *scheduler, req_state *s, RGWOp *op)
 {
+  ofstream file;
+  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
+  file<<" 47.\n";
+  file.close();
   using rgw::dmclock::SchedulerCompleter;
   if (!scheduler)
     return std::make_pair(0,SchedulerCompleter{});
@@ -57,6 +87,10 @@ auto schedule_request(Scheduler *scheduler, req_state *s, RGWOp *op)
 }
 
 bool RGWProcess::RGWWQ::_enqueue(RGWRequest* req) {
+  ofstream file;
+  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
+  file<<" 66.\n";
+  file.close();
   process->m_req_queue.push_back(req);
   perfcounter->inc(l_rgw_qlen);
   dout(20) << "enqueued request req=" << hex << req << dec << dendl;
@@ -65,6 +99,10 @@ bool RGWProcess::RGWWQ::_enqueue(RGWRequest* req) {
 }
 
 RGWRequest* RGWProcess::RGWWQ::_dequeue() {
+  ofstream file;
+  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
+  file<<" 78.\n";
+  file.close();
   if (process->m_req_queue.empty())
     return NULL;
   RGWRequest *req = process->m_req_queue.front();
@@ -76,6 +114,10 @@ RGWRequest* RGWProcess::RGWWQ::_dequeue() {
 }
 
 void RGWProcess::RGWWQ::_process(RGWRequest *req, ThreadPool::TPHandle &) {
+  ofstream file;
+  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
+  file<<" 93.\n";
+  file.close();
   perfcounter->inc(l_rgw_qactive);
   process->handle_request(req);
   process->req_throttle.put(1);
@@ -86,8 +128,103 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
                               RGWOp *& op,
                               RGWRequest * const req,
                               req_state * const s,
+                              JTracer& tracer,const Span& parentSpan,
                               const bool skip_retarget)
 {
+  Span span=tracer.childSpan("rgw_process.cc rgw_process_authenticated()",parentSpan);
+  ofstream file;
+  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
+  file<<" 109.\n";
+  file.close();
+  ldpp_dout(op, 2) << "init permissions" << dendl;
+  int ret = handler->init_permissions(op,tracer,span);
+  if (ret < 0) {
+    return ret;
+  }
+
+  /**
+   * Only some accesses support website mode, and website mode does NOT apply
+   * if you are using the REST endpoint either (ergo, no authenticated access)
+   */
+  if (! skip_retarget) {
+    ldpp_dout(op, 2) << "recalculating target" << dendl;
+    ret = handler->retarget(op, &op);
+    if (ret < 0) {
+      return ret;
+    }
+    req->op = op;
+  } else {
+    ldpp_dout(op, 2) << "retargeting skipped because of SubOp mode" << dendl;
+  }
+
+  /* If necessary extract object ACL and put them into req_state. */
+  ldpp_dout(op, 2) << "reading permissions" << dendl;
+  ret = handler->read_permissions(op,tracer,span);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ldpp_dout(op, 2) << "init op" << dendl;
+  ret = op->init_processing(tracer,span);
+  if (ret < 0) {
+    return ret;
+  }
+
+  ldpp_dout(op, 2) << "verifying op mask" << dendl;
+  ret = op->verify_op_mask(tracer,span);
+  if (ret < 0) {
+    return ret;
+  }
+
+  /* Check if OPA is used to authorize requests */
+  if (s->cct->_conf->rgw_use_opa_authz) {
+    ret = rgw_opa_authorize(op, s);
+    if (ret < 0) {
+      return ret;
+    }
+  }
+
+  ldpp_dout(op, 2) << "verifying op permissions" << dendl;
+  ret = op->verify_permission();
+  if (ret < 0) {
+    if (s->system_request) {
+      dout(2) << "overriding permissions due to system operation" << dendl;
+    } else if (s->auth.identity->is_admin_of(s->user->get_id())) {
+      dout(2) << "overriding permissions due to admin operation" << dendl;
+    } else {
+      return ret;
+    }
+  }
+
+  ldpp_dout(op, 2) << "verifying op params" << dendl;
+  ret = op->verify_params();
+  if (ret < 0) {
+    return ret;
+  }
+
+  ldpp_dout(op, 2) << "pre-executing" << dendl;
+  op->pre_exec();
+
+  ldpp_dout(op, 2) << "executing" << dendl;
+  op->execute(tracer,span);
+
+  ldpp_dout(op, 2) << "completing" << dendl;
+  op->complete();
+
+  return 0;
+}
+
+
+int rgw_process_authenticated(RGWHandler_REST * const handler,
+                              RGWOp *& op,
+                              RGWRequest * const req,
+                              req_state * const s,
+                              const bool skip_retarget)
+{
+  ofstream file;
+  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
+  file<<" 109.\n";
+  file.close();
   ldpp_dout(op, 2) << "init permissions" << dendl;
   int ret = handler->init_permissions(op);
   if (ret < 0) {
@@ -177,6 +314,13 @@ int process_request(rgw::sal::RGWRadosStore* const store,
 		    rgw::dmclock::Scheduler *scheduler,
                     int* http_ret)
 {
+  JTracer tracer;
+  tracer.initTracer("bucket_List_Process started","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+  Span parentSpan=tracer.newSpan("process_request");
+  ofstream file;
+  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
+  file<<" 202.\n";
+  file.close();
   int ret = client_io->init(g_ceph_context);
 
   dout(1) << "====== starting new request req=" << hex << req << dec
@@ -232,7 +376,11 @@ int process_request(rgw::sal::RGWRadosStore* const store,
     abort_early(s, NULL, -ERR_METHOD_NOT_ALLOWED, handler);
     goto done;
   }
-  std::tie(ret,c) = schedule_request(scheduler, s, op);
+  #ifdef WITH_JAEGER
+    std::tie(ret,c) = schedule_request(scheduler, s, op,tracer,parentSpan);
+  #else
+    std::tie(ret,c) = schedule_request(scheduler, s, op,tracer,parentSpan);
+  #endif
   if (ret < 0) {
     if (ret == -EAGAIN) {
       ret = -ERR_RATE_LIMITED;
@@ -274,8 +422,11 @@ int process_request(rgw::sal::RGWRadosStore* const store,
       abort_early(s, op, -ERR_USER_SUSPENDED, handler);
       goto done;
     }
-
-    ret = rgw_process_authenticated(handler, op, req, s);
+    #ifdef WITH_JAEGER
+      ret = rgw_process_authenticated(handler, op, req, s,tracer,parentSpan);
+    #else
+      ret = rgw_process_authenticated(handler, op, req, s);
+    #endif
     if (ret < 0) {
       abort_early(s, op, ret, handler);
       goto done;

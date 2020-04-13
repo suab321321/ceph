@@ -56,6 +56,8 @@
 #include "services/svc_tier_rados.h"
 
 #include "include/ceph_assert.h"
+#include "include/tracer.h"
+
 
 using ceph::crypto::SHA1;
 
@@ -84,7 +86,7 @@ class RGWHandler {
 protected:
   rgw::sal::RGWRadosStore* store{nullptr};
   struct req_state *s{nullptr};
-
+	int do_init_permissions(JTracer&,const Span&);
   int do_init_permissions();
   int do_read_permissions(RGWOp* op, bool only_bucket);
 
@@ -92,9 +94,17 @@ public:
   RGWHandler() {}
   virtual ~RGWHandler();
 
+	virtual int init(rgw::sal::RGWRadosStore* store,
+									 struct req_state* _s,
+									 rgw::io::BasicClient* cio,JTracer&,const Span&);
+
   virtual int init(rgw::sal::RGWRadosStore* store,
                    struct req_state* _s,
                    rgw::io::BasicClient* cio);
+
+	virtual int init_permissions(RGWOp*,JTracer&,const Span&) {
+		return 0;
+	}
 
   virtual int init_permissions(RGWOp*) {
     return 0;
@@ -104,7 +114,7 @@ public:
     *new_op = op;
     return 0;
   }
-
+	virtual int read_permissions(RGWOp* op,JTracer&,const Span&) = 0;
   virtual int read_permissions(RGWOp* op) = 0;
   virtual int authorize(const DoutPrefixProvider* dpp) = 0;
   virtual int postauth_init() = 0;
@@ -138,6 +148,7 @@ protected:
   int do_aws4_auth_completion();
 
   virtual int init_quota();
+	virtual int init_quota(JTracer&,const Span&);
 
 public:
   RGWOp()
@@ -151,6 +162,17 @@ public:
   virtual ~RGWOp() = default;
 
   int get_ret() const { return op_ret; }
+
+	virtual int init_processing(JTracer& tracer,const Span& parentSpan) {
+		Span span=tracer.childSpan("rgw_op.h RGWOp::init_processing()",parentSpan);
+    if (dialect_handler->supports_quota()) {
+      op_ret = init_quota(tracer,span);
+      if (op_ret < 0)
+        return op_ret;
+    }
+
+    return 0;
+  }
 
   virtual int init_processing() {
     if (dialect_handler->supports_quota()) {
@@ -188,8 +210,10 @@ public:
   }
   virtual int verify_permission() = 0;
   virtual int verify_op_mask();
+	virtual int verify_op_mask(JTracer&,const Span&);
   virtual void pre_exec() {}
   virtual void execute() = 0;
+	virtual void execute(JTracer&,const Span&) {}
   virtual void send_response() {}
   virtual void complete() {
     send_response();
@@ -621,7 +645,7 @@ protected:
 
   boost::optional<std::pair<std::string, rgw_obj_key>>
   parse_path(const boost::string_ref& path);
-  
+
   std::pair<std::string, std::string>
   handle_upload_path(struct req_state *s);
 
@@ -754,6 +778,7 @@ public:
   }
 
   int verify_permission() override;
+	void execute(JTracer&,const Span&) override;
   void execute() override;
 
   virtual int get_params() = 0;
@@ -827,8 +852,8 @@ class RGWListBucket : public RGWOp {
 protected:
   rgw::sal::RGWBucket* bucket;
   string prefix;
-  rgw_obj_key marker; 
-  rgw_obj_key next_marker; 
+  rgw_obj_key marker;
+  rgw_obj_key next_marker;
   rgw_obj_key end_marker;
   string max_keys;
   string delimiter;
@@ -1547,7 +1572,7 @@ public:
 
 class RGWGetLC : public RGWOp {
 protected:
-    
+
 public:
   RGWGetLC() { }
   ~RGWGetLC() override { }
@@ -1834,8 +1859,8 @@ struct RGWMultipartUploadEntry {
 class RGWListBucketMultiparts : public RGWOp {
 protected:
   string prefix;
-  RGWMPObj marker; 
-  RGWMultipartUploadEntry next_marker; 
+  RGWMPObj marker;
+  RGWMultipartUploadEntry next_marker;
   int max_uploads;
   string delimiter;
   vector<RGWMultipartUploadEntry> uploads;
@@ -1956,6 +1981,7 @@ public:
 };
 
 extern int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s);
+extern int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s,JTracer&,const Span&);
 extern int rgw_build_object_policies(rgw::sal::RGWRadosStore *store, struct req_state *s,
 				     bool prefetch_data);
 extern void rgw_build_iam_environment(rgw::sal::RGWRadosStore* store,
@@ -2091,7 +2117,7 @@ static inline void encode_delete_at_attr(boost::optional<ceph::real_time> delete
 {
   if (delete_at == boost::none) {
     return;
-  } 
+  }
 
   bufferlist delatbl;
   encode(*delete_at, delatbl);

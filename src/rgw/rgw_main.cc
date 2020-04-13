@@ -39,7 +39,6 @@
 #include "rgw_http_client_curl.h"
 #include "rgw_perf_counters.h"
 
-#include "common/jaegerTracer.h"
 
 #ifdef WITH_RADOSGW_AMQP_ENDPOINT
 #include "rgw_amqp.h"
@@ -56,6 +55,10 @@
 
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
+#endif
+
+#ifndef WITH_JAEGER
+  #define WITH_JAEGER
 #endif
 
 #define dout_subsys ceph_subsys_rgw
@@ -186,7 +189,9 @@ int radosgw_Main(int argc, const char **argv)
          << std::endl;
     return ENOSYS;
   }
-
+  JTracer tracer;
+  tracer.initTracer("rgw_main_started","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+  Span parentSpan=tracer.newSpan("rgw main started");
   /* alternative default for module */
   map<string,string> defaults = {
     { "debug_rgw", "1/5" },
@@ -206,17 +211,28 @@ int radosgw_Main(int argc, const char **argv)
   }
 
   int flags = CINIT_FLAG_UNPRIVILEGED_DAEMON_DEFAULTS;
+  #ifdef WITH_JAEGER
   global_pre_init(
     &defaults, args, CEPH_ENTITY_TYPE_CLIENT, CODE_ENVIRONMENT_DAEMON,
-    flags);
+    flags,tracer,parentSpan);
+  #else
+    global_pre_init(
+      &defaults, args, CEPH_ENTITY_TYPE_CLIENT, CODE_ENVIRONMENT_DAEMON,
+      flags);
+  #endif
 
   // Now that we've determined which frontend(s) to use, continue with global
   // initialization. Passing false as the final argument ensures that
   // global_pre_init() is not invoked twice.
   // claim the reference and release it after subsequent destructors have fired
+  #ifdef WITH_JAEGER
   auto cct = global_init(&defaults, args, CEPH_ENTITY_TYPE_CLIENT,
-			 CODE_ENVIRONMENT_DAEMON,
-			 flags, "rgw_data", false);
+  			 CODE_ENVIRONMENT_DAEMON,flags, tracer, parentSpan, "rgw_data", false);
+  #else
+  auto cct = global_init(&defaults, args, CEPH_ENTITY_TYPE_CLIENT,
+       CODE_ENVIRONMENT_DAEMON,
+       flags, "rgw_data", false);
+  #endif
 
   // First, let's determine which frontends are configured.
   list<string> frontends;
@@ -299,10 +315,16 @@ int radosgw_Main(int argc, const char **argv)
   if (!g_conf()->rgw_region.empty() && g_conf()->rgw_zonegroup.empty()) {
     g_conf().set_val_or_die("rgw_zonegroup", g_conf()->rgw_region.c_str());
   }
-
+  tracer.finishTracer();
   if (g_conf()->daemonize) {
     global_init_daemonize(g_ceph_context);
   }
+
+  JTracer tracerSec;
+
+  tracerSec.initTracer("rgw_initiation_2","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+  Span parentSpan2=tracerSec.newSpan("rgw_main.cc after global_init_daemonize");
+
   ceph::mutex mutex = ceph::make_mutex("main");
   SafeTimer init_timer(g_ceph_context, mutex);
   init_timer.init();
@@ -311,9 +333,13 @@ int radosgw_Main(int argc, const char **argv)
   mutex.unlock();
 
   common_init_finish(g_ceph_context);
-
-  init_async_signal_handler();
-  register_async_signal_handler(SIGHUP, sighup_handler);
+  #ifdef WITH_JAEGER
+    init_async_signal_handler(tracerSec,parentSpan2);
+    register_async_signal_handler(SIGHUP, sighup_handler,tracerSec,parentSpan2);
+  #else
+    init_async_signal_handler();
+    register_async_signal_handler(SIGHUP, sighup_handler);
+  #endif
 
   TracepointProvider::initialize<rgw_rados_tracepoint_traits>(g_ceph_context);
   TracepointProvider::initialize<rgw_op_tracepoint_traits>(g_ceph_context);
@@ -323,11 +349,17 @@ int radosgw_Main(int argc, const char **argv)
     derr << "ERROR: unable to initialize rgw tools" << dendl;
     return -r;
   }
+  #ifdef WITH_JAEGER
+    rgw_init_resolver();
+    rgw::curl::setup_curl(fe_map);
+    rgw_http_client_init(g_ceph_context,tracerSec,parentSpan2);
+  #else
+    rgw_init_resolver();
+    rgw::curl::setup_curl(fe_map);
+    rgw_http_client_init(g_ceph_context);
+  #endif
+  tracerSec.finishTracer();
 
-  rgw_init_resolver();
-  rgw::curl::setup_curl(fe_map);
-  rgw_http_client_init(g_ceph_context);
-  
 #if defined(WITH_RADOSGW_FCGI_FRONTEND)
   FCGX_Init();
 #endif
@@ -451,7 +483,7 @@ int radosgw_Main(int argc, const char **argv)
     admin_resource->register_resource("usage", new RGWRESTMgr_Usage);
     admin_resource->register_resource("user", new RGWRESTMgr_User);
     admin_resource->register_resource("bucket", new RGWRESTMgr_Bucket);
-  
+
     /*Registering resource for /admin/metadata */
     admin_resource->register_resource("metadata", new RGWRESTMgr_Metadata);
     admin_resource->register_resource("log", new RGWRESTMgr_Log);
@@ -534,6 +566,7 @@ int radosgw_Main(int argc, const char **argv)
     }
 
     RGWFrontend *fe = NULL;
+    // framework="civetweb";
 
     if (framework == "civetweb" || framework == "mongoose") {
       framework = "civetweb";
@@ -683,10 +716,9 @@ extern "C" {
 int radosgw_main(int argc, const char** argv)
 {
   //loading the yaml configuration file for rgw
-  jTracer tracer;
-  tracer.loadYamlConfigFile("tracerConfiguration.yaml");
+  // jTracer tracer;
+  // tracer.loadYamlConfigFile("tracerConfiguration.yaml");
   return radosgw_Main(argc, argv);
 }
 
 } /* extern "C" */
-

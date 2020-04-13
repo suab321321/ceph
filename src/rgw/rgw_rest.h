@@ -185,13 +185,13 @@ public:
 class RGWGetBucketTags_ObjStore : public RGWGetBucketTags {
 public:
   RGWGetBucketTags_ObjStore() = default;
-  virtual ~RGWGetBucketTags_ObjStore() = default; 
+  virtual ~RGWGetBucketTags_ObjStore() = default;
 };
 
 class RGWPutBucketTags_ObjStore: public RGWPutBucketTags {
 public:
   RGWPutBucketTags_ObjStore() = default;
-  virtual ~RGWPutBucketTags_ObjStore() = default; 
+  virtual ~RGWPutBucketTags_ObjStore() = default;
 };
 
 class RGWGetBucketReplication_ObjStore : public RGWGetBucketReplication {
@@ -203,13 +203,13 @@ public:
 class RGWPutBucketReplication_ObjStore: public RGWPutBucketReplication {
 public:
   RGWPutBucketReplication_ObjStore() = default;
-  virtual ~RGWPutBucketReplication_ObjStore() = default; 
+  virtual ~RGWPutBucketReplication_ObjStore() = default;
 };
 
 class RGWDeleteBucketReplication_ObjStore: public RGWDeleteBucketReplication {
 public:
   RGWDeleteBucketReplication_ObjStore() = default;
-  virtual ~RGWDeleteBucketReplication_ObjStore() = default; 
+  virtual ~RGWDeleteBucketReplication_ObjStore() = default;
 };
 
 class RGWListBuckets_ObjStore : public RGWListBuckets {
@@ -585,7 +585,9 @@ public:
   static int reallocate_formatter(struct req_state *s, int type);
 
   int init_permissions(RGWOp* op) override;
+	int init_permissions(RGWOp* op,JTracer&,const Span&) override;
   int read_permissions(RGWOp* op) override;
+	int read_permissions(RGWOp* op,JTracer&,const Span&) override;
 
   virtual RGWOp* get_op(void);
   virtual void put_op(RGWOp* op);
@@ -668,8 +670,16 @@ class RGWREST {
   RGWRESTMgr mgr;
 
   static int preprocess(struct req_state *s, rgw::io::BasicClient* rio);
+	static int preprocess(struct req_state *s, rgw::io::BasicClient* rio,JTracer&,const Span&);
 public:
   RGWREST() {}
+	RGWHandler_REST *get_handler(rgw::sal::RGWRadosStore *store,
+                               struct req_state *s,
+                               const rgw::auth::StrategyRegistry& auth_registry,
+                               const std::string& frontend_prefix,
+                               RGWRestfulIO *rio,
+                               RGWRESTMgr **pmgr,
+                               int *init_error,JTracer&,const Span&);
   RGWHandler_REST *get_handler(rgw::sal::RGWRadosStore *store,
                                struct req_state *s,
                                const rgw::auth::StrategyRegistry& auth_registry,

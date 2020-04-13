@@ -26,6 +26,52 @@
 #define dout_subsys ceph_subsys_
 
 #ifndef WITH_SEASTAR
+#ifdef WITH_JAEGER
+	CephContext *common_preinit(const CephInitParameters &iparams,
+				    enum code_environment_t code_env, int flags,JTracer& tracer,const Span& parentSpan)
+	{
+		Span span=tracer.childSpan("common_init.cc common_preinit()",parentSpan);
+	  // set code environment
+	  ANNOTATE_BENIGN_RACE_SIZED(&g_code_env, sizeof(g_code_env), "g_code_env");
+	  g_code_env = code_env;
+
+	  // Create a configuration object
+	  CephContext *cct = new CephContext(iparams.module_type, code_env, flags);
+
+	  auto& conf = cct->_conf;
+	  // add config observers here
+
+	  // Set up our entity name.
+	  conf->name = iparams.name;
+
+	  // different default keyring locations for osd and mds.  this is
+	  // for backward compatibility.  moving forward, we want all keyrings
+	  // in these locations.  the mon already forces $mon_data/keyring.
+	  if (conf->name.is_mds()) {
+	    conf.set_val_default("keyring", "$mds_data/keyring");
+	  } else if (conf->name.is_osd()) {
+	    conf.set_val_default("keyring", "$osd_data/keyring");
+	  }
+
+	  if ((flags & CINIT_FLAG_UNPRIVILEGED_DAEMON_DEFAULTS)) {
+	    // make this unique despite multiple instances by the same name.
+	    conf.set_val_default("admin_socket",
+				  "$run_dir/$cluster-$name.$pid.$cctid.asok");
+	  }
+
+	  if (code_env == CODE_ENVIRONMENT_LIBRARY ||
+	      code_env == CODE_ENVIRONMENT_UTILITY_NODOUT) {
+	    conf.set_val_default("log_to_stderr", "false");
+	    conf.set_val_default("err_to_stderr", "false");
+	    conf.set_val_default("log_flush_on_exit", "false");
+	  }
+
+	  conf.set_val("no_config_file", iparams.no_config_file ? "true" : "false");
+
+	  return cct;
+	}
+#endif
+
 CephContext *common_preinit(const CephInitParameters &iparams,
 			    enum code_environment_t code_env, int flags)
 {

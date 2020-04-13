@@ -35,8 +35,8 @@
 #include <sys/types.h>
 #include "common/errno.h"
 #if defined(_AIX)
-extern char *sys_siglist[]; 
-#endif 
+extern char *sys_siglist[];
+#endif
 
 #define dout_context g_ceph_context
 
@@ -374,8 +374,8 @@ string get_name_by_pid(pid_t pid)
 
   if (fd < 0) {
     fd = -errno;
-    derr << "Fail to open '" << proc_pid_path 
-         << "' error = " << cpp_strerror(fd) 
+    derr << "Fail to open '" << proc_pid_path
+         << "' error = " << cpp_strerror(fd)
          << dendl;
     return "<unknown>";
   }
@@ -395,7 +395,7 @@ string get_name_by_pid(pid_t pid)
   return string(buf, ret);
 }
 #endif
- 
+
 /**
  * safe async signal handler / dispatcher
  *
@@ -422,7 +422,7 @@ struct SignalHandler : public Thread {
     safe_handler() {
       memset(pipefd, 0, sizeof(pipefd));
       memset(&handler, 0, sizeof(handler));
-      memset(&info_t, 0, sizeof(info_t));    
+      memset(&info_t, 0, sizeof(info_t));
     }
 
     siginfo_t info_t;
@@ -531,7 +531,7 @@ struct SignalHandler : public Thread {
 	  }
 	}
 	lock.unlock();
-      } 
+      }
     }
     return NULL;
   }
@@ -587,7 +587,7 @@ void SignalHandler::register_handler(int signum, signal_handler_t handler, bool 
 
   // signal thread so that it sees our new handler
   signal_thread();
-  
+
   // install our handler
   struct sigaction oldact;
   struct sigaction act;
@@ -623,7 +623,14 @@ void SignalHandler::unregister_handler(int signum, signal_handler_t handler)
 
 
 // -------
-
+#ifdef WITH_JAEGER
+void init_async_signal_handler(JTracer& tracer,const Span& parentSpan)
+  {
+    Span span=tracer.childSpan("signal_handler.cc init_async_signal_handler()",parentSpan);
+    ceph_assert(!g_signal_handler);
+    g_signal_handler = new SignalHandler;
+  }
+#endif
 void init_async_signal_handler()
 {
   ceph_assert(!g_signal_handler);
@@ -642,7 +649,14 @@ void queue_async_signal(int signum)
   ceph_assert(g_signal_handler);
   g_signal_handler->queue_signal(signum);
 }
-
+#ifdef WITH_JAEGER
+void register_async_signal_handler(int signum, signal_handler_t handler,JTracer& tracer,const Span& parentSpan)
+  {
+    Span span=tracer.childSpan("signal_handler.cc register_async_signal_handler()",parentSpan);
+    ceph_assert(g_signal_handler);
+    g_signal_handler->register_handler(signum, handler, false);
+  }
+#endif
 void register_async_signal_handler(int signum, signal_handler_t handler)
 {
   ceph_assert(g_signal_handler);
@@ -660,6 +674,3 @@ void unregister_async_signal_handler(int signum, signal_handler_t handler)
   ceph_assert(g_signal_handler);
   g_signal_handler->unregister_handler(signum, handler);
 }
-
-
-

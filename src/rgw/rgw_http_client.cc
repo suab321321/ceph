@@ -1232,6 +1232,16 @@ void *RGWHTTPManager::reqs_thread_entry()
   return 0;
 }
 
+#ifdef WITH_JAEGER
+void rgw_http_client_init(CephContext *cct,JTracer& tracer,const Span& parentSpan)
+{
+  Span span=tracer.childSpan("rgw_http_client.cc rgw_http_client_init",parentSpan);
+  curl_global_init(CURL_GLOBAL_ALL);
+  rgw_http_manager = new RGWHTTPManager(cct);
+  rgw_http_manager->start();
+}
+#endif
+
 void rgw_http_client_init(CephContext *cct)
 {
   curl_global_init(CURL_GLOBAL_ALL);
