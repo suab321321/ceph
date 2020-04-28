@@ -209,9 +209,11 @@ public:
     return dialect_handler->authorize(this);
   }
   virtual int verify_permission() = 0;
+  virtual int verify_permission(JTracer&,const Span&) {}
   virtual int verify_op_mask();
 	virtual int verify_op_mask(JTracer&,const Span&);
   virtual void pre_exec() {}
+  virtual void pre_exec(JTracer&,const Span&) {}
   virtual void execute() = 0;
 	virtual void execute(JTracer&,const Span&) {}
   virtual void send_response() {}
@@ -879,7 +881,7 @@ public:
   int verify_permission() override;
   void pre_exec() override;
   void execute() override;
-
+  void execute(JTracer&,const Span&) override;
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
     RGWOp::init(store, s, h);
     bucket = new rgw::sal::RGWRadosBucket(store, *s->user, s->bucket);
@@ -1055,8 +1057,14 @@ public:
   }
 
   int verify_permission() override;
+  int verify_permission(JTracer&,const Span&);
+
   void pre_exec() override;
+  void pre_exec(JTracer&,const Span&);
+
   void execute() override;
+  void execute(JTracer&,const Span&);
+
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
     RGWOp::init(store, s, h);
     policy.set_ctx(s->cct);
@@ -1220,8 +1228,13 @@ public:
   }
 
   int verify_permission() override;
+  int verify_permission(JTracer&,const Span&) override;
+
   void pre_exec() override;
+  void pre_exec(JTracer&,const Span&) override;
+
   void execute() override;
+  void execute(JTracer&,const Span&) override;
 
   /* this is for cases when copying data from other object */
   virtual int get_decrypt_filter(std::unique_ptr<RGWGetObj_Filter>* filter,
@@ -1241,6 +1254,7 @@ public:
 
   virtual int get_params() = 0;
   virtual int get_data(bufferlist& bl) = 0;
+  virtual int get_data(bufferlist& bl,JTracer&,const Span&) {}
   void send_response() override = 0;
   const char* name() const override { return "put_obj"; }
   RGWOpType get_type() override { return RGW_OP_PUT_OBJ; }

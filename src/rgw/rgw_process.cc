@@ -185,7 +185,7 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
   }
 
   ldpp_dout(op, 2) << "verifying op permissions" << dendl;
-  ret = op->verify_permission();
+  ret = op->verify_permission(tracer,span);
   if (ret < 0) {
     if (s->system_request) {
       dout(2) << "overriding permissions due to system operation" << dendl;
@@ -203,7 +203,7 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
   }
 
   ldpp_dout(op, 2) << "pre-executing" << dendl;
-  op->pre_exec();
+  op->pre_exec(tracer,span);
 
   ldpp_dout(op, 2) << "executing" << dendl;
   op->execute(tracer,span);
@@ -315,7 +315,7 @@ int process_request(rgw::sal::RGWRadosStore* const store,
                     int* http_ret)
 {
   JTracer tracer;
-  tracer.initTracer("bucket_List_Process started","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+  tracer.initTracer("Object Uploading in Container","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
   Span parentSpan=tracer.newSpan("process_request");
   ofstream file;
   file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
@@ -357,10 +357,17 @@ int process_request(rgw::sal::RGWRadosStore* const store,
   int init_error = 0;
   bool should_log = false;
   RGWRESTMgr *mgr;
+  // #ifdef WITH_JAEGER
+  // RGWHandler_REST *handler = rest->get_handler(store, s,
+  //                                              auth_registry,
+  //                                              frontend_prefix,
+  //                                              client_io, &mgr, &init_error,tracer,parentSpan);
+  // #else
   RGWHandler_REST *handler = rest->get_handler(store, s,
                                                auth_registry,
                                                frontend_prefix,
                                                client_io, &mgr, &init_error);
+  // #endif
   rgw::dmclock::SchedulerCompleter c;
   if (init_error != 0) {
     abort_early(s, nullptr, init_error, nullptr);

@@ -1065,6 +1065,42 @@ int RGWPutObj_ObjStore::get_data(bufferlist& bl)
   return len;
 }
 
+int RGWPutObj_ObjStore::get_data(bufferlist& bl,JTracer& tracer,const Span& parentSpan)
+{
+  Span span=tracer.childSpan("rgw_rest.cc RGWPutObj_ObjStore::get_data",parentSpan);
+  size_t cl;
+  uint64_t chunk_size = s->cct->_conf->rgw_max_chunk_size;
+  if (s->length) {
+    cl = atoll(s->length) - ofs;
+    if (cl > chunk_size)
+      cl = chunk_size;
+  } else {
+    cl = chunk_size;
+  }
+
+  int len = 0;
+  {
+    ACCOUNTING_IO(s)->set_account(true);
+    bufferptr bp(cl);
+
+    const auto read_len  = recv_body(s, bp.c_str(), cl);
+    if (read_len < 0) {
+      return read_len;
+    }
+
+    len = read_len;
+    bl.append(bp, 0, len);
+
+    ACCOUNTING_IO(s)->set_account(false);
+  }
+
+  if ((uint64_t)ofs + len > s->cct->_conf->rgw_max_put_size) {
+    return -ERR_TOO_LARGE;
+  }
+
+  return len;
+}
+
 
 /*
  * parses params in the format: 'first; param1=foo; param2=bar'

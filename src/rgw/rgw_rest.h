@@ -10,6 +10,7 @@
 #include "common/sstring.hh"
 #include "common/ceph_json.h"
 #include "include/ceph_assert.h" /* needed because of common/ceph_json.h */
+#include "include/tracer.h"
 #include "rgw_op.h"
 #include "rgw_formats.h"
 #include "rgw_client_io.h"
@@ -263,6 +264,7 @@ public:
   int verify_params() override;
   int get_params() override;
   int get_data(bufferlist& bl) override;
+  int get_data(bufferlist& bl,JTracer&,const Span&) override;
 };
 
 class RGWPostObj_ObjStore : public RGWPostObj

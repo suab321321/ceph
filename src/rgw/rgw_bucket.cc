@@ -163,6 +163,20 @@ int rgw_read_user_buckets(rgw::sal::RGWRadosStore * store,
   return user.list_buckets(marker, end_marker, max, need_stats, buckets);
 }
 
+int rgw_read_user_buckets(rgw::sal::RGWRadosStore * store,
+                          const rgw_user& user_id,
+                          rgw::sal::RGWBucketList& buckets,
+                          const string& marker,
+                          const string& end_marker,
+                          uint64_t max,
+                          JTracer& tracer,const Span& parentSpan,
+                          bool need_stats)
+{
+  Span span=tracer.childSpan("rgw_bucket.cc rgw_read_user_buckets",parentSpan);
+  rgw::sal::RGWRadosUser user(store, user_id);
+  return user.list_buckets(marker, end_marker, max, need_stats, buckets);
+}
+
 int rgw_bucket_parse_bucket_instance(const string& bucket_instance, string *bucket_name, string *bucket_id, int *shard_id)
 {
   auto pos = bucket_instance.rfind(':');

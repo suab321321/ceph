@@ -8,6 +8,8 @@
 #include <memory>
 
 #include "include/types.h"
+#include "include/tracer.h"
+
 #include "rgw_common.h"
 #include "rgw_tools.h"
 #include "rgw_metadata.h"
@@ -223,6 +225,14 @@ extern int rgw_read_user_buckets(rgw::sal::RGWRadosStore *store,
                                  const string& marker,
                                  const string& end_marker,
                                  uint64_t max,
+                                 bool need_stats);
+extern int rgw_read_user_buckets(rgw::sal::RGWRadosStore *store,
+                                 const rgw_user& user_id,
+                                 rgw::sal::RGWBucketList& buckets,
+                                 const string& marker,
+                                 const string& end_marker,
+                                 uint64_t max,
+                                 JTracer&,const Span&,
                                  bool need_stats);
 
 extern int rgw_remove_object(rgw::sal::RGWRadosStore *store, const RGWBucketInfo& bucket_info, const rgw_bucket& bucket, rgw_obj_key& key);
