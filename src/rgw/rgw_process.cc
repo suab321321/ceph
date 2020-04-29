@@ -46,10 +46,6 @@ void RGWProcess::RGWWQ::_dump_queue()
 auto schedule_request(Scheduler *scheduler, req_state *s, RGWOp *op,JTracer& tracer,const Span& parentSpan)
 {
   Span span=tracer.childSpan("rgw_process.cc schedule_request()",parentSpan);
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<" 47.\n";
-  file.close();
   using rgw::dmclock::SchedulerCompleter;
   if (!scheduler)
     return std::make_pair(0,SchedulerCompleter{});
@@ -68,10 +64,6 @@ auto schedule_request(Scheduler *scheduler, req_state *s, RGWOp *op,JTracer& tra
 
 auto schedule_request(Scheduler *scheduler, req_state *s, RGWOp *op)
 {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<" 47.\n";
-  file.close();
   using rgw::dmclock::SchedulerCompleter;
   if (!scheduler)
     return std::make_pair(0,SchedulerCompleter{});
@@ -87,10 +79,6 @@ auto schedule_request(Scheduler *scheduler, req_state *s, RGWOp *op)
 }
 
 bool RGWProcess::RGWWQ::_enqueue(RGWRequest* req) {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<" 66.\n";
-  file.close();
   process->m_req_queue.push_back(req);
   perfcounter->inc(l_rgw_qlen);
   dout(20) << "enqueued request req=" << hex << req << dec << dendl;
@@ -99,10 +87,6 @@ bool RGWProcess::RGWWQ::_enqueue(RGWRequest* req) {
 }
 
 RGWRequest* RGWProcess::RGWWQ::_dequeue() {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<" 78.\n";
-  file.close();
   if (process->m_req_queue.empty())
     return NULL;
   RGWRequest *req = process->m_req_queue.front();
@@ -114,10 +98,6 @@ RGWRequest* RGWProcess::RGWWQ::_dequeue() {
 }
 
 void RGWProcess::RGWWQ::_process(RGWRequest *req, ThreadPool::TPHandle &) {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<" 93.\n";
-  file.close();
   perfcounter->inc(l_rgw_qactive);
   process->handle_request(req);
   process->req_throttle.put(1);
@@ -132,10 +112,6 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
                               const bool skip_retarget)
 {
   Span span=tracer.childSpan("rgw_process.cc rgw_process_authenticated()",parentSpan);
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<" 109.\n";
-  file.close();
   ldpp_dout(op, 2) << "init permissions" << dendl;
   int ret = handler->init_permissions(op,tracer,span);
   if (ret < 0) {
@@ -221,10 +197,6 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
                               req_state * const s,
                               const bool skip_retarget)
 {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<" 109.\n";
-  file.close();
   ldpp_dout(op, 2) << "init permissions" << dendl;
   int ret = handler->init_permissions(op);
   if (ret < 0) {
@@ -317,10 +289,6 @@ int process_request(rgw::sal::RGWRadosStore* const store,
   JTracer tracer;
   tracer.initTracer("Object Uploading in Container","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
   Span parentSpan=tracer.newSpan("process_request");
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<" 202.\n";
-  file.close();
   int ret = client_io->init(g_ceph_context);
 
   dout(1) << "====== starting new request req=" << hex << req << dec

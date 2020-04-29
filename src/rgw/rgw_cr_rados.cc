@@ -89,19 +89,11 @@ void RGWAsyncRadosProcessor::stop() {
 }
 
 void RGWAsyncRadosProcessor::handle_request(RGWAsyncRadosRequest *req) {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<"rgw_cr_rados.cc 92.\n";
-  file.close();
   req->send_request();
   req->put();
 }
 
 void RGWAsyncRadosProcessor::queue(RGWAsyncRadosRequest *req) {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<"rgw_process.cc 102.\n";
-  file.close();
   req_throttle.get(1);
   req_wq.queue(req);
 }
@@ -131,10 +123,6 @@ RGWAsyncGetSystemObj::RGWAsyncGetSystemObj(RGWCoroutine *caller, RGWAioCompletio
 
 int RGWSimpleRadosReadAttrsCR::send_request()
 {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<"rgw_process.cc 135.\n";
-  file.close();
   req = new RGWAsyncGetSystemObj(this, stack->create_completion_notifier(),
 			         svc, nullptr, obj, true, raw_attrs);
   async_rados->queue(req);
@@ -143,10 +131,6 @@ int RGWSimpleRadosReadAttrsCR::send_request()
 
 int RGWSimpleRadosReadAttrsCR::request_complete()
 {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/reqFlow.txt",std::ios::app|std::ios::out);
-  file<<"rgw_process.cc 147.\n";
-  file.close();
   if (pattrs) {
     *pattrs = std::move(req->attrs);
   }

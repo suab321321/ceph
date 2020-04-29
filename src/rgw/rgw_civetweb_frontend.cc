@@ -49,20 +49,12 @@ RGWCivetWebFrontend::RGWCivetWebFrontend(RGWProcessEnv& env,
 
 static int civetweb_callback(struct mg_connection* conn)
 {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/suab321.txt",std::ios::app|std::ios::out);
-  file<<"rgw_civetweb_frontend 51.cc.\n";
-  file.close();
   const struct mg_request_info* const req_info = mg_get_request_info(conn);
   return static_cast<RGWCivetWebFrontend *>(req_info->user_data)->process(conn);
 }
 
 int RGWCivetWebFrontend::process(struct mg_connection*  const conn)
 {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/suab321.txt",std::ios::app|std::ios::out);
-  file<<"rgw_civetweb_frontend 63.cc.\n";
-  file.close();
   /* Hold a read lock over access to env.store for reconfiguration. */
   std::shared_lock lock{env.mutex};
 
@@ -95,10 +87,6 @@ int RGWCivetWebFrontend::process(struct mg_connection*  const conn)
 
 int RGWCivetWebFrontend::run()
 {
-  ofstream file;
-  file.open("/home/abhinav/Desktop/suab321.txt",std::ios::app|std::ios::out);
-  file<<"rgw_civetweb_frontend 99.cc.\n";
-  file.close();
   auto& conf_map = conf->get_config_map();
 
   set_conf_default(conf_map, "num_threads",

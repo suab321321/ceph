@@ -715,9 +715,6 @@ extern "C" {
 
 int radosgw_main(int argc, const char** argv)
 {
-  //loading the yaml configuration file for rgw
-  // jTracer tracer;
-  // tracer.loadYamlConfigFile("tracerConfiguration.yaml");
   return radosgw_Main(argc, argv);
 }
 
