@@ -364,8 +364,11 @@ public:
   }
 
   int verify_permission() override;
+  int verify_permission(JTracer&,const Span&) override;
   void pre_exec() override;
+  void pre_exec(JTracer&,const Span&) override;
   void execute() override;
+  void execute(JTracer&,const Span&) override;
   int parse_range();
   int read_user_manifest_part(
     rgw_bucket& bucket,
@@ -879,7 +882,9 @@ public:
 		    allow_unordered(false), shard_id(-1) {}
   ~RGWListBucket() { delete bucket; }
   int verify_permission() override;
+  int verify_permission(JTracer&,const Span&) override;
   void pre_exec() override;
+  void pre_exec(JTracer&,const Span&) override;
   void execute() override;
   void execute(JTracer&,const Span&) override;
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {

@@ -354,7 +354,7 @@ int process_request(rgw::sal::RGWRadosStore* const store,
   #ifdef WITH_JAEGER
     std::tie(ret,c) = schedule_request(scheduler, s, op,tracer,parentSpan);
   #else
-    std::tie(ret,c) = schedule_request(scheduler, s, op,tracer,parentSpan);
+    std::tie(ret,c) = schedule_request(scheduler, s, op);
   #endif
   if (ret < 0) {
     if (ret == -EAGAIN) {

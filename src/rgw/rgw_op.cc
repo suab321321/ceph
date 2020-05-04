@@ -1213,6 +1213,48 @@ int RGWGetObj::verify_permission()
   return 0;
 }
 
+int RGWGetObj::verify_permission(JTracer& tracer,const Span& parentSpan)
+{
+  obj = rgw_obj(s->bucket, s->object);
+  store->getRados()->set_atomic(s->obj_ctx, obj);
+  if (get_data) {
+    store->getRados()->set_prefetch_data(s->obj_ctx, obj);
+  }
+
+  if (torrent.get_flag()) {
+    if (obj.key.instance.empty()) {
+      action = rgw::IAM::s3GetObjectTorrent;
+    } else {
+      action = rgw::IAM::s3GetObjectVersionTorrent;
+    }
+  } else {
+    if (obj.key.instance.empty()) {
+      action = rgw::IAM::s3GetObject;
+    } else {
+      action = rgw::IAM::s3GetObjectVersion;
+    }
+    if (s->iam_policy && s->iam_policy->has_partial_conditional(S3_EXISTING_OBJTAG))
+      rgw_iam_add_existing_objtags(store, s, obj, action);
+    if (! s->iam_user_policies.empty()) {
+      for (auto& user_policy : s->iam_user_policies) {
+        if (user_policy.has_partial_conditional(S3_EXISTING_OBJTAG))
+          rgw_iam_add_existing_objtags(store, s, obj, action);
+      }
+    }
+  }
+
+  if (!verify_object_permission(this, s, action)) {
+    return -EACCES;
+  }
+
+  if (s->bucket_info.obj_lock_enabled()) {
+    get_retention = verify_object_permission(this, s, rgw::IAM::s3GetObjectRetention);
+    get_legal_hold = verify_object_permission(this, s, rgw::IAM::s3GetObjectLegalHold);
+  }
+
+  return 0;
+}
+
 // cache the objects tags into the requests
 // use inside try/catch as "decode()" may throw
 void populate_tags_in_request(req_state* s, const std::map<std::string, bufferlist>& attrs) {
@@ -2454,6 +2496,11 @@ void RGWGetObj::pre_exec()
   rgw_bucket_object_pre_exec(s);
 }
 
+void RGWGetObj::pre_exec(JTracer& tracer,const Span& parentSpan)
+{
+  rgw_bucket_object_pre_exec(s);
+}
+
 static bool object_is_expired(map<string, bufferlist>& attrs) {
   map<string, bufferlist>::iterator iter = attrs.find(RGW_ATTR_DELETE_AT);
   if (iter != attrs.end()) {
@@ -2490,6 +2537,181 @@ static inline void rgw_cond_decode_objtags(
 }
 
 void RGWGetObj::execute()
+{
+  bufferlist bl;
+  gc_invalidate_time = ceph_clock_now();
+  gc_invalidate_time += (s->cct->_conf->rgw_gc_obj_min_wait / 2);
+
+  bool need_decompress;
+  int64_t ofs_x, end_x;
+
+  RGWGetObj_CB cb(this);
+  RGWGetObj_Filter* filter = (RGWGetObj_Filter *)&cb;
+  boost::optional<RGWGetObj_Decompress> decompress;
+  std::unique_ptr<RGWGetObj_Filter> decrypt;
+  map<string, bufferlist>::iterator attr_iter;
+
+  perfcounter->inc(l_rgw_get);
+
+  RGWRados::Object op_target(store->getRados(), s->bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), obj);
+  RGWRados::Object::Read read_op(&op_target);
+
+  op_ret = get_params();
+  if (op_ret < 0)
+    goto done_err;
+
+  op_ret = init_common();
+  if (op_ret < 0)
+    goto done_err;
+
+  read_op.conds.mod_ptr = mod_ptr;
+  read_op.conds.unmod_ptr = unmod_ptr;
+  read_op.conds.high_precision_time = s->system_request; /* system request need to use high precision time */
+  read_op.conds.mod_zone_id = mod_zone_id;
+  read_op.conds.mod_pg_ver = mod_pg_ver;
+  read_op.conds.if_match = if_match;
+  read_op.conds.if_nomatch = if_nomatch;
+  read_op.params.attrs = &attrs;
+  read_op.params.lastmod = &lastmod;
+  read_op.params.obj_size = &s->obj_size;
+
+  op_ret = read_op.prepare(s->yield);
+  if (op_ret < 0)
+    goto done_err;
+  version_id = read_op.state.obj.key.instance;
+
+  /* STAT ops don't need data, and do no i/o */
+  if (get_type() == RGW_OP_STAT_OBJ) {
+    return;
+  }
+
+  /* start gettorrent */
+  if (torrent.get_flag())
+  {
+    attr_iter = attrs.find(RGW_ATTR_CRYPT_MODE);
+    if (attr_iter != attrs.end() && attr_iter->second.to_str() == "SSE-C-AES256") {
+      ldpp_dout(this, 0) << "ERROR: torrents are not supported for objects "
+          "encrypted with SSE-C" << dendl;
+      op_ret = -EINVAL;
+      goto done_err;
+    }
+    torrent.init(s, store);
+    op_ret = torrent.get_torrent_file(read_op, total_len, bl, obj);
+    if (op_ret < 0)
+    {
+      ldpp_dout(this, 0) << "ERROR: failed to get_torrent_file ret= " << op_ret
+                       << dendl;
+      goto done_err;
+    }
+    op_ret = send_response_data(bl, 0, total_len);
+    if (op_ret < 0)
+    {
+      ldpp_dout(this, 0) << "ERROR: failed to send_response_data ret= " << op_ret << dendl;
+      goto done_err;
+    }
+    return;
+  }
+  /* end gettorrent */
+
+  op_ret = rgw_compression_info_from_attrset(attrs, need_decompress, cs_info);
+  if (op_ret < 0) {
+    ldpp_dout(s, 0) << "ERROR: failed to decode compression info, cannot decompress" << dendl;
+    goto done_err;
+  }
+  if (need_decompress) {
+      s->obj_size = cs_info.orig_size;
+      decompress.emplace(s->cct, &cs_info, partial_content, filter);
+      filter = &*decompress;
+  }
+
+  attr_iter = attrs.find(RGW_ATTR_USER_MANIFEST);
+  if (attr_iter != attrs.end() && !skip_manifest) {
+    op_ret = handle_user_manifest(attr_iter->second.c_str());
+    if (op_ret < 0) {
+      ldpp_dout(this, 0) << "ERROR: failed to handle user manifest ret="
+		       << op_ret << dendl;
+      goto done_err;
+    }
+    return;
+  }
+
+  attr_iter = attrs.find(RGW_ATTR_SLO_MANIFEST);
+  if (attr_iter != attrs.end() && !skip_manifest) {
+    is_slo = true;
+    op_ret = handle_slo_manifest(attr_iter->second);
+    if (op_ret < 0) {
+      ldpp_dout(this, 0) << "ERROR: failed to handle slo manifest ret=" << op_ret
+		       << dendl;
+      goto done_err;
+    }
+    return;
+  }
+
+  // for range requests with obj size 0
+  if (range_str && !(s->obj_size)) {
+    total_len = 0;
+    op_ret = -ERANGE;
+    goto done_err;
+  }
+
+  op_ret = read_op.range_to_ofs(s->obj_size, ofs, end);
+  if (op_ret < 0)
+    goto done_err;
+  total_len = (ofs <= end ? end + 1 - ofs : 0);
+
+  /* Check whether the object has expired. Swift API documentation
+   * stands that we should return 404 Not Found in such case. */
+  if (need_object_expiration() && object_is_expired(attrs)) {
+    op_ret = -ENOENT;
+    goto done_err;
+  }
+
+  /* Decode S3 objtags, if any */
+  rgw_cond_decode_objtags(s, attrs);
+
+  start = ofs;
+
+  attr_iter = attrs.find(RGW_ATTR_MANIFEST);
+  op_ret = this->get_decrypt_filter(&decrypt, filter,
+                                    attr_iter != attrs.end() ? &(attr_iter->second) : nullptr);
+  if (decrypt != nullptr) {
+    filter = decrypt.get();
+  }
+  if (op_ret < 0) {
+    goto done_err;
+  }
+
+  if (!get_data || ofs > end) {
+    send_response_data(bl, 0, 0);
+    return;
+  }
+
+  perfcounter->inc(l_rgw_get_b, end - ofs);
+
+  ofs_x = ofs;
+  end_x = end;
+  filter->fixup_range(ofs_x, end_x);
+  op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield);
+
+  if (op_ret >= 0)
+    op_ret = filter->flush();
+
+  perfcounter->tinc(l_rgw_get_lat, s->time_elapsed());
+  if (op_ret < 0) {
+    goto done_err;
+  }
+
+  op_ret = send_response_data(bl, 0, 0);
+  if (op_ret < 0) {
+    goto done_err;
+  }
+  return;
+
+done_err:
+  send_response_data_error();
+}
+
+void RGWGetObj::execute(JTracer& tracer,const Span& parentSpan)
 {
   bufferlist bl;
   gc_invalidate_time = ceph_clock_now();
@@ -3269,6 +3491,31 @@ int RGWListBucket::verify_permission()
   return 0;
 }
 
+int RGWListBucket::verify_permission(JTracer& tracer,const Span& parentSpan)
+{
+  op_ret = get_params();
+  if (op_ret < 0) {
+    return op_ret;
+  }
+  if (!prefix.empty())
+    s->env.emplace("s3:prefix", prefix);
+
+  if (!delimiter.empty())
+    s->env.emplace("s3:delimiter", delimiter);
+
+  s->env.emplace("s3:max-keys", std::to_string(max));
+
+  if (!verify_bucket_permission(this,
+                                s,
+				list_versions ?
+				rgw::IAM::s3ListBucketVersions :
+				rgw::IAM::s3ListBucket)) {
+    return -EACCES;
+  }
+
+  return 0;
+}
+
 int RGWListBucket::parse_max_keys()
 {
   // Bound max value of max-keys to configured value for security
@@ -3281,6 +3528,11 @@ int RGWListBucket::parse_max_keys()
 }
 
 void RGWListBucket::pre_exec()
+{
+  rgw_bucket_object_pre_exec(s);
+}
+
+void RGWListBucket::pre_exec(JTracer& tracer,const Span& parentSpan)
 {
   rgw_bucket_object_pre_exec(s);
 }
@@ -4907,7 +5159,8 @@ void RGWPutObj::execute(JTracer& tracer,const Span& parentSpan)
     if (fst > lst)
       break;
     if (copy_source.empty()) {
-      len = get_data(data,tracer,span);
+      // len = get_data(data,tracer,span);
+      len=get_data(data);
     } else {
       uint64_t cur_lst = min(fst + s->cct->_conf->rgw_max_chunk_size - 1, lst);
       op_ret = get_data(fst, cur_lst, data);
