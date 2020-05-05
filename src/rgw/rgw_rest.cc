@@ -1065,9 +1065,9 @@ int RGWPutObj_ObjStore::get_data(bufferlist& bl)
   return len;
 }
 
-int RGWPutObj_ObjStore::get_data(bufferlist& bl,JTracer& tracer,const Span& parentSpan)
+int RGWPutObj_ObjStore::get_data(bufferlist& bl,Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_rest.cc RGWPutObj_ObjStore::get_data",parentSpan);
+  Span span=tracer.child_span("rgw_rest.cc RGWPutObj_ObjStore::get_data",parent_span);
   size_t cl;
   uint64_t chunk_size = s->cct->_conf->rgw_max_chunk_size;
   if (s->length) {
@@ -1878,9 +1878,9 @@ static http_op op_from_method(const char *method)
   return OP_UNKNOWN;
 }
 
-int RGWHandler_REST::init_permissions(RGWOp* op,JTracer& tracer,const Span& parentSpan)
+int RGWHandler_REST::init_permissions(RGWOp* op,Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_rest.cc  RGWHandler_REST::init_permissions()",parentSpan);
+  Span span=tracer.child_span("rgw_rest.cc  RGWHandler_REST::init_permissions()",parent_span);
   if (op->get_type() == RGW_OP_CREATE_BUCKET) {
     // We don't need user policies in case of STS token returned by AssumeRole, hence the check for user type
     if (! s->user->get_id().empty() && s->auth.identity->get_identity_type() != TYPE_ROLE) {
@@ -1935,9 +1935,9 @@ int RGWHandler_REST::init_permissions(RGWOp* op)
   return do_init_permissions();
 }
 
-int RGWHandler_REST::read_permissions(RGWOp* op_obj,JTracer& tracer,const Span& parentSpan)
+int RGWHandler_REST::read_permissions(RGWOp* op_obj,Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_rest.cc RGWHandler_REST::read_permissions()",parentSpan);
+  Span span=tracer.child_span("rgw_rest.cc RGWHandler_REST::read_permissions()",parent_span);
   bool only_bucket = false;
 
   switch (s->op) {
@@ -2384,9 +2384,9 @@ int RGWREST::preprocess(struct req_state *s, rgw::io::BasicClient* cio)
 
 
 
-int RGWREST::preprocess(struct req_state *s, rgw::io::BasicClient* cio,JTracer& tracer,const Span& parentSpan)
+int RGWREST::preprocess(struct req_state *s, rgw::io::BasicClient* cio,Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_rest.cc RGWREST::preprocess()",parentSpan);
+  Span span=tracer.child_span("rgw_rest.cc RGWREST::preprocess()",parent_span);
   req_info& info = s->info;
 
   /* save the request uri used to hash on the client side. request_uri may suffer
@@ -2654,9 +2654,9 @@ RGWHandler_REST* RGWREST::get_handler(
   RGWRestfulIO* const rio,
   RGWRESTMgr** const pmgr,
   int* const init_error,
-  JTracer& tracer,const Span& parentSpan
+  Jager_Tracer& tracer,const Span& parent_span
 ) {
-  Span span=tracer.childSpan("rgw_resr.cc RGWHandler_REST* RGWREST::get_handler()",parentSpan);
+  Span span=tracer.child_span("rgw_resr.cc RGWHandler_REST* RGWREST::get_handler()",parent_span);
   *init_error = preprocess(s, rio,tracer,span);
   if (*init_error < 0) {
     return nullptr;

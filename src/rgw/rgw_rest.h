@@ -264,7 +264,7 @@ public:
   int verify_params() override;
   int get_params() override;
   int get_data(bufferlist& bl) override;
-  int get_data(bufferlist& bl,JTracer&,const Span&) override;
+  int get_data(bufferlist& bl,Jager_Tracer&,const Span&) override;
 };
 
 class RGWPostObj_ObjStore : public RGWPostObj
@@ -587,9 +587,9 @@ public:
   static int reallocate_formatter(struct req_state *s, int type);
 
   int init_permissions(RGWOp* op) override;
-	int init_permissions(RGWOp* op,JTracer&,const Span&) override;
+	int init_permissions(RGWOp* op,Jager_Tracer&,const Span&) override;
   int read_permissions(RGWOp* op) override;
-	int read_permissions(RGWOp* op,JTracer&,const Span&) override;
+	int read_permissions(RGWOp* op,Jager_Tracer&,const Span&) override;
 
   virtual RGWOp* get_op(void);
   virtual void put_op(RGWOp* op);
@@ -672,7 +672,7 @@ class RGWREST {
   RGWRESTMgr mgr;
 
   static int preprocess(struct req_state *s, rgw::io::BasicClient* rio);
-	static int preprocess(struct req_state *s, rgw::io::BasicClient* rio,JTracer&,const Span&);
+	static int preprocess(struct req_state *s, rgw::io::BasicClient* rio,Jager_Tracer&,const Span&);
 public:
   RGWREST() {}
 	RGWHandler_REST *get_handler(rgw::sal::RGWRadosStore *store,
@@ -681,7 +681,7 @@ public:
                                const std::string& frontend_prefix,
                                RGWRestfulIO *rio,
                                RGWRESTMgr **pmgr,
-                               int *init_error,JTracer&,const Span&);
+                               int *init_error,Jager_Tracer&,const Span&);
   RGWHandler_REST *get_handler(rgw::sal::RGWRadosStore *store,
                                struct req_state *s,
                                const rgw::auth::StrategyRegistry& auth_registry,

@@ -26,7 +26,7 @@ namespace rgw {
 namespace curl {
 using fe_map_t = std::multimap <std::string, RGWFrontendConfig *>;
 
-// void setup_curl(boost::optional<const fe_map_t&> m,JTracer&,const Span&);
+// void setup_curl(boost::optional<const fe_map_t&> m,Jager_Tracer&,const Span&);
 void setup_curl(boost::optional<const fe_map_t&> m);
 void cleanup_curl();
 }

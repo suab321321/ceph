@@ -46,7 +46,7 @@ global_init(
   uint32_t module_type,
   code_environment_t code_env,
   int flags,
-  JTracer&,
+  Jager_Tracer&,
   const Span&,
   const char *data_dir_option = 0,
   bool run_pre_init = true);
@@ -65,7 +65,7 @@ void global_pre_init(const std::map<std::string,std::string> *defaults,
 void global_pre_init(const std::map<std::string,std::string> *defaults,
         std::vector < const char* >& args,
         uint32_t module_type, code_environment_t code_env,
-        int flags,JTracer&,const Span&);
+        int flags,Jager_Tracer&,const Span&);
 
 /*
  * perform all of the steps that global_init_daemonize performs just prior

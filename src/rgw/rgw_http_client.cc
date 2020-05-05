@@ -1233,9 +1233,9 @@ void *RGWHTTPManager::reqs_thread_entry()
 }
 
 #ifdef WITH_JAEGER
-void rgw_http_client_init(CephContext *cct,JTracer& tracer,const Span& parentSpan)
+void rgw_http_client_init(CephContext *cct,Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_http_client.cc rgw_http_client_init",parentSpan);
+  Span span=tracer.child_span("rgw_http_client.cc rgw_http_client_init",parent_span);
   curl_global_init(CURL_GLOBAL_ALL);
   rgw_http_manager = new RGWHTTPManager(cct);
   rgw_http_manager->start();

@@ -624,9 +624,9 @@ void SignalHandler::unregister_handler(int signum, signal_handler_t handler)
 
 // -------
 #ifdef WITH_JAEGER
-void init_async_signal_handler(JTracer& tracer,const Span& parentSpan)
+void init_async_signal_handler(Jager_Tracer& tracer,const Span& parent_span)
   {
-    Span span=tracer.childSpan("signal_handler.cc init_async_signal_handler()",parentSpan);
+    Span span=tracer.child_span("signal_handler.cc init_async_signal_handler()",parent_span);
     ceph_assert(!g_signal_handler);
     g_signal_handler = new SignalHandler;
   }
@@ -650,9 +650,9 @@ void queue_async_signal(int signum)
   g_signal_handler->queue_signal(signum);
 }
 #ifdef WITH_JAEGER
-void register_async_signal_handler(int signum, signal_handler_t handler,JTracer& tracer,const Span& parentSpan)
+void register_async_signal_handler(int signum, signal_handler_t handler,Jager_Tracer& tracer,const Span& parent_span)
   {
-    Span span=tracer.childSpan("signal_handler.cc register_async_signal_handler()",parentSpan);
+    Span span=tracer.child_span("signal_handler.cc register_async_signal_handler()",parent_span);
     ceph_assert(g_signal_handler);
     g_signal_handler->register_handler(signum, handler, false);
   }

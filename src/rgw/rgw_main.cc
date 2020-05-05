@@ -189,9 +189,9 @@ int radosgw_Main(int argc, const char **argv)
          << std::endl;
     return ENOSYS;
   }
-  JTracer tracer;
-  tracer.initTracer("rgw_main_started","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
-  Span parentSpan=tracer.newSpan("rgw main started");
+  Jager_Tracer tracer;
+  tracer.init_tracer("rgw_main_started","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+  Span parent_span=tracer.new_span("rgw main started");
   /* alternative default for module */
   map<string,string> defaults = {
     { "debug_rgw", "1/5" },
@@ -214,7 +214,7 @@ int radosgw_Main(int argc, const char **argv)
   #ifdef WITH_JAEGER
   global_pre_init(
     &defaults, args, CEPH_ENTITY_TYPE_CLIENT, CODE_ENVIRONMENT_DAEMON,
-    flags,tracer,parentSpan);
+    flags,tracer,parent_span);
   #else
     global_pre_init(
       &defaults, args, CEPH_ENTITY_TYPE_CLIENT, CODE_ENVIRONMENT_DAEMON,
@@ -227,7 +227,7 @@ int radosgw_Main(int argc, const char **argv)
   // claim the reference and release it after subsequent destructors have fired
   #ifdef WITH_JAEGER
   auto cct = global_init(&defaults, args, CEPH_ENTITY_TYPE_CLIENT,
-  			 CODE_ENVIRONMENT_DAEMON,flags, tracer, parentSpan, "rgw_data", false);
+  			 CODE_ENVIRONMENT_DAEMON,flags, tracer, parent_span, "rgw_data", false);
   #else
   auto cct = global_init(&defaults, args, CEPH_ENTITY_TYPE_CLIENT,
        CODE_ENVIRONMENT_DAEMON,
@@ -315,15 +315,15 @@ int radosgw_Main(int argc, const char **argv)
   if (!g_conf()->rgw_region.empty() && g_conf()->rgw_zonegroup.empty()) {
     g_conf().set_val_or_die("rgw_zonegroup", g_conf()->rgw_region.c_str());
   }
-  tracer.finishTracer();
+  tracer.finish_tracer();
   if (g_conf()->daemonize) {
     global_init_daemonize(g_ceph_context);
   }
 
-  JTracer tracerSec;
+  Jager_Tracer tracerSec;
 
-  tracerSec.initTracer("rgw_initiation_2","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
-  Span parentSpan2=tracerSec.newSpan("rgw_main.cc after global_init_daemonize");
+  tracerSec.init_tracer("rgw_initiation_2","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+  Span parent_span2=tracerSec.new_span("rgw_main.cc after global_init_daemonize");
 
   ceph::mutex mutex = ceph::make_mutex("main");
   SafeTimer init_timer(g_ceph_context, mutex);
@@ -334,8 +334,8 @@ int radosgw_Main(int argc, const char **argv)
 
   common_init_finish(g_ceph_context);
   #ifdef WITH_JAEGER
-    init_async_signal_handler(tracerSec,parentSpan2);
-    register_async_signal_handler(SIGHUP, sighup_handler,tracerSec,parentSpan2);
+    init_async_signal_handler(tracerSec,parent_span2);
+    register_async_signal_handler(SIGHUP, sighup_handler,tracerSec,parent_span2);
   #else
     init_async_signal_handler();
     register_async_signal_handler(SIGHUP, sighup_handler);
@@ -352,13 +352,13 @@ int radosgw_Main(int argc, const char **argv)
   #ifdef WITH_JAEGER
     rgw_init_resolver();
     rgw::curl::setup_curl(fe_map);
-    rgw_http_client_init(g_ceph_context,tracerSec,parentSpan2);
+    rgw_http_client_init(g_ceph_context,tracerSec,parent_span2);
   #else
     rgw_init_resolver();
     rgw::curl::setup_curl(fe_map);
     rgw_http_client_init(g_ceph_context);
   #endif
-  tracerSec.finishTracer();
+  tracerSec.finish_tracer();
 
 #if defined(WITH_RADOSGW_FCGI_FRONTEND)
   FCGX_Init();

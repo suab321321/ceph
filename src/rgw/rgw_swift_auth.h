@@ -290,7 +290,7 @@ public:
 
   int verify_permission() override { return 0; }
   void execute() override;
-  void execute(JTracer&,const Span&) override;
+  void execute(Jager_Tracer&,const Span&) override;
   const char* name() const override { return "swift_auth_get"; }
   dmc::client_id dmclock_client() override { return dmc::client_id::auth; }
 };
@@ -302,7 +302,7 @@ public:
   RGWOp *op_get() override;
 
   int init(rgw::sal::RGWRadosStore *store, struct req_state *state, rgw::io::BasicClient *cio) override;
-  int init(rgw::sal::RGWRadosStore *store, struct req_state *state, rgw::io::BasicClient *cio,JTracer&,const Span&) override;
+  int init(rgw::sal::RGWRadosStore *store, struct req_state *state, rgw::io::BasicClient *cio,Jager_Tracer&,const Span&) override;
   int authorize(const DoutPrefixProvider *dpp) override;
   int postauth_init() override { return 0; }
   int read_permissions(RGWOp *op) override { return 0; }

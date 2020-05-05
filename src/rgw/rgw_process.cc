@@ -43,9 +43,9 @@ void RGWProcess::RGWWQ::_dump_queue()
 } /* RGWProcess::RGWWQ::_dump_queue */
 
 
-auto schedule_request(Scheduler *scheduler, req_state *s, RGWOp *op,JTracer& tracer,const Span& parentSpan)
+auto schedule_request(Scheduler *scheduler, req_state *s, RGWOp *op,Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_process.cc schedule_request()",parentSpan);
+  Span span=tracer.child_span("rgw_process.cc schedule_request()",parent_span);
   using rgw::dmclock::SchedulerCompleter;
   if (!scheduler)
     return std::make_pair(0,SchedulerCompleter{});
@@ -108,10 +108,10 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
                               RGWOp *& op,
                               RGWRequest * const req,
                               req_state * const s,
-                              JTracer& tracer,const Span& parentSpan,
+                              Jager_Tracer& tracer,const Span& parent_span,
                               const bool skip_retarget)
 {
-  Span span=tracer.childSpan("rgw_process.cc rgw_process_authenticated()",parentSpan);
+  Span span=tracer.child_span("rgw_process.cc rgw_process_authenticated()",parent_span);
   ldpp_dout(op, 2) << "init permissions" << dendl;
   int ret = handler->init_permissions(op,tracer,span);
   if (ret < 0) {
@@ -286,9 +286,9 @@ int process_request(rgw::sal::RGWRadosStore* const store,
 		    rgw::dmclock::Scheduler *scheduler,
                     int* http_ret)
 {
-  JTracer tracer;
-  tracer.initTracer("Object Uploading in Container","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
-  Span parentSpan=tracer.newSpan("process_request");
+  Jager_Tracer tracer;
+  tracer.init_tracer("Object Uploading in Container","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+  Span parent_span=tracer.new_span("process_request");
   int ret = client_io->init(g_ceph_context);
 
   dout(1) << "====== starting new request req=" << hex << req << dec
@@ -329,7 +329,7 @@ int process_request(rgw::sal::RGWRadosStore* const store,
   // RGWHandler_REST *handler = rest->get_handler(store, s,
   //                                              auth_registry,
   //                                              frontend_prefix,
-  //                                              client_io, &mgr, &init_error,tracer,parentSpan);
+  //                                              client_io, &mgr, &init_error,tracer,parent_span);
   // #else
   RGWHandler_REST *handler = rest->get_handler(store, s,
                                                auth_registry,
@@ -352,7 +352,7 @@ int process_request(rgw::sal::RGWRadosStore* const store,
     goto done;
   }
   #ifdef WITH_JAEGER
-    std::tie(ret,c) = schedule_request(scheduler, s, op,tracer,parentSpan);
+    std::tie(ret,c) = schedule_request(scheduler, s, op,tracer,parent_span);
   #else
     std::tie(ret,c) = schedule_request(scheduler, s, op);
   #endif
@@ -398,7 +398,7 @@ int process_request(rgw::sal::RGWRadosStore* const store,
       goto done;
     }
     #ifdef WITH_JAEGER
-      ret = rgw_process_authenticated(handler, op, req, s,tracer,parentSpan);
+      ret = rgw_process_authenticated(handler, op, req, s,tracer,parent_span);
     #else
       ret = rgw_process_authenticated(handler, op, req, s);
     #endif

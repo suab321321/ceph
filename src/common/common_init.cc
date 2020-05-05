@@ -28,9 +28,9 @@
 #ifndef WITH_SEASTAR
 #ifdef WITH_JAEGER
 	CephContext *common_preinit(const CephInitParameters &iparams,
-				    enum code_environment_t code_env, int flags,JTracer& tracer,const Span& parentSpan)
+				    enum code_environment_t code_env, int flags,Jager_Tracer& tracer,const Span& parent_span)
 	{
-		Span span=tracer.childSpan("common_init.cc common_preinit()",parentSpan);
+		Span span=tracer.child_span("common_init.cc common_preinit()",parent_span);
 	  // set code environment
 	  ANNOTATE_BENIGN_RACE_SIZED(&g_code_env, sizeof(g_code_env), "g_code_env");
 	  g_code_env = code_env;

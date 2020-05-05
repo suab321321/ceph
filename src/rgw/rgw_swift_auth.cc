@@ -620,9 +620,9 @@ SignedTokenEngine::authenticate(const DoutPrefixProvider* dpp,
 } /* namespace rgw */
 
 
-void RGW_SWIFT_Auth_Get::execute(JTracer& tracer,const Span& parentSpan)
+void RGW_SWIFT_Auth_Get::execute(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_swift_auth.cc RGW_SWIFT_Auth_Get::execute()",parentSpan);
+  Span span=tracer.child_span("rgw_swift_auth.cc RGW_SWIFT_Auth_Get::execute()",parent_span);
   int ret = -EPERM;
 
   const char *key = s->info.env->get("HTTP_X_AUTH_KEY");
@@ -866,9 +866,9 @@ done:
 
 
 int RGWHandler_SWIFT_Auth::init(rgw::sal::RGWRadosStore *store, struct req_state *state,
-				rgw::io::BasicClient *cio,JTracer& tracer,const Span& parentSpan)
+				rgw::io::BasicClient *cio,Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_swift_auth.cc RGWHandler_SWIFT_Auth::init",parentSpan);
+  Span span=tracer.child_span("rgw_swift_auth.cc RGWHandler_SWIFT_Auth::init",parent_span);
   state->dialect = "swift-auth";
   state->formatter = new JSONFormatter;
   state->format = RGW_FORMAT_JSON;

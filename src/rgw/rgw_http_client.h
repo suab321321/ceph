@@ -17,7 +17,7 @@
 using param_pair_t = pair<string, string>;
 using param_vec_t = vector<param_pair_t>;
 
-void rgw_http_client_init(CephContext *cct,JTracer&,const Span&); 
+void rgw_http_client_init(CephContext *cct,Jager_Tracer&,const Span&); 
 void rgw_http_client_init(CephContext *cct);
 void rgw_http_client_cleanup();
 

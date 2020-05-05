@@ -67,7 +67,7 @@ class CephInitParameters;
 CephContext *common_preinit(const CephInitParameters &iparams,
 			    enum code_environment_t code_env, int flags);
 CephContext *common_preinit(const CephInitParameters &iparams,
-          enum code_environment_t code_env, int flags,JTracer&,const Span&);
+          enum code_environment_t code_env, int flags,Jager_Tracer&,const Span&);
 #endif // #ifndef WITH_SEASTAR
 
 /* Print out some parse error. */

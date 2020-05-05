@@ -85,9 +85,9 @@ void global_pre_init(
   const std::map<std::string,std::string> *defaults,
   std::vector < const char* >& args,
   uint32_t module_type, code_environment_t code_env,
-  int flags,JTracer& tracer,const Span& parentSpan)
+  int flags,Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("global_init.cc global_pre_init",parentSpan);
+  Span span=tracer.child_span("global_init.cc global_pre_init",parent_span);
   std::string conf_file_list;
   std::string cluster = "";
 
@@ -260,10 +260,10 @@ global_init(const std::map<std::string,std::string> *defaults,
 	    std::vector < const char* >& args,
 	    uint32_t module_type, code_environment_t code_env,
 	    int flags,
-      JTracer& tracer,const Span& parentSpan,
+      Jager_Tracer& tracer,const Span& parent_span,
 	    const char *data_dir_option, bool run_pre_init)
 {
-  Span span=tracer.childSpan("global_init.cc global_init()",parentSpan);
+  Span span=tracer.child_span("global_init.cc global_init()",parent_span);
   // Ensure we're not calling the global init functions multiple times.
   static bool first_run = true;
   if (run_pre_init) {

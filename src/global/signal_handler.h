@@ -38,7 +38,7 @@ void install_standard_sighandlers(void);
 
 /// initialize async signal handler framework
 void init_async_signal_handler();
-void init_async_signal_handler(JTracer&,const Span&);
+void init_async_signal_handler(Jager_Tracer&,const Span&);
 
 /// shutdown async signal handler framework
 void shutdown_async_signal_handler();
@@ -48,7 +48,7 @@ void queue_async_signal(int signum);
 
 /// install a safe, async, callback for the given signal
 void register_async_signal_handler(int signum, signal_handler_t handler);
-void register_async_signal_handler(int signum, signal_handler_t handler,JTracer& tracer,const Span& parentSpan);
+void register_async_signal_handler(int signum, signal_handler_t handler,Jager_Tracer& tracer,const Span& parent_span);
 
 void register_async_signal_handler_oneshot(int signum, signal_handler_t handler);
 

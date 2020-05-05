@@ -86,7 +86,7 @@ class RGWHandler {
 protected:
   rgw::sal::RGWRadosStore* store{nullptr};
   struct req_state *s{nullptr};
-	int do_init_permissions(JTracer&,const Span&);
+	int do_init_permissions(Jager_Tracer&,const Span&);
   int do_init_permissions();
   int do_read_permissions(RGWOp* op, bool only_bucket);
 
@@ -96,13 +96,13 @@ public:
 
 	virtual int init(rgw::sal::RGWRadosStore* store,
 									 struct req_state* _s,
-									 rgw::io::BasicClient* cio,JTracer&,const Span&);
+									 rgw::io::BasicClient* cio,Jager_Tracer&,const Span&);
 
   virtual int init(rgw::sal::RGWRadosStore* store,
                    struct req_state* _s,
                    rgw::io::BasicClient* cio);
 
-	virtual int init_permissions(RGWOp*,JTracer&,const Span&) {
+	virtual int init_permissions(RGWOp*,Jager_Tracer&,const Span&) {
 		return 0;
 	}
 
@@ -114,7 +114,7 @@ public:
     *new_op = op;
     return 0;
   }
-	virtual int read_permissions(RGWOp* op,JTracer&,const Span&) = 0;
+	virtual int read_permissions(RGWOp* op,Jager_Tracer&,const Span&) = 0;
   virtual int read_permissions(RGWOp* op) = 0;
   virtual int authorize(const DoutPrefixProvider* dpp) = 0;
   virtual int postauth_init() = 0;
@@ -148,7 +148,7 @@ protected:
   int do_aws4_auth_completion();
 
   virtual int init_quota();
-	virtual int init_quota(JTracer&,const Span&);
+	virtual int init_quota(Jager_Tracer&,const Span&);
 
 public:
   RGWOp()
@@ -163,8 +163,8 @@ public:
 
   int get_ret() const { return op_ret; }
 
-	virtual int init_processing(JTracer& tracer,const Span& parentSpan) {
-		Span span=tracer.childSpan("rgw_op.h RGWOp::init_processing()",parentSpan);
+	virtual int init_processing(Jager_Tracer& tracer,const Span& parent_span) {
+		Span span=tracer.child_span("rgw_op.h RGWOp::init_processing()",parent_span);
     if (dialect_handler->supports_quota()) {
       op_ret = init_quota(tracer,span);
       if (op_ret < 0)
@@ -209,13 +209,13 @@ public:
     return dialect_handler->authorize(this);
   }
   virtual int verify_permission() = 0;
-  virtual int verify_permission(JTracer&,const Span&) {}
+  virtual int verify_permission(Jager_Tracer&,const Span&) {}
   virtual int verify_op_mask();
-	virtual int verify_op_mask(JTracer&,const Span&);
+	virtual int verify_op_mask(Jager_Tracer&,const Span&);
   virtual void pre_exec() {}
-  virtual void pre_exec(JTracer&,const Span&) {}
+  virtual void pre_exec(Jager_Tracer&,const Span&) {}
   virtual void execute() = 0;
-	virtual void execute(JTracer&,const Span&) {}
+	virtual void execute(Jager_Tracer&,const Span&) {}
   virtual void send_response() {}
   virtual void complete() {
     send_response();
@@ -364,11 +364,11 @@ public:
   }
 
   int verify_permission() override;
-  int verify_permission(JTracer&,const Span&) override;
+  int verify_permission(Jager_Tracer&,const Span&) override;
   void pre_exec() override;
-  void pre_exec(JTracer&,const Span&) override;
+  void pre_exec(Jager_Tracer&,const Span&) override;
   void execute() override;
-  void execute(JTracer&,const Span&) override;
+  void execute(Jager_Tracer&,const Span&) override;
   int parse_range();
   int read_user_manifest_part(
     rgw_bucket& bucket,
@@ -783,7 +783,7 @@ public:
   }
 
   int verify_permission() override;
-	void execute(JTracer&,const Span&) override;
+	void execute(Jager_Tracer&,const Span&) override;
   void execute() override;
 
   virtual int get_params() = 0;
@@ -882,11 +882,11 @@ public:
 		    allow_unordered(false), shard_id(-1) {}
   ~RGWListBucket() { delete bucket; }
   int verify_permission() override;
-  int verify_permission(JTracer&,const Span&) override;
+  int verify_permission(Jager_Tracer&,const Span&) override;
   void pre_exec() override;
-  void pre_exec(JTracer&,const Span&) override;
+  void pre_exec(Jager_Tracer&,const Span&) override;
   void execute() override;
-  void execute(JTracer&,const Span&) override;
+  void execute(Jager_Tracer&,const Span&) override;
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
     RGWOp::init(store, s, h);
     bucket = new rgw::sal::RGWRadosBucket(store, *s->user, s->bucket);
@@ -1062,13 +1062,13 @@ public:
   }
 
   int verify_permission() override;
-  int verify_permission(JTracer&,const Span&);
+  int verify_permission(Jager_Tracer&,const Span&);
 
   void pre_exec() override;
-  void pre_exec(JTracer&,const Span&);
+  void pre_exec(Jager_Tracer&,const Span&);
 
   void execute() override;
-  void execute(JTracer&,const Span&);
+  void execute(Jager_Tracer&,const Span&);
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
     RGWOp::init(store, s, h);
@@ -1233,13 +1233,13 @@ public:
   }
 
   int verify_permission() override;
-  int verify_permission(JTracer&,const Span&) override;
+  int verify_permission(Jager_Tracer&,const Span&) override;
 
   void pre_exec() override;
-  void pre_exec(JTracer&,const Span&) override;
+  void pre_exec(Jager_Tracer&,const Span&) override;
 
   void execute() override;
-  void execute(JTracer&,const Span&) override;
+  void execute(Jager_Tracer&,const Span&) override;
 
   /* this is for cases when copying data from other object */
   virtual int get_decrypt_filter(std::unique_ptr<RGWGetObj_Filter>* filter,
@@ -1259,7 +1259,7 @@ public:
 
   virtual int get_params() = 0;
   virtual int get_data(bufferlist& bl) = 0;
-  virtual int get_data(bufferlist& bl,JTracer&,const Span&) {}
+  virtual int get_data(bufferlist& bl,Jager_Tracer&,const Span&) {}
   void send_response() override = 0;
   const char* name() const override { return "put_obj"; }
   RGWOpType get_type() override { return RGW_OP_PUT_OBJ; }
@@ -2000,7 +2000,7 @@ public:
 };
 
 extern int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s);
-extern int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s,JTracer&,const Span&);
+extern int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s,Jager_Tracer&,const Span&);
 extern int rgw_build_object_policies(rgw::sal::RGWRadosStore *store, struct req_state *s,
 				     bool prefetch_data);
 extern void rgw_build_iam_environment(rgw::sal::RGWRadosStore* store,

@@ -188,7 +188,7 @@ extern int rgw_process_authenticated(RGWHandler_REST* handler,
                                       RGWOp*& op,
                                       RGWRequest* req,
                                       req_state* s,
-                                      JTracer&,const Span&,
+                                      Jager_Tracer&,const Span&,
                                       bool skip_retarget = false);
 
 extern int rgw_process_authenticated(RGWHandler_REST* handler,

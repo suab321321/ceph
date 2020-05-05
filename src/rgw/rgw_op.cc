@@ -560,9 +560,9 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
  * Returns: 0 on success, -ERR# otherwise.
  */
 
- int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s,JTracer& tracer,const Span& parentSpan)
+ int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s,Jager_Tracer& tracer,const Span& parent_span)
  {
-   Span span=tracer.childSpan("rgw_op.cc rgw_build_bucket_policies()",parentSpan);
+   Span span=tracer.child_span("rgw_op.cc rgw_build_bucket_policies()",parent_span);
    int ret = 0;
    rgw_obj_key obj;
    auto obj_ctx = store->svc()->sysobj->init_obj_ctx();
@@ -1213,7 +1213,7 @@ int RGWGetObj::verify_permission()
   return 0;
 }
 
-int RGWGetObj::verify_permission(JTracer& tracer,const Span& parentSpan)
+int RGWGetObj::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
 {
   obj = rgw_obj(s->bucket, s->object);
   store->getRados()->set_atomic(s->obj_ctx, obj);
@@ -1276,9 +1276,9 @@ void populate_metadata_in_request(req_state* s, std::map<std::string, bufferlist
   }
 }
 
-int RGWOp::verify_op_mask(JTracer& tracer,const Span& parentSpan)
+int RGWOp::verify_op_mask(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc verifiy_op_mask()",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc verifiy_op_mask()",parent_span);
   uint32_t required_mask = op_mask();
 
   ldpp_dout(this, 20) << "required_mask= " << required_mask
@@ -1666,9 +1666,9 @@ int RGWOp::do_aws4_auth_completion()
   return 0;
 }
 
-int RGWOp::init_quota(JTracer& tracer,const Span& parentSpan)
+int RGWOp::init_quota(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc init_quota()",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc init_quota()",parent_span);
   /* no quota enforcement for system requests */
   if (s->system_request)
     return 0;
@@ -2496,7 +2496,7 @@ void RGWGetObj::pre_exec()
   rgw_bucket_object_pre_exec(s);
 }
 
-void RGWGetObj::pre_exec(JTracer& tracer,const Span& parentSpan)
+void RGWGetObj::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 {
   rgw_bucket_object_pre_exec(s);
 }
@@ -2711,7 +2711,7 @@ done_err:
   send_response_data_error();
 }
 
-void RGWGetObj::execute(JTracer& tracer,const Span& parentSpan)
+void RGWGetObj::execute(Jager_Tracer& tracer,const Span& parent_span)
 {
   bufferlist bl;
   gc_invalidate_time = ceph_clock_now();
@@ -2932,9 +2932,9 @@ int RGWGetUsage::verify_permission()
   return 0;
 }
 
-void RGWListBuckets::execute(JTracer& tracer,const Span& parentSpan)
+void RGWListBuckets::execute(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc RGWListBuckets::execute()",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc RGWListBuckets::execute()",parent_span);
   bool done;
   bool started = false;
   uint64_t total_count = 0;
@@ -3491,7 +3491,7 @@ int RGWListBucket::verify_permission()
   return 0;
 }
 
-int RGWListBucket::verify_permission(JTracer& tracer,const Span& parentSpan)
+int RGWListBucket::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
 {
   op_ret = get_params();
   if (op_ret < 0) {
@@ -3532,7 +3532,7 @@ void RGWListBucket::pre_exec()
   rgw_bucket_object_pre_exec(s);
 }
 
-void RGWListBucket::pre_exec(JTracer& tracer,const Span& parentSpan)
+void RGWListBucket::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 {
   rgw_bucket_object_pre_exec(s);
 }
@@ -3574,9 +3574,9 @@ void RGWListBucket::execute()
   }
 }
 
-void RGWListBucket::execute(JTracer& tracer,const Span& parentSpan)
+void RGWListBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc RGWListBucket::execute",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc RGWListBucket::execute",parent_span);
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
     return;
@@ -3668,9 +3668,9 @@ int RGWCreateBucket::verify_permission()
   return 0;
 }
 
-int RGWCreateBucket::verify_permission(JTracer& tracer,const Span& parentSpan)
+int RGWCreateBucket::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc RGWCreateBucket::verify_permission",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc RGWCreateBucket::verify_permission",parent_span);
   /* This check is mostly needed for S3 that doesn't support account ACL.
    * Swift doesn't allow to delegate any permission to an anonymous user,
    * so it will become an early exit in such case. */
@@ -3746,9 +3746,9 @@ void RGWCreateBucket::pre_exec()
   rgw_bucket_object_pre_exec(s);
 }
 
-void RGWCreateBucket::pre_exec(JTracer& tracer,const Span& parentSpan)
+void RGWCreateBucket::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc RGWCreateBucket::pre_exec",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc RGWCreateBucket::pre_exec",parent_span);
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -4191,9 +4191,9 @@ void RGWCreateBucket::execute()
 }
 
 
-void RGWCreateBucket::execute(JTracer& tracer,const Span& parentSpan)
+void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc RGWCreateBucket::execute",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc RGWCreateBucket::execute",parent_span);
   RGWAccessControlPolicy old_policy(s->cct);
   buffer::list aclbl;
   buffer::list corsbl;
@@ -4700,7 +4700,7 @@ int RGWPutObj::verify_permission()
 
 
 
-int RGWPutObj::verify_permission(JTracer& tracer,const Span& parentSpan)
+int RGWPutObj::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
 {
   if (! copy_source.empty()) {
 
@@ -4825,9 +4825,9 @@ int RGWPutObj::verify_permission(JTracer& tracer,const Span& parentSpan)
 }
 
 
-void RGWPutObj::pre_exec(JTracer& tracer,const Span& parentSpan)
+void RGWPutObj::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc RGWPutObj::pre_exec",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc RGWPutObj::pre_exec",parent_span);
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -4954,9 +4954,9 @@ static CompressorRef get_compressor_plugin(const req_state *s,
 }
 
 
-void RGWPutObj::execute(JTracer& tracer,const Span& parentSpan)
+void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc RGWPutObj::execute",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc RGWPutObj::execute",parent_span);
   char supplied_md5_bin[CEPH_CRYPTO_MD5_DIGESTSIZE + 1];
   char supplied_md5[CEPH_CRYPTO_MD5_DIGESTSIZE * 2 + 1];
   char calc_md5[CEPH_CRYPTO_MD5_DIGESTSIZE * 2 + 1];
@@ -9094,9 +9094,9 @@ RGWHandler::~RGWHandler()
 
 int RGWHandler::init(rgw::sal::RGWRadosStore *_store,
                      struct req_state *_s,
-                     rgw::io::BasicClient *cio,JTracer& tracer,const Span& parentSpan)
+                     rgw::io::BasicClient *cio,Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc RGWHandler::init()",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc RGWHandler::init()",parent_span);
   store = _store;
   s = _s;
 
@@ -9113,9 +9113,9 @@ int RGWHandler::init(rgw::sal::RGWRadosStore *_store,
   return 0;
 }
 
-int RGWHandler::do_init_permissions(JTracer& tracer,const Span& parentSpan)
+int RGWHandler::do_init_permissions(Jager_Tracer& tracer,const Span& parent_span)
 {
-  Span span=tracer.childSpan("rgw_op.cc RGWHandler::do_init_permissions()",parentSpan);
+  Span span=tracer.child_span("rgw_op.cc RGWHandler::do_init_permissions()",parent_span);
   int ret = rgw_build_bucket_policies(store, s);
   if (ret < 0) {
     ldpp_dout(s, 10) << "init_permissions on " << s->bucket

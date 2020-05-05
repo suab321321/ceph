@@ -169,10 +169,10 @@ int rgw_read_user_buckets(rgw::sal::RGWRadosStore * store,
                           const string& marker,
                           const string& end_marker,
                           uint64_t max,
-                          JTracer& tracer,const Span& parentSpan,
+                          Jager_Tracer& tracer,const Span& parent_span,
                           bool need_stats)
 {
-  Span span=tracer.childSpan("rgw_bucket.cc rgw_read_user_buckets",parentSpan);
+  Span span=tracer.child_span("rgw_bucket.cc rgw_read_user_buckets",parent_span);
   rgw::sal::RGWRadosUser user(store, user_id);
   return user.list_buckets(marker, end_marker, max, need_stats, buckets);
 }

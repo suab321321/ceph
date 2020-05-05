@@ -232,7 +232,7 @@ extern int rgw_read_user_buckets(rgw::sal::RGWRadosStore *store,
                                  const string& marker,
                                  const string& end_marker,
                                  uint64_t max,
-                                 JTracer&,const Span&,
+                                 Jager_Tracer&,const Span&,
                                  bool need_stats);
 
 extern int rgw_remove_object(rgw::sal::RGWRadosStore *store, const RGWBucketInfo& bucket_info, const rgw_bucket& bucket, rgw_obj_key& key);
