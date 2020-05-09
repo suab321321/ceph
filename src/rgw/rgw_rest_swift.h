@@ -161,7 +161,9 @@ public:
   ~RGWDeleteObj_ObjStore_SWIFT() override {}
 
   int verify_permission() override;
+  int verify_permission(Jager_Tracer&, const Span&) override;
   int get_params() override;
+  int get_params(Jager_Tracer& tracer, const Span& parent_span) override;
   bool need_object_expiration() override { return true; }
   void send_response() override;
 };

@@ -1259,6 +1259,7 @@ public:
   int get_data(const off_t fst, const off_t lst, bufferlist& bl);
 
   virtual int get_params() = 0;
+  virtual int get_params(Jager_Tracer&, const Span&) {}
   virtual int get_data(bufferlist& bl) = 0;
   virtual int get_data(bufferlist& bl,Jager_Tracer&,const Span&) {}
   void send_response() override = 0;
@@ -1445,11 +1446,15 @@ public:
   }
 
   int verify_permission() override;
+  int verify_permission(Jager_Tracer&, const Span&) override;
   void pre_exec() override;
+  void pre_exec(Jager_Tracer&, const Span&) override;
   void execute() override;
+  void execute(Jager_Tracer&, const Span&) override;
   int handle_slo_manifest(bufferlist& bl);
 
   virtual int get_params() { return 0; }
+  virtual int get_params(Jager_Tracer& tracer, const Span& parent_span) { return 0; }
   void send_response() override = 0;
   const char* name() const override { return "delete_obj"; }
   RGWOpType get_type() override { return RGW_OP_DELETE_OBJ; }

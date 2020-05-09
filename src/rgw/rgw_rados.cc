@@ -5077,6 +5077,202 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y)
   return 0;
 }
 
+int RGWRados::Object::Delete::delete_obj(optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::Object::Delete::delete_obj", parent_span);
+  RGWRados *store = target->get_store();
+  rgw_obj& src_obj = target->get_obj();
+  const string& instance = src_obj.key.instance;
+  rgw_obj obj = src_obj;
+
+  if (instance == "null") {
+    obj.key.instance.clear();
+  }
+
+  bool explicit_marker_version = (!params.marker_version_id.empty());
+
+  if (params.versioning_status & BUCKET_VERSIONED || explicit_marker_version) {
+    if (instance.empty() || explicit_marker_version) {
+      rgw_obj marker = obj;
+
+      if (!params.marker_version_id.empty()) {
+        if (params.marker_version_id != "null") {
+          marker.key.set_instance(params.marker_version_id);
+        }
+      } else if ((params.versioning_status & BUCKET_VERSIONS_SUSPENDED) == 0) {
+        store->gen_rand_obj_instance_name(&marker);
+      }
+
+      result.version_id = marker.key.instance;
+      if (result.version_id.empty())
+        result.version_id = "null";
+      result.delete_marker = true;
+
+      struct rgw_bucket_dir_entry_meta meta;
+
+      meta.owner = params.obj_owner.get_id().to_str();
+      meta.owner_display_name = params.obj_owner.get_display_name();
+
+      if (real_clock::is_zero(params.mtime)) {
+        meta.mtime = real_clock::now();
+      } else {
+        meta.mtime = params.mtime;
+      }
+
+      int r = store->set_olh(target->get_ctx(), target->get_bucket_info(), marker, true, &meta, params.olh_epoch, params.unmod_since, params.high_precision_time, y, params.zones_trace);
+      if (r < 0) {
+        return r;
+      }
+    } else {
+      rgw_bucket_dir_entry dirent;
+
+      int r = store->bi_get_instance(target->get_bucket_info(), obj, &dirent);
+      if (r < 0) {
+        return r;
+      }
+      result.delete_marker = dirent.is_delete_marker();
+      r = store->unlink_obj_instance(target->get_ctx(), target->get_bucket_info(), obj, params.olh_epoch, y, params.zones_trace);
+      if (r < 0) {
+        return r;
+      }
+      result.version_id = instance;
+    }
+
+    BucketShard *bs;
+    int r = target->get_bucket_shard(&bs);
+    if (r < 0) {
+      ldout(store->ctx(), 5) << "failed to get BucketShard object: r=" << r << dendl;
+      return r;
+    }
+
+    r = store->svc.datalog_rados->add_entry(target->bucket_info, bs->shard_id);
+    if (r < 0) {
+      lderr(store->ctx()) << "ERROR: failed writing data log" << dendl;
+      return r;
+    }
+
+    return 0;
+  }
+
+  rgw_rados_ref ref;
+  int r = store->get_obj_head_ref(target->get_bucket_info(), obj, &ref);
+  if (r < 0) {
+    return r;
+  }
+
+  RGWObjState *state;
+  r = target->get_state(&state, false, y);
+  if (r < 0)
+    return r;
+
+  ObjectWriteOperation op;
+
+  if (!real_clock::is_zero(params.unmod_since)) {
+    struct timespec ctime = ceph::real_clock::to_timespec(state->mtime);
+    struct timespec unmod = ceph::real_clock::to_timespec(params.unmod_since);
+    if (!params.high_precision_time) {
+      ctime.tv_nsec = 0;
+      unmod.tv_nsec = 0;
+    }
+
+    ldout(store->ctx(), 10) << "If-UnModified-Since: " << params.unmod_since << " Last-Modified: " << ctime << dendl;
+    if (ctime > unmod) {
+      return -ERR_PRECONDITION_FAILED;
+    }
+
+    /* only delete object if mtime is less than or equal to params.unmod_since */
+    store->cls_obj_check_mtime(op, params.unmod_since, params.high_precision_time, CLS_RGW_CHECK_TIME_MTIME_LE);
+  }
+  uint64_t obj_accounted_size = state->accounted_size;
+
+  if(params.abortmp) {
+    obj_accounted_size = params.parts_accounted_size;
+  }
+
+  if (!real_clock::is_zero(params.expiration_time)) {
+    bufferlist bl;
+    real_time delete_at;
+
+    if (state->get_attr(RGW_ATTR_DELETE_AT, bl)) {
+      try {
+        auto iter = bl.cbegin();
+        decode(delete_at, iter);
+      } catch (buffer::error& err) {
+        ldout(store->ctx(), 0) << "ERROR: couldn't decode RGW_ATTR_DELETE_AT" << dendl;
+	return -EIO;
+      }
+
+      if (params.expiration_time != delete_at) {
+        return -ERR_PRECONDITION_FAILED;
+      }
+    } else {
+      return -ERR_PRECONDITION_FAILED;
+    }
+  }
+
+  if (!state->exists) {
+    target->invalidate_state();
+    return -ENOENT;
+  }
+
+  r = target->prepare_atomic_modification(op, false, NULL, NULL, NULL, true, false, y);
+  if (r < 0)
+    return r;
+
+  RGWBucketInfo& bucket_info = target->get_bucket_info();
+
+  RGWRados::Bucket bop(store, bucket_info);
+  RGWRados::Bucket::UpdateIndex index_op(&bop, obj);
+  
+  index_op.set_zones_trace(params.zones_trace);
+  index_op.set_bilog_flags(params.bilog_flags);
+
+  r = index_op.prepare(CLS_RGW_OP_DEL, &state->write_tag, y);
+  if (r < 0)
+    return r;
+
+  store->remove_rgw_head_obj(op);
+
+  auto& ioctx = ref.pool.ioctx();
+  r = rgw_rados_operate(ioctx, ref.obj.oid, &op, null_yield);
+
+  /* raced with another operation, object state is indeterminate */
+  const bool need_invalidate = (r == -ECANCELED);
+
+  int64_t poolid = ioctx.get_id();
+  if (r >= 0) {
+    tombstone_cache_t *obj_tombstone_cache = store->get_tombstone_cache();
+    if (obj_tombstone_cache) {
+      tombstone_entry entry{*state};
+      obj_tombstone_cache->add(obj, entry);
+    }
+    r = index_op.complete_del(poolid, ioctx.get_last_version(), state->mtime, params.remove_objs);
+    
+    int ret = target->complete_atomic_modification();
+    if (ret < 0) {
+      ldout(store->ctx(), 0) << "ERROR: complete_atomic_modification returned ret=" << ret << dendl;
+    }
+    /* other than that, no need to propagate error */
+  } else {
+    int ret = index_op.cancel();
+    if (ret < 0) {
+      ldout(store->ctx(), 0) << "ERROR: index_op.cancel() returned ret=" << ret << dendl;
+    }
+  }
+
+  if (need_invalidate) {
+    target->invalidate_state();
+  }
+
+  if (r < 0)
+    return r;
+
+  /* update quota cache */
+  store->quota_handler->update_stats(params.bucket_owner, obj.bucket, -1, 0, obj_accounted_size);
+
+  return 0;
+}
+
 int RGWRados::delete_obj(RGWObjectCtx& obj_ctx,
                          const RGWBucketInfo& bucket_info,
                          const rgw_obj& obj,

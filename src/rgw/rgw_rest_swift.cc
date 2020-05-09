@@ -1257,8 +1257,32 @@ int RGWDeleteObj_ObjStore_SWIFT::verify_permission()
   }
 }
 
+int RGWDeleteObj_ObjStore_SWIFT::verify_permission(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::verify_permission", parent_span);
+  op_ret = RGWDeleteObj_ObjStore::verify_permission();
+
+  /* We have to differentiate error codes depending on whether user is
+   * anonymous (401 Unauthorized) or he doesn't have necessary permissions
+   * (403 Forbidden). */
+  if (s->auth.identity->is_anonymous() && op_ret == -EACCES) {
+    return -EPERM;
+  } else {
+    return op_ret;
+  }
+}
+
 int RGWDeleteObj_ObjStore_SWIFT::get_params()
 {
+  const string& mm = s->info.args.get("multipart-manifest");
+  multipart_delete = (mm.compare("delete") == 0);
+
+  return RGWDeleteObj_ObjStore::get_params();
+}
+
+int RGWDeleteObj_ObjStore_SWIFT::get_params(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::get_params", parent_span);
   const string& mm = s->info.args.get("multipart-manifest");
   multipart_delete = (mm.compare("delete") == 0);
 

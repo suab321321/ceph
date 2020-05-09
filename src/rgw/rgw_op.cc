@@ -338,6 +338,18 @@ static int get_obj_attrs(rgw::sal::RGWRadosStore *store, struct req_state *s, co
   return read_op.prepare(s->yield);
 }
 
+static int get_obj_attrs(rgw::sal::RGWRadosStore *store, struct req_state *s, const rgw_obj& obj, map<string, bufferlist>& attrs, Jager_Tracer& tracer,const Span& parent_span, rgw_obj *target_obj = nullptr)
+{
+  Span span = tracer.child_span("rgw_op.cc get_obj_attrs", parent_span);
+  RGWRados::Object op_target(store->getRados(), s->bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), obj);
+  RGWRados::Object::Read read_op(&op_target);
+
+  read_op.params.attrs = &attrs;
+  read_op.params.target_obj = target_obj;
+
+  return read_op.prepare(s->yield, tracer, span);
+}
+
 static int get_obj_head(rgw::sal::RGWRadosStore *store, struct req_state *s,
                         const rgw_obj& obj,
                         map<string, bufferlist> *attrs,
@@ -6362,8 +6374,75 @@ int RGWDeleteObj::verify_permission()
   return 0;
 }
 
+int RGWDeleteObj::verify_permission(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc RGWDeleteObj::verify_permission",parent_span);
+  int op_ret = get_params();
+  if (op_ret) {
+    return op_ret;
+  }
+  if (s->iam_policy || ! s->iam_user_policies.empty()) {
+    if (s->bucket_info.obj_lock_enabled() && bypass_governance_mode) {
+      auto r = eval_user_policies(s->iam_user_policies, s->env, boost::none,
+                                               rgw::IAM::s3BypassGovernanceRetention, ARN(s->bucket, s->object.name));
+      if (r == Effect::Deny) {
+        bypass_perm = false;
+      } else if (r == Effect::Pass && s->iam_policy) {
+        r = s->iam_policy->eval(s->env, *s->auth.identity, rgw::IAM::s3BypassGovernanceRetention,
+                                     ARN(s->bucket, s->object.name));
+        if (r == Effect::Deny) {
+          bypass_perm = false;
+        }
+      }
+    }
+    auto usr_policy_res = eval_user_policies(s->iam_user_policies, s->env,
+                                              boost::none,
+                                              s->object.instance.empty() ?
+                                              rgw::IAM::s3DeleteObject :
+                                              rgw::IAM::s3DeleteObjectVersion,
+                                              ARN(s->bucket, s->object.name));
+    if (usr_policy_res == Effect::Deny) {
+      return -EACCES;
+    }
+
+    rgw::IAM::Effect r = Effect::Pass;
+    if (s->iam_policy) {
+      r = s->iam_policy->eval(s->env, *s->auth.identity,
+				 s->object.instance.empty() ?
+				 rgw::IAM::s3DeleteObject :
+				 rgw::IAM::s3DeleteObjectVersion,
+				 ARN(s->bucket, s->object.name));
+    }
+    if (r == Effect::Allow)
+      return 0;
+    else if (r == Effect::Deny)
+      return -EACCES;
+    else if (usr_policy_res == Effect::Allow)
+      return 0;
+  }
+
+  if (!verify_bucket_permission_no_policy(this, s, RGW_PERM_WRITE)) {
+    return -EACCES;
+  }
+
+  if (s->bucket_info.mfa_enabled() &&
+      !s->object.instance.empty() &&
+      !s->mfa_verified) {
+    ldpp_dout(this, 5) << "NOTICE: object delete request with a versioned object, mfa auth not provided" << dendl;
+    return -ERR_MFA_REQUIRED;
+  }
+
+  return 0;
+}
+
 void RGWDeleteObj::pre_exec()
 {
+  rgw_bucket_object_pre_exec(s);
+}
+
+void RGWDeleteObj::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc RGWDeleteObj::pre_exec",parent_span);
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -6381,6 +6460,167 @@ void RGWDeleteObj::execute()
 
   if (!s->object.empty()) {
     op_ret = get_obj_attrs(store, s, obj, attrs);
+
+    if (need_object_expiration() || multipart_delete) {
+      /* check if obj exists, read orig attrs */
+      if (op_ret < 0) {
+        return;
+      }
+    }
+
+    if (check_obj_lock) {
+      /* check if obj exists, read orig attrs */
+      if (op_ret < 0) {
+        if (op_ret == -ENOENT) {
+          /* object maybe delete_marker, skip check_obj_lock*/
+          check_obj_lock = false;
+        } else {
+          return;
+        }
+      }
+    }
+
+    // ignore return value from get_obj_attrs in all other cases
+    op_ret = 0;
+
+    if (check_obj_lock) {
+      auto aiter = attrs.find(RGW_ATTR_OBJECT_RETENTION);
+      if (aiter != attrs.end()) {
+        RGWObjectRetention obj_retention;
+        try {
+          decode(obj_retention, aiter->second);
+        } catch (buffer::error& err) {
+          ldpp_dout(this, 0) << "ERROR: failed to decode RGWObjectRetention" << dendl;
+          op_ret = -EIO;
+          return;
+        }
+        if (ceph::real_clock::to_time_t(obj_retention.get_retain_until_date()) > ceph_clock_now()) {
+          if (obj_retention.get_mode().compare("GOVERNANCE") != 0 || !bypass_perm || !bypass_governance_mode) {
+            op_ret = -EACCES;
+            return;
+          }
+        }
+      }
+      aiter = attrs.find(RGW_ATTR_OBJECT_LEGAL_HOLD);
+      if (aiter != attrs.end()) {
+        RGWObjectLegalHold obj_legal_hold;
+        try {
+          decode(obj_legal_hold, aiter->second);
+        } catch (buffer::error& err) {
+          ldpp_dout(this, 0) << "ERROR: failed to decode RGWObjectLegalHold" << dendl;
+          op_ret = -EIO;
+          return;
+        }
+        if (obj_legal_hold.is_enabled()) {
+          op_ret = -EACCES;
+          return;
+        }
+      }
+    }
+
+    if (multipart_delete) {
+      const auto slo_attr = attrs.find(RGW_ATTR_SLO_MANIFEST);
+
+      if (slo_attr != attrs.end()) {
+        op_ret = handle_slo_manifest(slo_attr->second);
+        if (op_ret < 0) {
+          ldpp_dout(this, 0) << "ERROR: failed to handle slo manifest ret=" << op_ret << dendl;
+        }
+      } else {
+        op_ret = -ERR_NOT_SLO_MANIFEST;
+      }
+
+      return;
+    }
+
+    RGWObjectCtx *obj_ctx = static_cast<RGWObjectCtx *>(s->obj_ctx);
+    obj_ctx->set_atomic(obj);
+
+    bool ver_restored = false;
+    op_ret = store->getRados()->swift_versioning_restore(*obj_ctx, s->bucket_owner.get_id(),
+                                             s->bucket_info, obj, ver_restored, this);
+    if (op_ret < 0) {
+      return;
+    }
+
+    if (!ver_restored) {
+      /* Swift's versioning mechanism hasn't found any previous version of
+       * the object that could be restored. This means we should proceed
+       * with the regular delete path. */
+      RGWRados::Object del_target(store->getRados(), s->bucket_info, *obj_ctx, obj);
+      RGWRados::Object::Delete del_op(&del_target);
+
+      op_ret = get_system_versioning_params(s, &del_op.params.olh_epoch,
+                                            &del_op.params.marker_version_id);
+      if (op_ret < 0) {
+        return;
+      }
+
+      del_op.params.bucket_owner = s->bucket_owner.get_id();
+      del_op.params.versioning_status = s->bucket_info.versioning_status();
+      del_op.params.obj_owner = s->owner;
+      del_op.params.unmod_since = unmod_since;
+      del_op.params.high_precision_time = s->system_request; /* system request uses high precision time */
+
+      op_ret = del_op.delete_obj(s->yield);
+      if (op_ret >= 0) {
+        delete_marker = del_op.result.delete_marker;
+        version_id = del_op.result.version_id;
+      }
+
+      /* Check whether the object has expired. Swift API documentation
+       * stands that we should return 404 Not Found in such case. */
+      if (need_object_expiration() && object_is_expired(attrs)) {
+        op_ret = -ENOENT;
+        return;
+      }
+    }
+
+    if (op_ret == -ECANCELED) {
+      op_ret = 0;
+    }
+    if (op_ret == -ERR_PRECONDITION_FAILED && no_precondition_error) {
+      op_ret = 0;
+    }
+
+    // cache the objects tags and metadata into the requests
+    // so it could be used in the notification mechanism
+    try {
+      populate_tags_in_request(s, attrs);
+    } catch (buffer::error& err) {
+      ldpp_dout(this, 5) << "WARNING: failed to populate delete request with object tags: " << err.what() << dendl;
+    }
+    populate_metadata_in_request(s, attrs);
+  } else {
+    op_ret = -EINVAL;
+  }
+
+  const auto ret = rgw::notify::publish(s, s->object, s->obj_size, ceph::real_clock::now(), attrs[RGW_ATTR_ETAG].to_str(),
+          delete_marker && s->object.instance.empty() ? rgw::notify::ObjectRemovedDeleteMarkerCreated : rgw::notify::ObjectRemovedDelete,
+          store);
+  if (ret < 0) {
+    ldpp_dout(this, 5) << "WARNING: publishing notification failed, with error: " << ret << dendl;
+	// TODO: we should have conf to make send a blocking coroutine and reply with error in case sending failed
+	// this should be global conf (probably returnign a different handler)
+    // so we don't need to read the configured values before we perform it
+  }
+}
+
+void RGWDeleteObj::execute(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc RGWDeleteObj::execute",parent_span);
+  if (!s->bucket_exists) {
+    op_ret = -ERR_NO_SUCH_BUCKET;
+    return;
+  }
+
+  rgw_obj obj(s->bucket, s->object);
+  map<string, bufferlist> attrs;
+
+  bool check_obj_lock = obj.key.have_instance() && s->bucket_info.obj_lock_enabled();
+
+  if (!s->object.empty()) {
+    op_ret = get_obj_attrs(store, s, obj, attrs, tracer, span);
 
     if (need_object_expiration() || multipart_delete) {
       /* check if obj exists, read orig attrs */
