@@ -9,7 +9,10 @@
 #include "rgw_frontend.h"
 #include "rgw_client_io_filters.h"
 #include "rgw_dmclock_sync_scheduler.h"
-#include<fstream>
+#include "include/tracer.h"
+
+#include <chrono>
+#include <ctime>
 
 #define dout_subsys ceph_subsys_rgw
 
@@ -69,9 +72,22 @@ int RGWCivetWebFrontend::process(struct mg_connection*  const conn)
   RGWRequest req(env.store->getRados()->get_new_req_id());
   int http_ret = 0;
   //assert (scheduler != nullptr);
-  int ret = process_request(env.store, env.rest, &req, env.uri_prefix,
-                            *env.auth_registry, &client_io, env.olog,
-                            null_yield, scheduler.get() ,&http_ret);
+  int ret;
+  #ifdef WITH_JAEGER
+    Jager_Tracer tracer;
+    std::string tracerName;
+    auto time=std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    tracerName = std::ctime(&time);
+    tracer.init_tracer(tracerName.c_str(),"/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+    Span span=tracer.new_span("RootSpan");
+    ret = process_request(env.store, env.rest, &req, env.uri_prefix,
+                              *env.auth_registry, &client_io, env.olog,
+                              null_yield, tracer, span, scheduler.get() ,&http_ret);
+  #else
+    ret = process_request(env.store, env.rest, &req, env.uri_prefix,
+                              *env.auth_registry, &client_io, env.olog,
+                              null_yield, tracer, scheduler.get() ,&http_ret);
+  #endif
   if (ret < 0) {
     /* We don't really care about return code. */
     dout(20) << "process_request() returned " << ret << dendl;

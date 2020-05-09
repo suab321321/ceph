@@ -17,7 +17,6 @@
 #include "rgw_client_io.h"
 #include "rgw_opa.h"
 #include "rgw_perf_counters.h"
-#include<fstream>
 
 #include "services/svc_zone_utils.h"
 
@@ -111,9 +110,24 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
                               Jager_Tracer& tracer,const Span& parent_span,
                               const bool skip_retarget)
 {
-  Span span=tracer.child_span("rgw_process.cc rgw_process_authenticated()",parent_span);
+  bool should_trace=true;
+  Span span;
+  RGWOpType type=op->get_type();
+  if(type == 0)
+    should_trace=false;
+
+  if(should_trace){
+    span=tracer.child_span(RGWOpTypeMapper[type], parent_span);
+    span->SetTag("operation_success", true);
+    span->SetTag("operation_type", RGWOpTypeMapper[type]);
+  }
+
   ldpp_dout(op, 2) << "init permissions" << dendl;
-  int ret = handler->init_permissions(op,tracer,span);
+  int ret;
+  if(should_trace)
+    ret = handler->init_permissions(op,tracer,span);
+  else
+    ret = handler->init_permissions(op);
   if (ret < 0) {
     return ret;
   }
@@ -135,19 +149,28 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
 
   /* If necessary extract object ACL and put them into req_state. */
   ldpp_dout(op, 2) << "reading permissions" << dendl;
-  ret = handler->read_permissions(op,tracer,span);
+  if(should_trace)
+    ret = handler->read_permissions(op,tracer,span);
+  else
+    ret = handler->read_permissions(op);
   if (ret < 0) {
     return ret;
   }
 
   ldpp_dout(op, 2) << "init op" << dendl;
-  ret = op->init_processing(tracer,span);
+  if(should_trace)
+    ret = op->init_processing(tracer,span);
+  else
+    ret = op->init_processing();
   if (ret < 0) {
     return ret;
   }
 
   ldpp_dout(op, 2) << "verifying op mask" << dendl;
-  ret = op->verify_op_mask(tracer,span);
+  if(should_trace)
+    ret = op->verify_op_mask(tracer,span);
+  else
+    ret = op->verify_op_mask();
   if (ret < 0) {
     return ret;
   }
@@ -161,7 +184,10 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
   }
 
   ldpp_dout(op, 2) << "verifying op permissions" << dendl;
-  ret = op->verify_permission(tracer,span);
+  if(should_trace)
+    ret = op->verify_permission(tracer,span);
+  else
+    ret = op->verify_permission();
   if (ret < 0) {
     if (s->system_request) {
       dout(2) << "overriding permissions due to system operation" << dendl;
@@ -179,10 +205,16 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
   }
 
   ldpp_dout(op, 2) << "pre-executing" << dendl;
-  op->pre_exec(tracer,span);
+  if(should_trace)
+    op->pre_exec(tracer,span);
+  else
+    op->pre_exec();
 
   ldpp_dout(op, 2) << "executing" << dendl;
-  op->execute(tracer,span);
+  if(should_trace)
+    op->execute(tracer,span);
+  else
+    op->execute();
 
   ldpp_dout(op, 2) << "completing" << dendl;
   op->complete();
@@ -283,12 +315,10 @@ int process_request(rgw::sal::RGWRadosStore* const store,
                     RGWRestfulIO* const client_io,
                     OpsLogSocket* const olog,
                     optional_yield yield,
-		    rgw::dmclock::Scheduler *scheduler,
+                    Jager_Tracer& tracer,const Span& parent_span,
+		                rgw::dmclock::Scheduler *scheduler,
                     int* http_ret)
 {
-  Jager_Tracer tracer;
-  tracer.init_tracer("Object Uploading in Container","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
-  Span parent_span=tracer.new_span("process_request");
   int ret = client_io->init(g_ceph_context);
 
   dout(1) << "====== starting new request req=" << hex << req << dec
@@ -351,11 +381,11 @@ int process_request(rgw::sal::RGWRadosStore* const store,
     abort_early(s, NULL, -ERR_METHOD_NOT_ALLOWED, handler);
     goto done;
   }
-  #ifdef WITH_JAEGER
-    std::tie(ret,c) = schedule_request(scheduler, s, op,tracer,parent_span);
-  #else
+  // #ifdef WITH_JAEGER
+  //   std::tie(ret,c) = schedule_request(scheduler, s, op,tracer,parent_span);
+  // #else
     std::tie(ret,c) = schedule_request(scheduler, s, op);
-  #endif
+  // #endif
   if (ret < 0) {
     if (ret == -EAGAIN) {
       ret = -ERR_RATE_LIMITED;
@@ -398,7 +428,7 @@ int process_request(rgw::sal::RGWRadosStore* const store,
       goto done;
     }
     #ifdef WITH_JAEGER
-      ret = rgw_process_authenticated(handler, op, req, s,tracer,parent_span);
+      ret = rgw_process_authenticated(handler, op, req, s, tracer, parent_span);
     #else
       ret = rgw_process_authenticated(handler, op, req, s);
     #endif

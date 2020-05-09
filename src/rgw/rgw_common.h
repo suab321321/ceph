@@ -23,6 +23,7 @@
 
 #include "common/ceph_crypto.h"
 #include "common/random_string.h"
+#include "include/tracer.h"
 #include "rgw_acl.h"
 #include "rgw_cors.h"
 #include "rgw_iam_policy.h"
@@ -2261,6 +2262,7 @@ extern bool verify_object_permission(
   const vector<rgw::IAM::Policy>& user_policies,
   const uint64_t op);
 extern bool verify_object_permission(const DoutPrefixProvider* dpp, struct req_state *s, uint64_t op);
+extern bool verify_object_permission(const DoutPrefixProvider* dpp, struct req_state *s, uint64_t op, Jager_Tracer&, const Span&);
 extern bool verify_object_permission_no_policy(
   const DoutPrefixProvider* dpp,
   struct req_state * const s,
@@ -2365,6 +2367,8 @@ extern bool match_policy(boost::string_view pattern, boost::string_view input,
 
 extern string camelcase_dash_http_attr(const string& orig);
 extern string lowercase_dash_http_attr(const string& orig);
+
+extern std::unordered_map<int, const char*> RGWOpTypeMapper;
 
 void rgw_setup_saved_curl_handles();
 void rgw_release_all_curl_handles();

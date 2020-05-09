@@ -5,6 +5,8 @@
 #include "common/Throttle.h"
 #include "common/WorkQueue.h"
 
+#include "include/tracer.h"
+
 #include "rgw_rados.h"
 #include "rgw_rest.h"
 #include "rgw_frontend.h"
@@ -14,6 +16,8 @@
 #include "rgw_client_io.h"
 
 #include <atomic>
+#include <chrono>
+#include <ctime>
 
 #define dout_subsys ceph_subsys_rgw
 
@@ -132,10 +136,22 @@ void RGWLoadGenProcess::handle_request(RGWRequest* r)
 
   RGWLoadGenIO real_client_io(&env);
   RGWRestfulIO client_io(cct, &real_client_io);
-
-  int ret = process_request(store, rest, req, uri_prefix,
-                            *auth_registry, &client_io, olog,
-                            null_yield, nullptr);
+  int ret;
+  #ifdef WITH_JAEGER
+    Jager_Tracer tracer;
+    std::string tracerName;
+    auto time=std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    tracerName = std::ctime(&time);
+    tracer.init_tracer(tracerName.c_str(),"/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+    Span span=tracer.new_span("RootSpan");
+    ret = process_request(store, rest, req, uri_prefix,
+                              *auth_registry, &client_io, olog,
+                              null_yield, tracer, span, nullptr);
+  #else
+    ret = process_request(store, rest, req, uri_prefix,
+                              *auth_registry, &client_io, olog,
+                              null_yield, nullptr);
+  #endif
   if (ret < 0) {
     /* we don't really care about return code */
     dout(20) << "process_request() returned " << ret << dendl;

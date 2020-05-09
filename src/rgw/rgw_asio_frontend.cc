@@ -4,6 +4,8 @@
 #include <atomic>
 #include <thread>
 #include <vector>
+#include <chrono>
+#include <ctime>
 
 #include <boost/asio.hpp>
 #include <boost/intrusive/list.hpp>
@@ -14,6 +16,7 @@
 #include "common/async/shared_mutex.h"
 #include "common/errno.h"
 #include "common/strtol.h"
+#include "include/tracer.h"
 
 #include "rgw_asio_client.h"
 #include "rgw_asio_frontend.h"
@@ -46,6 +49,10 @@ using parse_buffer = boost::beast::flat_static_buffer<65536>;
 auto make_stack_allocator() {
   return boost::context::protected_fixedsize_stack{512*1024};
 }
+
+std::once_flag tracerInit;
+Jager_Tracer tracer;
+Span root_span = nullptr;
 
 template <typename Stream>
 class StreamIO : public rgw::asio::ClientIO {
@@ -106,6 +113,9 @@ void handle_connection(boost::asio::io_context& context,
                        boost::system::error_code& ec,
                        spawn::yield_context yield)
 {
+  std::call_once(tracerInit,[](){
+    tracer.init_tracer("RGW_Client_Process","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+  });
   // limit header to 4k, since we read it all into a single flat_buffer
   static constexpr size_t header_limit = 4096;
   // don't impose a limit on the body, since we read it in pieces
@@ -130,6 +140,7 @@ void handle_connection(boost::asio::io_context& context,
 #endif
         ec == http::error::end_of_stream) {
       ldout(cct, 20) << "failed to read header: " << ec.message() << dendl;
+      root_span=nullptr;
       return;
     }
     if (ec) {
@@ -144,6 +155,7 @@ void handle_connection(boost::asio::io_context& context,
         ldout(cct, 5) << "failed to write response: " << ec.message() << dendl;
       }
       ldout(cct, 1) << "====== req done http_status=400 ======" << dendl;
+      root_span=nullptr;
       return;
     }
 
@@ -177,8 +189,19 @@ void handle_connection(boost::asio::io_context& context,
                                     &real_client))));
       RGWRestfulIO client(cct, &real_client_io);
       auto y = optional_yield{context, yield};
-      process_request(env.store, env.rest, &req, env.uri_prefix,
-                      *env.auth_registry, &client, env.olog, y, scheduler);
+      #ifdef WITH_JAEGER
+        std::string span_name;
+        auto time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        span_name = std::ctime(&time);
+        Span span=tracer.new_span(span_name.c_str());
+        if(root_span == nullptr)
+          root_span=tracer.new_span(span_name.c_str());
+        process_request(env.store, env.rest, &req, env.uri_prefix,
+                        *env.auth_registry, &client, env.olog, y, tracer, root_span, scheduler);
+      #else
+        process_request(env.store, env.rest, &req, env.uri_prefix,
+                        *env.auth_registry, &client, env.olog, y, scheduler);
+      #endif
     }
 
     if (!parser.keep_alive()) {

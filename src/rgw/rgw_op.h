@@ -327,6 +327,7 @@ protected:
   bool get_legal_hold;
 
   int init_common();
+  int init_common(Jager_Tracer&,const Span&);
 public:
   RGWGetObj() {
     range_str = NULL;

@@ -183,6 +183,17 @@ extern int process_request(rgw::sal::RGWRadosStore* store,
                            optional_yield y,
                            rgw::dmclock::Scheduler *scheduler,
                            int* http_ret = nullptr);
+extern int process_request(rgw::sal::RGWRadosStore* store,
+                           RGWREST* rest,
+                           RGWRequest* req,
+                           const std::string& frontend_prefix,
+                           const rgw_auth_registry_t& auth_registry,
+                           RGWRestfulIO* client_io,
+                           OpsLogSocket* olog,
+                           optional_yield y,
+                           Jager_Tracer&,const Span&,
+                           rgw::dmclock::Scheduler *scheduler,
+                           int* http_ret = nullptr);
 
 extern int rgw_process_authenticated(RGWHandler_REST* handler,
                                       RGWOp*& op,

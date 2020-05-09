@@ -5877,6 +5877,104 @@ int RGWRados::Object::Read::prepare(optional_yield y)
   return 0;
 }
 
+int RGWRados::Object::Read::prepare(optional_yield y,Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span=tracer.child_span("rgw_rados.cc RGWRados::Object::Read::prepare",parent_span);
+  RGWRados *store = source->get_store();
+  CephContext *cct = store->ctx();
+
+  bufferlist etag;
+
+  map<string, bufferlist>::iterator iter;
+
+  RGWObjState *astate;
+  int r = source->get_state(&astate, true, y);
+  if (r < 0)
+    return r;
+
+  if (!astate->exists) {
+    return -ENOENT;
+  }
+
+  const RGWBucketInfo& bucket_info = source->get_bucket_info();
+
+  state.obj = astate->obj;
+  store->obj_to_raw(bucket_info.placement_rule, state.obj, &state.head_obj);
+
+  state.cur_pool = state.head_obj.pool;
+  state.cur_ioctx = &state.io_ctxs[state.cur_pool];
+
+  r = store->get_obj_head_ioctx(bucket_info, state.obj, state.cur_ioctx);
+  if (r < 0) {
+    return r;
+  }
+  if (params.target_obj) {
+    *params.target_obj = state.obj;
+  }
+  if (params.attrs) {
+    *params.attrs = astate->attrset;
+    if (cct->_conf->subsys.should_gather<ceph_subsys_rgw, 20>()) {
+      for (iter = params.attrs->begin(); iter != params.attrs->end(); ++iter) {
+        ldout(cct, 20) << "Read xattr: " << iter->first << dendl;
+      }
+    }
+  }
+
+  /* Convert all times go GMT to make them compatible */
+  if (conds.mod_ptr || conds.unmod_ptr) {
+    obj_time_weight src_weight;
+    src_weight.init(astate);
+    src_weight.high_precision = conds.high_precision_time;
+
+    obj_time_weight dest_weight;
+    dest_weight.high_precision = conds.high_precision_time;
+
+    if (conds.mod_ptr && !conds.if_nomatch) {
+      dest_weight.init(*conds.mod_ptr, conds.mod_zone_id, conds.mod_pg_ver);
+      ldout(cct, 10) << "If-Modified-Since: " << dest_weight << " Last-Modified: " << src_weight << dendl;
+      if (!(dest_weight < src_weight)) {
+        return -ERR_NOT_MODIFIED;
+      }
+    }
+
+    if (conds.unmod_ptr && !conds.if_match) {
+      dest_weight.init(*conds.unmod_ptr, conds.mod_zone_id, conds.mod_pg_ver);
+      ldout(cct, 10) << "If-UnModified-Since: " << dest_weight << " Last-Modified: " << src_weight << dendl;
+      if (dest_weight < src_weight) {
+        return -ERR_PRECONDITION_FAILED;
+      }
+    }
+  }
+  if (conds.if_match || conds.if_nomatch) {
+    r = get_attr(RGW_ATTR_ETAG, etag, y);
+    if (r < 0)
+      return r;
+
+    if (conds.if_match) {
+      string if_match_str = rgw_string_unquote(conds.if_match);
+      ldout(cct, 10) << "ETag: " << string(etag.c_str(), etag.length()) << " " << " If-Match: " << if_match_str << dendl;
+      if (if_match_str.compare(0, etag.length(), etag.c_str(), etag.length()) != 0) {
+        return -ERR_PRECONDITION_FAILED;
+      }
+    }
+
+    if (conds.if_nomatch) {
+      string if_nomatch_str = rgw_string_unquote(conds.if_nomatch);
+      ldout(cct, 10) << "ETag: " << string(etag.c_str(), etag.length()) << " " << " If-NoMatch: " << if_nomatch_str << dendl;
+      if (if_nomatch_str.compare(0, etag.length(), etag.c_str(), etag.length()) == 0) {
+        return -ERR_NOT_MODIFIED;
+      }
+    }
+  }
+
+  if (params.obj_size)
+    *params.obj_size = astate->size;
+  if (params.lastmod)
+    *params.lastmod = astate->mtime;
+
+  return 0;
+}
+
 int RGWRados::Object::Read::range_to_ofs(uint64_t obj_size, int64_t &ofs, int64_t &end)
 {
   if (ofs < 0) {

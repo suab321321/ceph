@@ -9,6 +9,7 @@
 
 #include "include/rados/librados.hpp"
 #include "include/Context.h"
+#include "include/tracer.h"
 #include "common/RefCountedObj.h"
 #include "common/RWLock.h"
 #include "common/ceph_time.h"
@@ -780,6 +781,7 @@ public:
       explicit Read(RGWRados::Object *_source) : source(_source) {}
 
       int prepare(optional_yield y);
+      int prepare(optional_yield y,Jager_Tracer&, const Span&);
       static int range_to_ofs(uint64_t obj_size, int64_t &ofs, int64_t &end);
       int read(int64_t ofs, int64_t end, bufferlist& bl, optional_yield y);
       int iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb, optional_yield y);

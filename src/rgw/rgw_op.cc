@@ -781,6 +781,7 @@ int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* 
   auto obj_ctx = store->svc()->sysobj->init_obj_ctx();
 
   string bi = s->info.args.get(RGW_SYS_PARAM_PREFIX "bucket-instance");
+  std::cout<<bi<<std::endl;
   if (!bi.empty()) {
     string bucket_name;
     ret = rgw_bucket_parse_bucket_instance(bi, &bucket_name, &s->bucket_instance_id, &s->bucket_instance_shard_id);
@@ -1215,6 +1216,7 @@ int RGWGetObj::verify_permission()
 
 int RGWGetObj::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
 {
+  Span span=tracer.child_span("rgw_op.cc  RGWGetObj::verify_permission",parent_span);
   obj = rgw_obj(s->bucket, s->object);
   store->getRados()->set_atomic(s->obj_ctx, obj);
   if (get_data) {
@@ -1243,7 +1245,7 @@ int RGWGetObj::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
     }
   }
 
-  if (!verify_object_permission(this, s, action)) {
+  if (!verify_object_permission(this, s, action, tracer, span)) {
     return -EACCES;
   }
 
@@ -2498,6 +2500,7 @@ void RGWGetObj::pre_exec()
 
 void RGWGetObj::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 {
+  Span span=tracer.child_span("rgw_op.cc RGWGetObj::pre_exec",parent_span);
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -2713,6 +2716,7 @@ done_err:
 
 void RGWGetObj::execute(Jager_Tracer& tracer,const Span& parent_span)
 {
+  Span span = tracer.child_span("rgw_op.cc RGWGetObj::execute",parent_span);
   bufferlist bl;
   gc_invalidate_time = ceph_clock_now();
   gc_invalidate_time += (s->cct->_conf->rgw_gc_obj_min_wait / 2);
@@ -2735,7 +2739,7 @@ void RGWGetObj::execute(Jager_Tracer& tracer,const Span& parent_span)
   if (op_ret < 0)
     goto done_err;
 
-  op_ret = init_common();
+  op_ret = init_common(tracer,span);
   if (op_ret < 0)
     goto done_err;
 
@@ -2750,7 +2754,7 @@ void RGWGetObj::execute(Jager_Tracer& tracer,const Span& parent_span)
   read_op.params.lastmod = &lastmod;
   read_op.params.obj_size = &s->obj_size;
 
-  op_ret = read_op.prepare(s->yield);
+  op_ret = read_op.prepare(s->yield, tracer, span);
   if (op_ret < 0)
     goto done_err;
   version_id = read_op.state.obj.key.instance;
@@ -2888,6 +2892,32 @@ done_err:
 
 int RGWGetObj::init_common()
 {
+  if (range_str) {
+    /* range parsed error when prefetch */
+    if (!range_parsed) {
+      int r = parse_range();
+      if (r < 0)
+        return r;
+    }
+  }
+  if (if_mod) {
+    if (parse_time(if_mod, &mod_time) < 0)
+      return -EINVAL;
+    mod_ptr = &mod_time;
+  }
+
+  if (if_unmod) {
+    if (parse_time(if_unmod, &unmod_time) < 0)
+      return -EINVAL;
+    unmod_ptr = &unmod_time;
+  }
+
+  return 0;
+}
+
+int RGWGetObj::init_common(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc RGWGetObj::init_common",parent_span);
   if (range_str) {
     /* range parsed error when prefetch */
     if (!range_parsed) {
