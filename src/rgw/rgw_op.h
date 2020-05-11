@@ -1092,8 +1092,11 @@ public:
   RGWDeleteBucket() {}
 
   int verify_permission() override;
+  int verify_permission(Jager_Tracer&, const Span&) override;
   void pre_exec() override;
+  void pre_exec(Jager_Tracer&, const Span&) override;
   void execute() override;
+  void execute(Jager_Tracer&, const Span&) override;
 
   void send_response() override = 0;
   const char* name() const override { return "delete_bucket"; }

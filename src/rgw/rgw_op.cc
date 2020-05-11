@@ -4515,8 +4515,24 @@ int RGWDeleteBucket::verify_permission()
   return 0;
 }
 
+int RGWDeleteBucket::verify_permission(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", parent_span);
+  if (!verify_bucket_permission(this, s, rgw::IAM::s3DeleteBucket)) {
+    return -EACCES;
+  }
+
+  return 0;
+}
+
 void RGWDeleteBucket::pre_exec()
 {
+  rgw_bucket_object_pre_exec(s);
+}
+
+void RGWDeleteBucket::pre_exec(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span=tracer.child_span("rgw_op.cc  RGWDeleteBucket::pre_exec", parent_span);
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -4598,6 +4614,103 @@ void RGWDeleteBucket::execute()
   }
 
   op_ret = store->getRados()->delete_bucket(s->bucket_info, ot, s->yield, false);
+
+  if (op_ret == -ECANCELED) {
+    // lost a race, either with mdlog sync or another delete bucket operation.
+    // in either case, we've already called ctl.bucket->unlink_bucket()
+    op_ret = 0;
+    return;
+  }
+
+  if (op_ret == 0) {
+    op_ret = store->ctl()->bucket->unlink_bucket(s->bucket_info.owner,
+                                              s->bucket, s->yield, false);
+    if (op_ret < 0) {
+      ldpp_dout(this, 0) << "WARNING: failed to unlink bucket: ret=" << op_ret
+		       << dendl;
+    }
+  }
+}
+
+void RGWDeleteBucket::execute(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc RGWDeleteBucket::execute", parent_span);
+  if (s->bucket_name.empty()) {
+    op_ret = -EINVAL;
+    return;
+  }
+
+  if (!s->bucket_exists) {
+    ldpp_dout(this, 0) << "ERROR: bucket " << s->bucket_name << " not found" << dendl;
+    op_ret = -ERR_NO_SUCH_BUCKET;
+    return;
+  }
+  RGWObjVersionTracker ot;
+  ot.read_version = s->bucket_ep_objv;
+
+  if (s->system_request) {
+    string tag = s->info.args.get(RGW_SYS_PARAM_PREFIX "tag");
+    string ver_str = s->info.args.get(RGW_SYS_PARAM_PREFIX "ver");
+    if (!tag.empty()) {
+      ot.read_version.tag = tag;
+      uint64_t ver;
+      string err;
+      ver = strict_strtol(ver_str.c_str(), 10, &err);
+      if (!err.empty()) {
+        ldpp_dout(this, 0) << "failed to parse ver param" << dendl;
+        op_ret = -EINVAL;
+        return;
+      }
+      ot.read_version.ver = ver;
+    }
+  }
+
+  op_ret = store->ctl()->bucket->sync_user_stats(s->user->get_id(), s->bucket_info);
+  if ( op_ret < 0) {
+     ldpp_dout(this, 1) << "WARNING: failed to sync user stats before bucket delete: op_ret= " << op_ret << dendl;
+  }
+
+  op_ret = store->getRados()->check_bucket_empty(s->bucket_info, s->yield, tracer, span);
+  if (op_ret < 0) {
+    return;
+  }
+
+  if (!store->svc()->zone->is_meta_master()) {
+    bufferlist in_data;
+    op_ret = forward_request_to_master(s, &ot.read_version, store, in_data,
+				       NULL);
+    if (op_ret < 0) {
+      if (op_ret == -ENOENT) {
+        /* adjust error, we want to return with NoSuchBucket and not
+	 * NoSuchKey */
+        op_ret = -ERR_NO_SUCH_BUCKET;
+      }
+      return;
+    }
+  }
+
+  string prefix, delimiter;
+
+  if (s->prot_flags & RGW_REST_SWIFT) {
+    string path_args;
+    path_args = s->info.args.get("path");
+    if (!path_args.empty()) {
+      if (!delimiter.empty() || !prefix.empty()) {
+        op_ret = -EINVAL;
+        return;
+      }
+      prefix = path_args;
+      delimiter="/";
+    }
+  }
+
+  op_ret = abort_bucket_multiparts(store, s->cct, s->bucket_info, prefix, delimiter);
+
+  if (op_ret < 0) {
+    return;
+  }
+
+  op_ret = store->getRados()->delete_bucket(s->bucket_info, ot, s->yield, tracer, span, false);
 
   if (op_ret == -ECANCELED) {
     // lost a race, either with mdlog sync or another delete bucket operation.

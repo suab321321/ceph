@@ -4514,6 +4514,46 @@ int RGWRados::check_bucket_empty(RGWBucketInfo& bucket_info, optional_yield y)
 
   return 0;
 }
+
+int RGWRados::check_bucket_empty(RGWBucketInfo& bucket_info, optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::check_bucket_empty", parent_span);
+  constexpr uint NUM_ENTRIES = 1000u;
+
+  rgw_obj_index_key marker;
+  string prefix;
+  bool is_truncated;
+
+  do {
+    std::vector<rgw_bucket_dir_entry> ent_list;
+    ent_list.reserve(NUM_ENTRIES);
+
+    int r = cls_bucket_list_unordered(bucket_info,
+				      RGW_NO_SHARD,
+				      marker,
+				      prefix,
+				      NUM_ENTRIES,
+				      true,
+				      ent_list,
+				      &is_truncated,
+				      &marker,
+                                      y);
+    if (r < 0) {
+      return r;
+    }
+
+    string ns;
+    for (auto const& dirent : ent_list) {
+      rgw_obj_key obj;
+
+      if (rgw_obj_key::oid_to_key_in_ns(dirent.key.name, &obj, ns)) {
+        return -ENOTEMPTY;
+      }
+    }
+  } while (is_truncated);
+
+  return 0;
+}
   
 /**
  * Delete a bucket.
@@ -4522,6 +4562,72 @@ int RGWRados::check_bucket_empty(RGWBucketInfo& bucket_info, optional_yield y)
  */
 int RGWRados::delete_bucket(RGWBucketInfo& bucket_info, RGWObjVersionTracker& objv_tracker, optional_yield y, bool check_empty)
 {
+  const rgw_bucket& bucket = bucket_info.bucket;
+  RGWSI_RADOS::Pool index_pool;
+  map<int, string> bucket_objs;
+  int r = svc.bi_rados->open_bucket_index(bucket_info, std::nullopt, &index_pool, &bucket_objs, nullptr);
+  if (r < 0)
+    return r;
+  
+  if (check_empty) {
+    r = check_bucket_empty(bucket_info, y);
+    if (r < 0) {
+      return r;
+    }
+  }
+
+  bool remove_ep = true;
+
+  if (objv_tracker.read_version.empty()) {
+    RGWBucketEntryPoint ep;
+    r = ctl.bucket->read_bucket_entrypoint_info(bucket_info.bucket,
+                                                &ep,
+						null_yield,
+                                                RGWBucketCtl::Bucket::GetParams()
+                                                .set_objv_tracker(&objv_tracker));
+    if (r < 0 ||
+        (!bucket_info.bucket.bucket_id.empty() &&
+         ep.bucket.bucket_id != bucket_info.bucket.bucket_id)) {
+      if (r != -ENOENT) {
+        ldout(cct, 0) << "ERROR: read_bucket_entrypoint_info() bucket=" << bucket_info.bucket << " returned error: r=" << r << dendl;
+        /* we have no idea what caused the error, will not try to remove it */
+      }
+      /* 
+       * either failed to read bucket entrypoint, or it points to a different bucket instance than
+       * requested
+       */
+      remove_ep = false;
+    }
+  }
+ 
+  if (remove_ep) {
+    r = ctl.bucket->remove_bucket_entrypoint_info(bucket_info.bucket, null_yield,
+                                                  RGWBucketCtl::Bucket::RemoveParams()
+                                                  .set_objv_tracker(&objv_tracker));
+    if (r < 0)
+      return r;
+  }
+
+  /* if the bucket is not synced we can remove the meta file */
+  if (!svc.zone->is_syncing_bucket_meta(bucket)) {
+    RGWObjVersionTracker objv_tracker;
+    r = ctl.bucket->remove_bucket_instance_info(bucket, bucket_info, null_yield);
+    if (r < 0) {
+      return r;
+    }
+
+   /* remove bucket index objects asynchronously by best effort */
+    (void) CLSRGWIssueBucketIndexClean(index_pool.ioctx(),
+				       bucket_objs,
+				       cct->_conf->rgw_bucket_index_max_aio)();
+  }
+
+  return 0;
+}
+
+int RGWRados::delete_bucket(RGWBucketInfo& bucket_info, RGWObjVersionTracker& objv_tracker, optional_yield y, Jager_Tracer& tracer, const Span& parent_span, bool check_empty)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::delete_bucket", parent_span);
   const rgw_bucket& bucket = bucket_info.bucket;
   RGWSI_RADOS::Pool index_pool;
   map<int, string> bucket_objs;
