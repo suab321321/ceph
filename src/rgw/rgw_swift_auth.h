@@ -306,6 +306,10 @@ public:
   int authorize(const DoutPrefixProvider *dpp) override;
   int postauth_init() override { return 0; }
   int read_permissions(RGWOp *op) override { return 0; }
+  int read_permissions(RGWOp *op, Jager_Tracer& tracer, const Span& parent_span) override { 
+    Span span  = tracer.child_span("rgw_swift_auth.cc read_permissions", parent_span);
+    return 0; 
+  }
 
   virtual RGWAccessControlPolicy *alloc_policy() { return NULL; }
   virtual void free_policy(RGWAccessControlPolicy *policy) {}

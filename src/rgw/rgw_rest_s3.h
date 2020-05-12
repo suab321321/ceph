@@ -48,7 +48,9 @@ public:
 
   int get_params() override;
   int send_response_data_error() override;
+  int send_response_data_error(const Span&) override;
   int send_response_data(bufferlist& bl, off_t ofs, off_t len) override;
+  int send_response_data(bufferlist& bl, off_t ofs, off_t len, const Span&) override;
   void set_custom_http_response(int http_ret) { custom_http_ret = http_ret; }
   int get_decrypt_filter(std::unique_ptr<RGWGetObj_Filter>* filter,
                          RGWGetObj_Filter* cb,
@@ -132,8 +134,10 @@ public:
     return 0;
   }
   void send_response_begin(bool has_buckets) override;
+  void send_response_begin(bool has_buckets, Jager_Tracer&, const Span&, Span&) override;
   void send_response_data(rgw::sal::RGWBucketList& buckets) override;
   void send_response_end() override;
+  void send_response_end(Span,const Span&) override;
 };
 
 class RGWGetUsage_ObjStore_S3 : public RGWGetUsage_ObjStore {
@@ -160,6 +164,7 @@ protected:
 
   int get_params() override;
   void send_response() override;
+  void send_response(const Span&) override;
   void send_versioned_response();
 };
 
@@ -252,6 +257,7 @@ public:
 
   int get_params() override;
   void send_response() override;
+  void send_response(const Span&) override;
 };
 
 class RGWDeleteBucket_ObjStore_S3 : public RGWDeleteBucket_ObjStore {
@@ -260,6 +266,7 @@ public:
   ~RGWDeleteBucket_ObjStore_S3() override {}
 
   void send_response() override;
+  void send_response(const Span&) override;
 };
 
 class RGWPutObj_ObjStore_S3 : public RGWPutObj_ObjStore {
@@ -273,6 +280,7 @@ public:
   int get_params() override;
   int get_data(bufferlist& bl) override;
   void send_response() override;
+  void send_response(const Span&) override;
 
   int get_encrypt_filter(std::unique_ptr<rgw::putobj::DataProcessor> *filter,
                          rgw::putobj::DataProcessor *cb) override;
@@ -324,6 +332,7 @@ public:
 
   int get_params() override;
   void send_response() override;
+  void send_response(const Span&) override;
 };
 
 class RGWCopyObj_ObjStore_S3 : public RGWCopyObj_ObjStore {

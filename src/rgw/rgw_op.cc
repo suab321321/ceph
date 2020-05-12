@@ -2480,6 +2480,21 @@ int RGWGetObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
   return send_response_data(bl, bl_ofs, bl_len);
 }
 
+int RGWGetObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len, const Span& parent_span)
+{
+  /* garbage collection related handling */
+  utime_t start_time = ceph_clock_now();
+  if (start_time > gc_invalidate_time) {
+    int r = store->getRados()->defer_gc(s->obj_ctx, s->bucket_info, obj, s->yield);
+    if (r < 0) {
+      ldpp_dout(this, 0) << "WARNING: could not defer gc entry for obj" << dendl;
+    }
+    gc_invalidate_time = start_time;
+    gc_invalidate_time += (s->cct->_conf->rgw_gc_obj_min_wait / 2);
+  }
+  return send_response_data(bl, bl_ofs, bl_len, parent_span);
+}
+
 bool RGWGetObj::prefetch_data()
 {
   /* HEAD request, stop prefetch*/
@@ -2873,7 +2888,7 @@ void RGWGetObj::execute(Jager_Tracer& tracer,const Span& parent_span)
   }
 
   if (!get_data || ofs > end) {
-    send_response_data(bl, 0, 0);
+    send_response_data(bl, 0, 0, parent_span);
     return;
   }
 
@@ -2892,14 +2907,14 @@ void RGWGetObj::execute(Jager_Tracer& tracer,const Span& parent_span)
     goto done_err;
   }
 
-  op_ret = send_response_data(bl, 0, 0);
+  op_ret = send_response_data(bl, 0, 0, parent_span);
   if (op_ret < 0) {
     goto done_err;
   }
   return;
 
 done_err:
-  send_response_data_error();
+  send_response_data_error(parent_span);
 }
 
 int RGWGetObj::init_common()
@@ -2977,6 +2992,7 @@ int RGWGetUsage::verify_permission()
 void RGWListBuckets::execute(Jager_Tracer& tracer,const Span& parent_span)
 {
   Span span=tracer.child_span("rgw_op.cc RGWListBuckets::execute()",parent_span);
+  Span response_span = nullptr;
   bool done;
   bool started = false;
   uint64_t total_count = 0;
@@ -3045,9 +3061,9 @@ void RGWListBuckets::execute(Jager_Tracer& tracer,const Span& parent_span)
     total_count += m.size();
 
     done = (m.size() < read_count || (limit >= 0 && total_count >= (uint64_t)limit));
-
+  
     if (!started) {
-      send_response_begin(buckets.count() > 0);
+      send_response_begin(buckets.count() > 0, tracer, span, response_span);
       started = true;
     }
 
@@ -3062,9 +3078,9 @@ void RGWListBuckets::execute(Jager_Tracer& tracer,const Span& parent_span)
 
 send_end:
   if (!started) {
-    send_response_begin(false);
+    send_response_begin(false, tracer, span, response_span);
   }
-  send_response_end();
+  send_response_end(std::move(response_span), parent_span);
 }
 
 

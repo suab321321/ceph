@@ -23,7 +23,9 @@ public:
   int verify_permission() override;
   int get_params() override;
   int send_response_data_error() override;
+  int send_response_data_error(const Span&) override;
   int send_response_data(bufferlist& bl, off_t ofs, off_t len) override;
+  int send_response_data(bufferlist& bl, off_t ofs, off_t len, const Span&) override;
 
   void set_custom_http_response(const int http_ret) {
     custom_http_ret = http_ret;
@@ -54,10 +56,12 @@ public:
   int get_params() override;
   void handle_listing_chunk(rgw::sal::RGWBucketList&& buckets) override;
   void send_response_begin(bool has_buckets) override;
+  void send_response_begin(bool has_buckets, Jager_Tracer&, const Span&, Span&) override;
   void send_response_data(rgw::sal::RGWBucketList& buckets) override;
   void send_response_data_reversed(rgw::sal::RGWBucketList& buckets);
   void dump_bucket_entry(const rgw::sal::RGWBucket& obj);
   void send_response_end() override;
+  void send_response_end(Span, const Span&) override;
 
   bool should_get_stats() override { return need_stats; }
   bool supports_account_metadata() override { return true; }
@@ -73,6 +77,7 @@ public:
 
   int get_params() override;
   void send_response() override;
+  void send_response(const Span&) override;
   bool need_container_stats() override { return true; }
 };
 
@@ -104,6 +109,7 @@ public:
 
   int get_params() override;
   void send_response() override;
+  void send_response(const Span&) override;
 };
 
 class RGWDeleteBucket_ObjStore_SWIFT : public RGWDeleteBucket_ObjStore {
@@ -112,6 +118,7 @@ public:
   ~RGWDeleteBucket_ObjStore_SWIFT() override {}
 
   void send_response() override;
+  void send_response(const Span&) override;
 };
 
 class RGWPutObj_ObjStore_SWIFT : public RGWPutObj_ObjStore {
@@ -125,6 +132,7 @@ public:
   int verify_permission() override;
   int get_params() override;
   void send_response() override;
+  void send_response(const Span&) override;
 };
 
 class RGWPutMetadataAccount_ObjStore_SWIFT : public RGWPutMetadataAccount_ObjStore {
@@ -166,6 +174,7 @@ public:
   int get_params(Jager_Tracer& tracer, const Span& parent_span) override;
   bool need_object_expiration() override { return true; }
   void send_response() override;
+  void send_response(const Span&) override;
 };
 
 class RGWCopyObj_ObjStore_SWIFT : public RGWCopyObj_ObjStore {

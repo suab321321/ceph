@@ -192,6 +192,12 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets)
   }
 }
 
+void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets, Jager_Tracer& tracer, const Span& parent_span, Span& span)
+{
+  span = tracer.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response", parent_span);
+  RGWListBuckets_ObjStore_SWIFT::send_response_begin(has_buckets);
+}
+
 void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList&& buckets)
 {
   if (wants_reversed) {
@@ -291,6 +297,12 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_end()
   if (sent_data || s->cct->_conf->rgw_swift_enforce_content_length) {
     rgw_flush_formatter_and_reset(s, s->formatter);
   }
+}
+
+void RGWListBuckets_ObjStore_SWIFT::send_response_end(Span span, const Span& parent_span)
+{
+  parent_span->SetTag("operation_gateway", "swift");
+  RGWListBuckets_ObjStore_SWIFT::send_response_end();
 }
 
 int RGWListBucket_ObjStore_SWIFT::get_params()
@@ -448,6 +460,11 @@ next:
 
   rgw_flush_formatter_and_reset(s, s->formatter);
 } // RGWListBucket_ObjStore_SWIFT::send_response
+
+void RGWListBucket_ObjStore_SWIFT::send_response(const Span& parent_span){
+  parent_span->SetTag("operation_gateway", "swift");
+  RGWListBucket_ObjStore_SWIFT::send_response();
+}
 
 static void dump_container_metadata(struct req_state *s,
                                     const rgw::sal::RGWBucket* bucket,
@@ -760,6 +777,12 @@ void RGWCreateBucket_ObjStore_SWIFT::send_response()
   rgw_flush_formatter_and_reset(s, s->formatter);
 }
 
+void RGWCreateBucket_ObjStore_SWIFT::send_response(const Span& parent_span)
+{
+  parent_span->SetTag("operation_gateway", "swift");
+  RGWCreateBucket_ObjStore_SWIFT::send_response();
+}
+
 void RGWDeleteBucket_ObjStore_SWIFT::send_response()
 {
   int r = op_ret;
@@ -770,6 +793,12 @@ void RGWDeleteBucket_ObjStore_SWIFT::send_response()
   dump_errno(s);
   end_header(s, this, NULL, 0);
   rgw_flush_formatter_and_reset(s, s->formatter);
+}
+
+void RGWDeleteBucket_ObjStore_SWIFT::send_response(const Span& parent_span)
+{
+  parent_span->SetTag("operation_gateway", "swift");
+  RGWDeleteBucket_ObjStore_SWIFT::send_response();
 }
 
 static int get_delete_at_param(req_state *s, boost::optional<real_time> &delete_at)
@@ -1048,6 +1077,12 @@ void RGWPutObj_ObjStore_SWIFT::send_response()
   dump_errno(s);
   end_header(s, this);
   rgw_flush_formatter_and_reset(s, s->formatter);
+}
+
+void RGWPutObj_ObjStore_SWIFT::send_response(const Span& parent_span)
+{
+  parent_span->SetTag("operation_gateway", "swift");
+  RGWPutObj_ObjStore_SWIFT::send_response();
 }
 
 static int get_swift_account_settings(req_state * const s,
@@ -1333,6 +1368,12 @@ void RGWDeleteObj_ObjStore_SWIFT::send_response()
 
 }
 
+void RGWDeleteObj_ObjStore_SWIFT::send_response(const Span& parent_span)
+{
+  parent_span->SetTag("operation_gateway", "swift");
+  RGWDeleteObj_ObjStore_SWIFT::send_response();
+}
+
 static void get_contype_from_attrs(map<string, bufferlist>& attrs,
 				   string& content_type)
 {
@@ -1528,6 +1569,12 @@ int RGWGetObj_ObjStore_SWIFT::send_response_data_error()
   return send_response_data(error_bl, 0, error_bl.length());
 }
 
+int RGWGetObj_ObjStore_SWIFT::send_response_data_error(const Span& parent_span)
+{
+  parent_span->SetTag("operation_gateway", "swift");
+  return RGWGetObj_ObjStore_SWIFT::send_response_data_error();
+}
+
 int RGWGetObj_ObjStore_SWIFT::send_response_data(bufferlist& bl,
                                                  const off_t bl_ofs,
                                                  const off_t bl_len)
@@ -1597,6 +1644,14 @@ send_data:
   rgw_flush_formatter_and_reset(s, s->formatter);
 
   return 0;
+}
+
+int RGWGetObj_ObjStore_SWIFT::send_response_data(bufferlist& bl,
+                                                 const off_t bl_ofs,
+                                                 const off_t bl_len, const Span& parent_span)
+{
+  parent_span->SetTag("operation_gateway", "swift");
+  return RGWGetObj_ObjStore_SWIFT::send_response_data(bl, bl_ofs, bl_len);
 }
 
 void RGWOptionsCORS_ObjStore_SWIFT::send_response()
