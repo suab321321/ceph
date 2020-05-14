@@ -133,9 +133,15 @@ public:
     limit = -1; /* no limit */
     return 0;
   }
+  int get_params(Jager_Tracer& tracer, const Span& parent_span) override {
+    Span span = tracer.child_span("rgw_rest_s3.h RGWListBuckets_ObjStore_S3::get_params", parent_span);
+    limit = -1; /* no limit */
+    return 0;
+  }
   void send_response_begin(bool has_buckets) override;
   void send_response_begin(bool has_buckets, Jager_Tracer&, const Span&, Span&) override;
   void send_response_data(rgw::sal::RGWBucketList& buckets) override;
+  void send_response_data(rgw::sal::RGWBucketList& buckets, Jager_Tracer& tracer, const Span& parent_span) override;
   void send_response_end() override;
   void send_response_end(Span,const Span&) override;
 };

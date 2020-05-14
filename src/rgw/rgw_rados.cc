@@ -1998,6 +1998,21 @@ done:
   return 0;
 } // list_objects_ordered
 
+int RGWRados::Bucket::List::list_objects_ordered(
+  int64_t max_p,
+  vector<rgw_bucket_dir_entry> *result,
+  map<string, bool> *common_prefixes,
+  bool *is_truncated, Jager_Tracer& tracer, const Span& parent_span,
+  optional_yield y)
+  {
+    Span span = tracer.child_span("rgw_rados RGWRados::Bucket::List::list_objects_ordered", parent_span);
+    return RGWRados::Bucket::List::list_objects_ordered(
+                                                max_p,
+                                                result,
+                                                common_prefixes,
+                                                is_truncated,
+                                                y);
+  }
 
 /**
  * Get listing of the objects in a bucket and allow the results to be out
@@ -2142,6 +2157,19 @@ done:
   return 0;
 } // list_objects_unordered
 
+int RGWRados::Bucket::List::list_objects_unordered(int64_t max_p,
+						   vector<rgw_bucket_dir_entry> *result,
+						   map<string, bool> *common_prefixes,
+						   bool *is_truncated, Jager_Tracer& tracer, const Span& parent_span,
+                                                   optional_yield y)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::Bucket::List::list_objects_unordered", parent_span);
+  return RGWRados::Bucket::List::list_objects_unordered(max_p,
+                                                        result,
+                                                        common_prefixes,
+                                                        is_truncated,
+                                                        y);
+}
 
 /**
  * create a rados pool, associated meta info
@@ -2273,6 +2301,37 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
   /* this is highly unlikely */
   ldout(cct, 0) << "ERROR: could not create bucket, continuously raced with bucket creation and removal" << dendl;
   return -ENOENT;
+}
+
+int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
+                            const string& zonegroup_id,
+                            const rgw_placement_rule& placement_rule,
+                            const string& swift_ver_location,
+                            const RGWQuotaInfo * pquota_info,
+			    map<std::string, bufferlist>& attrs,
+                            RGWBucketInfo& info,
+                            obj_version *pobjv,
+                            obj_version *pep_objv,
+                            real_time creation_time,
+                            rgw_bucket *pmaster_bucket,
+                            uint32_t *pmaster_num_shards,
+                            Jager_Tracer& tracer, const Span& parent_span,
+			    bool exclusive)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::create_bucket", parent_span);
+  return RGWRados::create_bucket(owner, bucket,
+                            zonegroup_id,
+                            placement_rule,
+                            swift_ver_location,
+                            pquota_info,
+			                       attrs,
+                            info,
+                            pobjv,
+                            pep_objv,
+                            creation_time,
+                            pmaster_bucket,
+                            pmaster_num_shards,
+			                      exclusive);
 }
 
 bool RGWRados::get_obj_data_pool(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_pool *pool)

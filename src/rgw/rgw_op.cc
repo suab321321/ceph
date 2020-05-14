@@ -2980,6 +2980,19 @@ int RGWListBuckets::verify_permission()
   return 0;
 }
 
+int RGWListBuckets::verify_permission(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc RGWListBuckets::verify_permission", parent_span);
+  rgw::Partition partition = rgw::Partition::aws;
+  rgw::Service service = rgw::Service::s3;
+
+  if (!verify_user_permission(this, s, ARN(partition, service, "", s->user->get_tenant(), "*"), rgw::IAM::s3ListAllMyBuckets)) {
+    return -EACCES;
+  }
+
+  return 0;
+}
+
 int RGWGetUsage::verify_permission()
 {
   if (s->auth.identity->is_anonymous()) {
@@ -2999,7 +3012,7 @@ void RGWListBuckets::execute(Jager_Tracer& tracer,const Span& parent_span)
 
   const uint64_t max_buckets = s->cct->_conf->rgw_list_buckets_max_chunk;
 
-  op_ret = get_params();
+  op_ret = get_params(tracer, span);
   if (op_ret < 0) {
     goto send_end;
   }
@@ -3023,7 +3036,7 @@ void RGWListBuckets::execute(Jager_Tracer& tracer,const Span& parent_span)
 
     rgw::sal::RGWRadosUser user(store, s->user->get_id());
 
-    op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
+    op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets, tracer, span);
 
     if (op_ret < 0) {
       /* hmm.. something wrong here.. the user was authenticated, so it
@@ -3072,7 +3085,7 @@ void RGWListBuckets::execute(Jager_Tracer& tracer,const Span& parent_span)
       map<string, rgw::sal::RGWBucket*>::reverse_iterator riter = m.rbegin();
       marker = riter->first;
 
-      handle_listing_chunk(std::move(buckets));
+      handle_listing_chunk(std::move(buckets), tracer, span);
     }
   } while (is_truncated && !done);
 
@@ -3664,7 +3677,7 @@ void RGWListBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
   list_op.params.list_versions = list_versions;
   list_op.params.allow_unordered = allow_unordered;
 
-  op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
+  op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, tracer, span, s->yield);
   if (op_ret >= 0) {
     next_marker = list_op.get_next_marker();
   }

@@ -50,6 +50,28 @@ int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
   return 0;
 }
 
+int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
+			       uint64_t max, bool need_stats, RGWBucketList &buckets, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_sal.cc RGWRadosUser::list_buckets", parent_span);
+  RGWUserBuckets ulist;
+  bool is_truncated = false;
+  int ret;
+
+  ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
+					 need_stats, &ulist, &is_truncated, tracer, span);
+  if (ret < 0)
+    return ret;
+
+  buckets.set_truncated(is_truncated);
+  for (const auto& ent : ulist.get_buckets()) {
+    RGWRadosBucket *rb = new RGWRadosBucket(this->store, *this, ent.second);
+    buckets.add(rb);
+  }
+
+  return 0;
+}
+
 RGWBucketList::~RGWBucketList()
 {
   for (auto itr = buckets.begin(); itr != buckets.end(); itr++) {

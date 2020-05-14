@@ -1207,7 +1207,7 @@ void RGWListBuckets_ObjStore_S3::send_response_begin(bool has_buckets)
 
 void RGWListBuckets_ObjStore_S3::send_response_begin(bool has_buckets, Jager_Tracer& tracer, const Span& parent_span, Span& span)
 {
-  span = tracer.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response", parent_span);
+  span = tracer.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response_begin", parent_span);
   RGWListBuckets_ObjStore_S3::send_response_begin(has_buckets);
 }
 
@@ -1226,6 +1226,12 @@ void RGWListBuckets_ObjStore_S3::send_response_data(rgw::sal::RGWBucketList& buc
   rgw_flush_formatter(s, s->formatter);
 }
 
+void RGWListBuckets_ObjStore_S3::send_response_data(rgw::sal::RGWBucketList& buckets, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response_data", parent_span);
+  RGWListBuckets_ObjStore_S3::send_response_data(buckets);
+}
+
 void RGWListBuckets_ObjStore_S3::send_response_end()
 {
   if (sent_data) {
@@ -1239,6 +1245,7 @@ void RGWListBuckets_ObjStore_S3::send_response_end(Span span, const Span& parent
 {
   parent_span->SetTag("operation_gateway", "s3");
   RGWListBuckets_ObjStore_S3::send_response_end();
+  span->Finish();
 }
 
 int RGWGetUsage_ObjStore_S3::get_params()

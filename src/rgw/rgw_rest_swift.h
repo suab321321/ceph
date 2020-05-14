@@ -54,10 +54,13 @@ public:
   ~RGWListBuckets_ObjStore_SWIFT() override {}
 
   int get_params() override;
+  int get_params(Jager_Tracer&, const Span&) override;
   void handle_listing_chunk(rgw::sal::RGWBucketList&& buckets) override;
+  void handle_listing_chunk(rgw::sal::RGWBucketList&& buckets, Jager_Tracer&, const Span&) override;
   void send_response_begin(bool has_buckets) override;
   void send_response_begin(bool has_buckets, Jager_Tracer&, const Span&, Span&) override;
   void send_response_data(rgw::sal::RGWBucketList& buckets) override;
+  void send_response_data(rgw::sal::RGWBucketList& buckets, Jager_Tracer&, const Span&) override;
   void send_response_data_reversed(rgw::sal::RGWBucketList& buckets);
   void dump_bucket_entry(const rgw::sal::RGWBucket& obj);
   void send_response_end() override;

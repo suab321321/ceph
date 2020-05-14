@@ -2846,6 +2846,20 @@ int RGWUserCtl::list_buckets(const rgw_user& user,
   });
 }
 
+int RGWUserCtl::list_buckets(const rgw_user& user,
+                             const string& marker,
+                             const string& end_marker,
+                             uint64_t max,
+                             bool need_stats,
+                             RGWUserBuckets *buckets,
+                             bool *is_truncated,
+                              Jager_Tracer& tracer, const Span& parent_span,
+                             uint64_t default_max)
+{
+  Span span = tracer.child_span("rgw_user.cc RGWUserCtl::list_buckets", parent_span);
+  return RGWUserCtl::list_buckets(user, marker, end_marker, max, need_stats, buckets, is_truncated, default_max);
+}
+
 int RGWUserCtl::flush_bucket_stats(const rgw_user& user,
                                    const RGWBucketEnt& ent)
 {

@@ -793,10 +793,12 @@ public:
   }
 
   int verify_permission() override;
+  int verify_permission(Jager_Tracer&, const Span&) override;
 	void execute(Jager_Tracer&,const Span&) override;
   void execute() override;
 
   virtual int get_params() = 0;
+  virtual int get_params(Jager_Tracer&, const Span&) = 0;
   virtual void handle_listing_chunk(rgw::sal::RGWBucketList&& buckets) {
     /* The default implementation, used by e.g. S3, just generates a new
      * part of listing and sends it client immediately. Swift can behave
@@ -804,9 +806,17 @@ public:
      * instances of RGWBucketList are buffered and finally reversed. */
     return send_response_data(buckets);
   }
+  virtual void handle_listing_chunk(rgw::sal::RGWBucketList&& buckets, Jager_Tracer& tracer, const Span& parent_span) {
+    /* The default implementation, used by e.g. S3, just generates a new
+     * part of listing and sends it client immediately. Swift can behave
+     * differently: when the reverse option is requested, all incoming
+     * instances of RGWBucketList are buffered and finally reversed. */
+    return send_response_data(buckets, tracer, parent_span);
+  }
   virtual void send_response_begin(bool has_buckets) = 0;
   virtual void send_response_begin(bool has_buckets, Jager_Tracer&, const Span&, Span&) = 0;
   virtual void send_response_data(rgw::sal::RGWBucketList& buckets) = 0;
+  virtual void send_response_data(rgw::sal::RGWBucketList& buckets, Jager_Tracer&, const Span&) = 0;
   virtual void send_response_end() = 0;
   virtual void send_response_end(Span, const Span&) = 0;
   void send_response() override {}

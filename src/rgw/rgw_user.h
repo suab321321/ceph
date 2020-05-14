@@ -964,6 +964,16 @@ public:
                    bool *is_truncated,
                    uint64_t default_max = 1000);
 
+  int list_buckets(const rgw_user& user,
+                   const string& marker,
+                   const string& end_marker,
+                   uint64_t max,
+                   bool need_stats,
+                   RGWUserBuckets *buckets,
+                   bool *is_truncated,
+                   Jager_Tracer&, const Span&,
+                   uint64_t default_max = 1000);
+
   int flush_bucket_stats(const rgw_user& user,
                          const RGWBucketEnt& ent);
   int complete_flush_stats(const rgw_user& user);

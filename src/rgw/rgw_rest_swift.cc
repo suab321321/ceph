@@ -83,6 +83,11 @@ int RGWListBuckets_ObjStore_SWIFT::get_params()
   return 0;
 }
 
+int RGWListBuckets_ObjStore_SWIFT::get_params(Jager_Tracer& tracer, const Span& parent_span){
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::get_params", parent_span);
+  return RGWListBuckets_ObjStore_SWIFT::get_params();
+}
+
 static void dump_account_metadata(struct req_state * const s,
                                   const RGWUsageStats& global_stats,
                                   const std::map<std::string, RGWUsageStats> &policies_stats,
@@ -194,7 +199,7 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets)
 
 void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets, Jager_Tracer& tracer, const Span& parent_span, Span& span)
 {
-  span = tracer.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response", parent_span);
+  span = tracer.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_begin", parent_span);
   RGWListBuckets_ObjStore_SWIFT::send_response_begin(has_buckets);
 }
 
@@ -206,6 +211,18 @@ void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList
     reverse_buffer.emplace(std::begin(reverse_buffer), std::move(buckets));
   } else {
     return send_response_data(buckets);
+  }
+}
+
+void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList&& buckets, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk", parent_span);
+  if (wants_reversed) {
+    /* Just store in the reversal buffer. Its content will be handled later,
+     * in send_response_end(). */
+    reverse_buffer.emplace(std::begin(reverse_buffer), std::move(buckets));
+  } else {
+    return send_response_data(buckets, tracer, span);
   }
 }
 
@@ -225,6 +242,12 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_data(rgw::sal::RGWBucketList& 
        ++iter) {
     dump_bucket_entry(*iter->second);
   }
+}
+
+void RGWListBuckets_ObjStore_SWIFT::send_response_data(rgw::sal::RGWBucketList& buckets, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_data", parent_span);
+  RGWListBuckets_ObjStore_SWIFT::send_response_data(buckets);
 }
 
 void RGWListBuckets_ObjStore_SWIFT::dump_bucket_entry(const rgw::sal::RGWBucket& obj)
@@ -303,6 +326,7 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_end(Span span, const Span& par
 {
   parent_span->SetTag("operation_gateway", "swift");
   RGWListBuckets_ObjStore_SWIFT::send_response_end();
+  span->Finish();
 }
 
 int RGWListBucket_ObjStore_SWIFT::get_params()

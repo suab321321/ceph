@@ -193,6 +193,7 @@ void handle_connection(boost::asio::io_context& context,
         std::string span_name;
         auto time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
         span_name = std::ctime(&time);
+        span_name = "rgw_asio_frontend "+span_name;
         Span span=tracer.new_span(span_name.c_str());
         if(root_span == nullptr)
           root_span=tracer.new_span(span_name.c_str());

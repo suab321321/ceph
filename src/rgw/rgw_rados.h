@@ -672,6 +672,20 @@ public:
                             rgw_bucket *master_bucket,
                             uint32_t *master_num_shards,
                             bool exclusive = true);
+  int create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
+                            const string& zonegroup_id,
+                            const rgw_placement_rule& placement_rule,
+                            const string& swift_ver_location,
+                            const RGWQuotaInfo * pquota_info,
+                            map<std::string,bufferlist>& attrs,
+                            RGWBucketInfo& bucket_info,
+                            obj_version *pobjv,
+                            obj_version *pep_objv,
+                            ceph::real_time creation_time,
+                            rgw_bucket *master_bucket,
+                            uint32_t *master_num_shards,
+                            Jager_Tracer&, const Span&,
+                            bool exclusive = true);
 
   RGWCoroutinesManagerRegistry *get_cr_registry() { return cr_registry; }
 
@@ -1001,10 +1015,20 @@ public:
 			       map<string, bool> *common_prefixes,
 			       bool *is_truncated,
                                optional_yield y);
+      int list_objects_ordered(int64_t max,
+			       vector<rgw_bucket_dir_entry> *result,
+			       map<string, bool> *common_prefixes,
+			       bool *is_truncated, Jager_Tracer&, const Span&,
+                               optional_yield y);
       int list_objects_unordered(int64_t max,
 				 vector<rgw_bucket_dir_entry> *result,
 				 map<string, bool> *common_prefixes,
 				 bool *is_truncated,
+                                 optional_yield y);
+      int list_objects_unordered(int64_t max,
+				 vector<rgw_bucket_dir_entry> *result,
+				 map<string, bool> *common_prefixes,
+				 bool *is_truncated, Jager_Tracer&, const Span&,
                                  optional_yield y);
 
     public:
@@ -1041,6 +1065,20 @@ public:
 	} else {
 	  return list_objects_ordered(max, result, common_prefixes,
 				      is_truncated, y);
+	}
+      }
+  
+  int list_objects(int64_t max,
+		       vector<rgw_bucket_dir_entry> *result,
+		       map<string, bool> *common_prefixes,
+		       bool *is_truncated,Jager_Tracer& tracer, const Span& parent_span,
+                       optional_yield y) {
+	if (params.allow_unordered) {
+	  return list_objects_unordered(max, result, common_prefixes,
+					is_truncated, tracer, parent_span, y);
+	} else {
+	  return list_objects_ordered(max, result, common_prefixes,
+				      is_truncated, tracer, parent_span, y);
 	}
       }
       rgw_obj_key& get_next_marker() {
