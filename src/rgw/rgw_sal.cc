@@ -226,6 +226,31 @@ int RGWRadosBucket::update_container_stats(void)
   return 0;
 }
 
+int RGWRadosBucket::update_container_stats(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", parent_span);
+  int ret;
+  map<std::string, RGWBucketEnt> m;
+
+  m[ent.bucket.name] = ent;
+  ret = store->getRados()->update_containers_stats(m, tracer, span);
+  if (!ret)
+    return -EEXIST;
+  if (ret < 0)
+    return ret;
+
+  map<string, RGWBucketEnt>::iterator iter = m.find(ent.bucket.name);
+  if (iter == m.end())
+    return -EINVAL;
+
+  ent.count = iter->second.count;
+  ent.size = iter->second.size;
+  ent.size_rounded = iter->second.size_rounded;
+  ent.placement_rule = std::move(iter->second.placement_rule);
+
+  return 0;
+}
+
 int RGWRadosBucket::check_bucket_shards(void)
 {
       return store->getRados()->check_bucket_shards(info, ent.bucket, get_count());

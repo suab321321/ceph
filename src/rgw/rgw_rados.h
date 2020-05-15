@@ -1366,6 +1366,7 @@ public:
   void gen_rand_obj_instance_name(rgw_obj *target);
 
   int update_containers_stats(map<string, RGWBucketEnt>& m);
+  int update_containers_stats(map<string, RGWBucketEnt>& m, Jager_Tracer&, const Span&);
   int append_async(rgw_raw_obj& obj, size_t size, bufferlist& bl);
 
 public:
@@ -1434,6 +1435,23 @@ public:
 			      rgw_obj_index_key *last_entry,
                               optional_yield y,
 			      check_filter_t force_check_filter = nullptr);
+
+  int cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
+			      const int shard_id,
+			      const rgw_obj_index_key& start_after,
+			      const string& prefix,
+			      const string& delimiter,
+			      const uint32_t num_entries,
+			      const bool list_versions,
+			      const uint16_t exp_factor, // 0 means ignore
+			      ent_map_t& m,
+			      bool* is_truncated,
+			      bool* cls_filtered,
+			      rgw_obj_index_key *last_entry,
+                              optional_yield y,
+            Jager_Tracer&, const Span&,
+			      check_filter_t force_check_filter = nullptr);
+
   int cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
 				int shard_id,
 				const rgw_obj_index_key& start_after,

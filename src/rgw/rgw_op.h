@@ -129,6 +129,7 @@ public:
 
 
 void rgw_bucket_object_pre_exec(struct req_state *s);
+void rgw_bucket_object_pre_exec(struct req_state *s, Jager_Tracer&, const Span&);
 
 namespace dmc = rgw::dmclock;
 
@@ -217,13 +218,13 @@ public:
   virtual void execute() = 0;
 	virtual void execute(Jager_Tracer&,const Span&) {}
   virtual void send_response() {}
-  virtual void send_response(const Span&) {}
+  virtual void send_response(Jager_Tracer& tracer, const Span& parent_span) {}
   virtual void complete() {
     send_response();
   }
 
-  virtual void complete(const Span& span) {
-    send_response(span);
+  virtual void complete(Jager_Tracer& tracer, const Span& parent_span) {
+    send_response(tracer, parent_span);
   }
 
   virtual const char* name() const = 0;
@@ -897,6 +898,7 @@ protected:
   int shard_id;
 
   int parse_max_keys();
+  int parse_max_keys(Jager_Tracer&, const Span&);
 
 public:
   RGWListBucket() : bucket(nullptr), list_versions(false), max(0),
@@ -914,8 +916,9 @@ public:
     bucket = new rgw::sal::RGWRadosBucket(store, *s->user, s->bucket);
   }
   virtual int get_params() = 0;
+  virtual int get_params(Jager_Tracer&, const Span& parent_span) = 0;
   void send_response() override = 0;
-  void send_response(const Span&) override = 0;
+  void send_response(Jager_Tracer&, const Span&) override = 0;
   const char* name() const override { return "list_bucket"; }
   RGWOpType get_type() override { return RGW_OP_LIST_BUCKET; }
   uint32_t op_mask() override { return RGW_OP_TYPE_READ; }
@@ -1101,7 +1104,7 @@ public:
   }
   virtual int get_params() { return 0; }
   void send_response() override = 0;
-  void send_response(const Span&) override {}
+  void send_response(Jager_Tracer&, const Span&) override {}
   const char* name() const override { return "create_bucket"; }
   RGWOpType get_type() override { return RGW_OP_CREATE_BUCKET; }
   uint32_t op_mask() override { return RGW_OP_TYPE_WRITE; }
@@ -1122,7 +1125,7 @@ public:
   void execute(Jager_Tracer&, const Span&) override;
 
   void send_response() override = 0;
-  void send_response(const Span&) override = 0;
+  void send_response(Jager_Tracer&, const Span&) override = 0;
   const char* name() const override { return "delete_bucket"; }
   RGWOpType get_type() override { return RGW_OP_DELETE_BUCKET; }
   uint32_t op_mask() override { return RGW_OP_TYPE_DELETE; }
@@ -1290,7 +1293,7 @@ public:
   virtual int get_data(bufferlist& bl) = 0;
   virtual int get_data(bufferlist& bl,Jager_Tracer&,const Span&) {}
   void send_response() override = 0;
-  void send_response(const Span&) override {}
+  void send_response(Jager_Tracer&, const Span&) override {}
   const char* name() const override { return "put_obj"; }
   RGWOpType get_type() override { return RGW_OP_PUT_OBJ; }
   uint32_t op_mask() override { return RGW_OP_TYPE_WRITE; }
@@ -1484,7 +1487,7 @@ public:
   virtual int get_params() { return 0; }
   virtual int get_params(Jager_Tracer& tracer, const Span& parent_span) { return 0; }
   void send_response() override = 0;
-  void send_response(const Span&) override = 0;
+  void send_response(Jager_Tracer&, const Span&) override = 0;
   const char* name() const override { return "delete_obj"; }
   RGWOpType get_type() override { return RGW_OP_DELETE_OBJ; }
   uint32_t op_mask() override { return RGW_OP_TYPE_DELETE; }

@@ -418,6 +418,12 @@ void dump_bucket_from_state(struct req_state *s)
   }
 }
 
+void dump_bucket_from_state(struct req_state *s, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest.cc dump_bucket_from_state", parent_span);
+  dump_bucket_from_state(s);
+}
+
 void dump_redirect(struct req_state * const s, const std::string& redirect)
 {
   return dump_header_if_nonempty(s, "Location", redirect);

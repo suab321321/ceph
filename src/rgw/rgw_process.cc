@@ -206,19 +206,19 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
 
   ldpp_dout(op, 2) << "pre-executing" << dendl;
   if(should_trace)
-    op->pre_exec(tracer,span);
+    op->pre_exec(tracer, span);
   else
     op->pre_exec();
 
   ldpp_dout(op, 2) << "executing" << dendl;
   if(should_trace)
-    op->execute(tracer,span);
+    op->execute(tracer, span);
   else
     op->execute();
 
   ldpp_dout(op, 2) << "completing" << dendl;
   if(should_trace)
-    op->complete(span);
+    op->complete(tracer, span);
   else
     op->complete();
 

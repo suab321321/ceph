@@ -375,6 +375,53 @@ int RGWListBucket_ObjStore_SWIFT::get_params()
   return 0;
 }
 
+int RGWListBucket_ObjStore_SWIFT::get_params(Jager_Tracer& tracer, const Span& parent_span){
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::get_params", parent_span);
+  prefix = s->info.args.get("prefix");
+  marker = s->info.args.get("marker");
+  end_marker = s->info.args.get("end_marker");
+  max_keys = s->info.args.get("limit");
+
+  // non-standard
+  s->info.args.get_bool("allow_unordered", &allow_unordered, false);
+
+  delimiter = s->info.args.get("delimiter");
+
+  op_ret = parse_max_keys(tracer, span);
+  if (op_ret < 0) {
+    return op_ret;
+  }
+  // S3 behavior is to silently cap the max-keys.
+  // Swift behavior is to abort.
+  if (max > default_max)
+    return -ERR_PRECONDITION_FAILED;
+
+  string path_args;
+  if (s->info.args.exists("path")) { // should handle empty path
+    path_args = s->info.args.get("path");
+    if (!delimiter.empty() || !prefix.empty()) {
+      return -EINVAL;
+    }
+    prefix = path_args;
+    delimiter="/";
+
+    path = prefix;
+    if (path.size() && path[path.size() - 1] != '/')
+      path.append("/");
+
+    int len = prefix.size();
+    int delim_size = delimiter.size();
+
+    if (len >= delim_size) {
+      if (prefix.substr(len - delim_size).compare(delimiter) != 0)
+        prefix.append(delimiter);
+    }
+  }
+
+  return 0;
+
+}
+
 static void dump_container_metadata(struct req_state *,
                                     const rgw::sal::RGWBucket*,
                                     const RGWQuotaInfo&,
@@ -485,9 +532,10 @@ next:
   rgw_flush_formatter_and_reset(s, s->formatter);
 } // RGWListBucket_ObjStore_SWIFT::send_response
 
-void RGWListBucket_ObjStore_SWIFT::send_response(const Span& parent_span){
-  parent_span->SetTag("operation_gateway", "swift");
+void RGWListBucket_ObjStore_SWIFT::send_response(Jager_Tracer& tracer,const Span& parent_span){
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::send_response", parent_span);
   RGWListBucket_ObjStore_SWIFT::send_response();
+  parent_span->SetTag("operation_gateway", "swift");
 }
 
 static void dump_container_metadata(struct req_state *s,
@@ -801,10 +849,11 @@ void RGWCreateBucket_ObjStore_SWIFT::send_response()
   rgw_flush_formatter_and_reset(s, s->formatter);
 }
 
-void RGWCreateBucket_ObjStore_SWIFT::send_response(const Span& parent_span)
+void RGWCreateBucket_ObjStore_SWIFT::send_response(Jager_Tracer& tracer, const Span& parent_span)
 {
-  parent_span->SetTag("operation_gateway", "swift");
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::send_response", parent_span);
   RGWCreateBucket_ObjStore_SWIFT::send_response();
+  parent_span->SetTag("operation_gateway", "swift");
 }
 
 void RGWDeleteBucket_ObjStore_SWIFT::send_response()
@@ -819,10 +868,11 @@ void RGWDeleteBucket_ObjStore_SWIFT::send_response()
   rgw_flush_formatter_and_reset(s, s->formatter);
 }
 
-void RGWDeleteBucket_ObjStore_SWIFT::send_response(const Span& parent_span)
+void RGWDeleteBucket_ObjStore_SWIFT::send_response(Jager_Tracer& tracer, const Span& parent_span)
 {
-  parent_span->SetTag("operation_gateway", "swift");
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWDeleteBucket_ObjStore_SWIFT::send_response", parent_span);
   RGWDeleteBucket_ObjStore_SWIFT::send_response();
+  parent_span->SetTag("operation_gateway", "swift");
 }
 
 static int get_delete_at_param(req_state *s, boost::optional<real_time> &delete_at)
@@ -1103,10 +1153,11 @@ void RGWPutObj_ObjStore_SWIFT::send_response()
   rgw_flush_formatter_and_reset(s, s->formatter);
 }
 
-void RGWPutObj_ObjStore_SWIFT::send_response(const Span& parent_span)
+void RGWPutObj_ObjStore_SWIFT::send_response(Jager_Tracer& tracer, const Span& parent_span)
 {
-  parent_span->SetTag("operation_gateway", "swift");
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::send_response", parent_span);
   RGWPutObj_ObjStore_SWIFT::send_response();
+  parent_span->SetTag("operation_gateway", "swift");
 }
 
 static int get_swift_account_settings(req_state * const s,
@@ -1392,10 +1443,11 @@ void RGWDeleteObj_ObjStore_SWIFT::send_response()
 
 }
 
-void RGWDeleteObj_ObjStore_SWIFT::send_response(const Span& parent_span)
+void RGWDeleteObj_ObjStore_SWIFT::send_response(Jager_Tracer& tracer, const Span& parent_span)
 {
-  parent_span->SetTag("operation_gateway", "swift");
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::send_response", parent_span);
   RGWDeleteObj_ObjStore_SWIFT::send_response();
+  parent_span->SetTag("operation_gateway", "swift");
 }
 
 static void get_contype_from_attrs(map<string, bufferlist>& attrs,

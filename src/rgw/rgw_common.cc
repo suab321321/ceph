@@ -1252,6 +1252,11 @@ bool verify_bucket_permission(const DoutPrefixProvider* dpp, struct req_state * 
                                   s->iam_user_policies,
                                   op);
 }
+bool verify_bucket_permission(const DoutPrefixProvider* dpp, struct req_state * const s, const uint64_t op, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_common.cc verify_bucket_permission", parent_span);
+  return verify_bucket_permission(dpp, s, op);
+}
 
 // Authorize anyone permitted by the policy and the bucket owner
 // unless explicitly denied by the policy.

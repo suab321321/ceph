@@ -1421,9 +1421,30 @@ int RGWListBucket_ObjStore_S3::get_common_params()
   return 0;
 }
 
+int RGWListBucket_ObjStore_S3::get_common_params(Jager_Tracer& tracer, const Span& parent_span){
+  Span span = tracer.child_span("rgw_rest_s3.cc RGWListBucket_ObjStore_S3::get_common_params", parent_span);
+  return RGWListBucket_ObjStore_S3::get_common_params();
+}
+
 int RGWListBucket_ObjStore_S3::get_params()
 {
   int ret = get_common_params();
+  if (ret < 0) {
+    return ret;
+  }
+  if (!list_versions) {
+    marker = s->info.args.get("marker");
+  } else {
+    marker.name = s->info.args.get("key-marker");
+    marker.instance = s->info.args.get("version-id-marker");
+  }
+  return 0;
+}
+
+int RGWListBucket_ObjStore_S3::get_params(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest_s3.cc RGWListBucket_ObjStore_S3::get_params", parent_span);
+  int ret = get_common_params(tracer, span);
   if (ret < 0) {
     return ret;
   }
@@ -1654,9 +1675,10 @@ void RGWListBucket_ObjStore_S3::send_response()
     rgw_flush_formatter_and_reset(s, s->formatter);
 }
 
-void RGWListBucket_ObjStore_S3::send_response(const Span& parent_span){
-  parent_span->SetTag("operation_gateway", "s3");
+void RGWListBucket_ObjStore_S3::send_response(Jager_Tracer& tracer, const Span& parent_span){
+  Span span = tracer.child_span("rgw_rest_s3.cc ",parent_span);
   RGWListBucket_ObjStore_S3::send_response();
+  parent_span->SetTag("operation_gateway", "s3");
 }
   
 void RGWListBucket_ObjStore_S3v2::send_versioned_response()
@@ -2273,10 +2295,11 @@ void RGWCreateBucket_ObjStore_S3::send_response()
   }
 }
 
-void RGWCreateBucket_ObjStore_S3::send_response(const Span& parent_span)
+void RGWCreateBucket_ObjStore_S3::send_response(Jager_Tracer& tracer, const Span& parent_span)
 {
-  parent_span->SetTag("operation_gateway", "s3");
+  Span span = tracer.child_span("rgw_rest_s3.cc RGWCreateBucket_ObjStore_S3::send_response", parent_span);
   RGWCreateBucket_ObjStore_S3::send_response();
+  parent_span->SetTag("operation_gateway", "s3");
 }
 
 void RGWDeleteBucket_ObjStore_S3::send_response()
@@ -2290,10 +2313,11 @@ void RGWDeleteBucket_ObjStore_S3::send_response()
   end_header(s, this);
 }
 
-void RGWDeleteBucket_ObjStore_S3::send_response(const Span& parent_span)
+void RGWDeleteBucket_ObjStore_S3::send_response(Jager_Tracer& tracer, const Span& parent_span)
 {
-  parent_span->SetTag("operation_gateway", "s3");
+  Span span = tracer.child_span("rgw_rest_s3.cc RGWDeleteBucket_ObjStore_S3::send_response", parent_span);
   RGWDeleteBucket_ObjStore_S3::send_response();
+  parent_span->SetTag("operation_gateway", "s3");
 }
 
 static inline void map_qs_metadata(struct req_state* s)
@@ -2573,10 +2597,11 @@ void RGWPutObj_ObjStore_S3::send_response()
   end_header(s, this);
 }
 
-void RGWPutObj_ObjStore_S3::send_response(const Span& parent_span)
+void RGWPutObj_ObjStore_S3::send_response(Jager_Tracer& tracer, const Span& parent_span)
 {
-  parent_span->SetTag("opearation_gateway", "s3");
+  Span span = tracer.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::send_response", parent_span);
   RGWPutObj_ObjStore_S3::send_response();
+  parent_span->SetTag("opearation_gateway", "s3");
 }
 
 static inline int get_obj_attrs(rgw::sal::RGWRadosStore *store, struct req_state *s, rgw_obj& obj, map<string, bufferlist>& attrs)
@@ -3241,10 +3266,11 @@ void RGWDeleteObj_ObjStore_S3::send_response()
   end_header(s, this);
 }
 
-void RGWDeleteObj_ObjStore_S3::send_response(const Span& parent_span)
+void RGWDeleteObj_ObjStore_S3::send_response(Jager_Tracer& tracer, const Span& parent_span)
 {
-  parent_span->SetTag("operation_gateway", "s3");
+  Span span = tracer.child_span("rgw_rest_s3.cc RGWDeleteObj_ObjStore_S3::send_response", parent_span);
   RGWDeleteObj_ObjStore_S3::send_response();
+  parent_span->SetTag("operation_gateway", "s3");
 }
 
 int RGWCopyObj_ObjStore_S3::init_dest_policy()

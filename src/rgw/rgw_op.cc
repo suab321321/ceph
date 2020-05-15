@@ -1153,6 +1153,15 @@ void rgw_bucket_object_pre_exec(struct req_state *s)
   dump_bucket_from_state(s);
 }
 
+void rgw_bucket_object_pre_exec(struct req_state *s, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc rgw_bucket_object_pre_exec", parent_span);
+  if (s->expect_cont)
+    dump_continue(s);
+
+  dump_bucket_from_state(s, tracer, parent_span);
+}
+
 // So! Now and then when we try to update bucket information, the
 // bucket has changed during the course of the operation. (Or we have
 // a cache consistency problem that Watch/Notify isn't ruling out
@@ -3564,7 +3573,8 @@ int RGWListBucket::verify_permission()
 
 int RGWListBucket::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
 {
-  op_ret = get_params();
+  Span span = tracer.child_span("rgw_op.cc RGWListBucket::verify_permission", parent_span);
+  op_ret = get_params(tracer, span);
   if (op_ret < 0) {
     return op_ret;
   }
@@ -3580,7 +3590,7 @@ int RGWListBucket::verify_permission(Jager_Tracer& tracer,const Span& parent_spa
                                 s,
 				list_versions ?
 				rgw::IAM::s3ListBucketVersions :
-				rgw::IAM::s3ListBucket)) {
+				rgw::IAM::s3ListBucket, tracer, span)) {
     return -EACCES;
   }
 
@@ -3598,6 +3608,12 @@ int RGWListBucket::parse_max_keys()
 			default_max);
 }
 
+int RGWListBucket::parse_max_keys(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc RGWListBucket::parse_max_keys", parent_span);
+  return RGWListBucket::parse_max_keys();
+}
+
 void RGWListBucket::pre_exec()
 {
   rgw_bucket_object_pre_exec(s);
@@ -3605,7 +3621,7 @@ void RGWListBucket::pre_exec()
 
 void RGWListBucket::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 {
-  rgw_bucket_object_pre_exec(s);
+  rgw_bucket_object_pre_exec(s, tracer, parent_span);
 }
 
 void RGWListBucket::execute()
@@ -3661,7 +3677,7 @@ void RGWListBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
   }
 
   if (need_container_stats()) {
-    op_ret = bucket->update_container_stats();
+    op_ret = bucket->update_container_stats(tracer, span);
   }
 
   RGWRados::Bucket target(store->getRados(), s->bucket_info);

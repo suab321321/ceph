@@ -160,6 +160,7 @@ protected:
   bool objs_container;
   bool encode_key {false};
   int get_common_params();
+  int get_common_params(Jager_Tracer&, const Span&);
   void send_common_response();
   void send_common_versioned_response();
   public:
@@ -169,8 +170,9 @@ protected:
   ~RGWListBucket_ObjStore_S3() override {}
 
   int get_params() override;
+  int get_params(Jager_Tracer&, const Span&) override;
   void send_response() override;
-  void send_response(const Span&) override;
+  void send_response(Jager_Tracer&, const Span&) override;
   void send_versioned_response();
 };
 
@@ -263,7 +265,7 @@ public:
 
   int get_params() override;
   void send_response() override;
-  void send_response(const Span&) override;
+  void send_response(Jager_Tracer&, const Span&) override;
 };
 
 class RGWDeleteBucket_ObjStore_S3 : public RGWDeleteBucket_ObjStore {
@@ -272,7 +274,7 @@ public:
   ~RGWDeleteBucket_ObjStore_S3() override {}
 
   void send_response() override;
-  void send_response(const Span&) override;
+  void send_response(Jager_Tracer&, const Span&) override;
 };
 
 class RGWPutObj_ObjStore_S3 : public RGWPutObj_ObjStore {
@@ -286,7 +288,7 @@ public:
   int get_params() override;
   int get_data(bufferlist& bl) override;
   void send_response() override;
-  void send_response(const Span&) override;
+  void send_response(Jager_Tracer&, const Span&) override;
 
   int get_encrypt_filter(std::unique_ptr<rgw::putobj::DataProcessor> *filter,
                          rgw::putobj::DataProcessor *cb) override;
@@ -338,7 +340,7 @@ public:
 
   int get_params() override;
   void send_response() override;
-  void send_response(const Span&) override;
+  void send_response(Jager_Tracer&, const Span&) override;
 };
 
 class RGWCopyObj_ObjStore_S3 : public RGWCopyObj_ObjStore {

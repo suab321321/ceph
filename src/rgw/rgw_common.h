@@ -2240,6 +2240,7 @@ bool verify_bucket_permission(
   const vector<rgw::IAM::Policy>& user_policies,
   const uint64_t op);
 bool verify_bucket_permission(const DoutPrefixProvider* dpp, struct req_state * const s, const uint64_t op);
+bool verify_bucket_permission(const DoutPrefixProvider* dpp, struct req_state * const s, const uint64_t op, Jager_Tracer&, const Span&);
 bool verify_bucket_permission_no_policy(
   const DoutPrefixProvider* dpp,
   struct req_state * const s,
