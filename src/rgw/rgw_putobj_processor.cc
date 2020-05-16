@@ -59,6 +59,11 @@ int HeadObjectProcessor::process(bufferlist&& data, uint64_t logical_offset)
   return processor->process(std::move(data), write_offset);
 }
 
+int HeadObjectProcessor::process(bufferlist&& data, uint64_t logical_offset, Jager_Tracer& tracer, const Span& parent_span){
+  Span span = tracer.child_span("rgw_putobj_processor.cc HeadObjectProcessor::process", parent_span);
+  bufferlist dataX = data;
+  return HeadObjectProcessor::process(std::move(dataX), logical_offset);
+}
 
 static int process_completed(const AioResultList& completed, RawObjSet *written)
 {
@@ -77,6 +82,12 @@ int RadosWriter::set_stripe_obj(const rgw_raw_obj& raw_obj)
 {
   stripe_obj = store->svc()->rados->obj(raw_obj);
   return stripe_obj.open();
+}
+
+int RadosWriter::set_stripe_obj(const rgw_raw_obj& raw_obj, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_putobj_processor.cc RadosWriter::set_stripe_obj", parent_span);
+  return RadosWriter::set_stripe_obj(raw_obj);
 }
 
 int RadosWriter::process(bufferlist&& bl, uint64_t offset)
@@ -271,6 +282,78 @@ int AtomicObjectProcessor::prepare(optional_yield y)
   return 0;
 }
 
+int AtomicObjectProcessor::prepare(optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_putobj_processor.cc AtomicObjectProcessor::prepare", parent_span);
+  uint64_t max_head_chunk_size;
+  uint64_t head_max_size;
+  uint64_t chunk_size = 0;
+  uint64_t alignment;
+  rgw_pool head_pool;
+
+  if (!store->getRados()->get_obj_data_pool(bucket_info.placement_rule, head_obj, &head_pool, tracer, span)) {
+    return -EIO;
+  }
+
+  int r = store->getRados()->get_max_chunk_size(head_pool, &max_head_chunk_size, tracer, span, &alignment);
+  if (r < 0) {
+    return r;
+  }
+
+  bool same_pool = true;
+
+  if (bucket_info.placement_rule != tail_placement_rule) {
+    rgw_pool tail_pool;
+    if (!store->getRados()->get_obj_data_pool(tail_placement_rule, head_obj, &tail_pool)) {
+      return -EIO;
+    }
+
+    if (tail_pool != head_pool) {
+      same_pool = false;
+
+      r = store->getRados()->get_max_chunk_size(tail_pool, &chunk_size);
+      if (r < 0) {
+        return r;
+      }
+
+      head_max_size = 0;
+    }
+  }
+
+  if (same_pool) {
+    head_max_size = max_head_chunk_size;
+    chunk_size = max_head_chunk_size;
+  }
+
+  uint64_t stripe_size;
+  const uint64_t default_stripe_size = store->ctx()->_conf->rgw_obj_stripe_size;
+
+  store->getRados()->get_max_aligned_size(default_stripe_size, alignment, &stripe_size, tracer, span);
+
+  manifest.set_trivial_rule(head_max_size, stripe_size);
+
+  r = manifest_gen.create_begin(store->ctx(), &manifest,
+                                bucket_info.placement_rule,
+                                &tail_placement_rule,
+                                head_obj.bucket, head_obj, tracer, span);
+  if (r < 0) {
+    return r;
+  }
+
+  rgw_raw_obj stripe_obj = manifest_gen.get_cur_obj(store->getRados());
+
+  r = writer.set_stripe_obj(stripe_obj, tracer, span);
+  if (r < 0) {
+    return r;
+  }
+
+  set_head_chunk_size(head_max_size);
+  // initialize the processors
+  chunk = ChunkProcessor(&writer, chunk_size);
+  stripe = StripeProcessor(&chunk, this, head_max_size);
+  return 0;
+}
+
 int AtomicObjectProcessor::complete(size_t accounted_size,
                                     const std::string& etag,
                                     ceph::real_time *mtime,
@@ -318,6 +401,67 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
   obj_op.meta.modify_tail = true;
 
   r = obj_op.write_meta(actual_size, accounted_size, attrs, y);
+  if (r < 0) {
+    return r;
+  }
+  if (!obj_op.meta.canceled) {
+    // on success, clear the set of objects for deletion
+    writer.clear_written();
+  }
+  if (pcanceled) {
+    *pcanceled = obj_op.meta.canceled;
+  }
+  return 0;
+}
+
+int AtomicObjectProcessor::complete(size_t accounted_size,
+                                    const std::string& etag,
+                                    ceph::real_time *mtime,
+                                    ceph::real_time set_mtime,
+                                    std::map<std::string, bufferlist>& attrs,
+                                    ceph::real_time delete_at,
+                                    const char *if_match,
+                                    const char *if_nomatch,
+                                    const std::string *user_data,
+                                    rgw_zone_set *zones_trace,
+                                    bool *pcanceled, optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_putobj_processor.cc AtomicObjectProcessor::complete", parent_span);
+  int r = writer.drain();
+  if (r < 0) {
+    return r;
+  }
+  const uint64_t actual_size = get_actual_size();
+  r = manifest_gen.create_next(actual_size);
+  if (r < 0) {
+    return r;
+  }
+
+  obj_ctx.set_atomic(head_obj);
+
+  RGWRados::Object op_target(store->getRados(), bucket_info, obj_ctx, head_obj);
+
+  /* some object types shouldn't be versioned, e.g., multipart parts */
+  op_target.set_versioning_disabled(!bucket_info.versioning_enabled());
+
+  RGWRados::Object::Write obj_op(&op_target);
+
+  obj_op.meta.data = &first_chunk;
+  obj_op.meta.manifest = &manifest;
+  obj_op.meta.ptag = &unique_tag; /* use req_id as operation tag */
+  obj_op.meta.if_match = if_match;
+  obj_op.meta.if_nomatch = if_nomatch;
+  obj_op.meta.mtime = mtime;
+  obj_op.meta.set_mtime = set_mtime;
+  obj_op.meta.owner = owner;
+  obj_op.meta.flags = PUT_OBJ_CREATE;
+  obj_op.meta.olh_epoch = olh_epoch;
+  obj_op.meta.delete_at = delete_at;
+  obj_op.meta.user_data = user_data;
+  obj_op.meta.zones_trace = zones_trace;
+  obj_op.meta.modify_tail = true;
+
+  r = obj_op.write_meta(actual_size, accounted_size, attrs, y, tracer, span);
   if (r < 0) {
     return r;
   }

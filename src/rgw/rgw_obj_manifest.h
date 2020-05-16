@@ -539,6 +539,11 @@ public:
                      const rgw_placement_rule *tail_placement_rule,
                      const rgw_bucket& bucket,
                      const rgw_obj& obj);
+    int create_begin(CephContext *cct, RGWObjManifest *manifest,
+                     const rgw_placement_rule& head_placement_rule,
+                     const rgw_placement_rule *tail_placement_rule,
+                     const rgw_bucket& bucket,
+                     const rgw_obj& obj, Jager_Tracer&, const Span&);
 
     int create_next(uint64_t ofs);
 

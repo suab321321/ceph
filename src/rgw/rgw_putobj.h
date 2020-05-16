@@ -16,6 +16,7 @@
 #pragma once
 
 #include "include/buffer.h"
+#include "include/tracer.h"
 
 namespace rgw::putobj {
 
@@ -28,6 +29,7 @@ class DataProcessor {
   // empty bufferlist is given to request that any buffered data be flushed,
   // though this doesn't wait for completions
   virtual int process(bufferlist&& data, uint64_t offset) = 0;
+  virtual int process(bufferlist&& data, uint64_t offset, Jager_Tracer& tracer, const Span&) {}
 };
 
 // for composing data processors into a pipeline

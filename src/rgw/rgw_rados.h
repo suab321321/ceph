@@ -597,7 +597,9 @@ public:
 
   int get_required_alignment(const rgw_pool& pool, uint64_t *alignment);
   void get_max_aligned_size(uint64_t size, uint64_t alignment, uint64_t *max_size);
+  void get_max_aligned_size(uint64_t size, uint64_t alignment, uint64_t *max_size, Jager_Tracer&, const Span&);
   int get_max_chunk_size(const rgw_pool& pool, uint64_t *max_chunk_size, uint64_t *palignment = nullptr);
+  int get_max_chunk_size(const rgw_pool& pool, uint64_t *max_chunk_size, Jager_Tracer&, const Span&, uint64_t *palignment = nullptr);
   int get_max_chunk_size(const rgw_placement_rule& placement_rule, const rgw_obj& obj, uint64_t *max_chunk_size, uint64_t *palignment = nullptr);
 
   uint32_t get_max_bucket_shards() {
@@ -657,6 +659,7 @@ public:
   void create_bucket_id(string *bucket_id);
 
   bool get_obj_data_pool(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_pool *pool);
+  bool get_obj_data_pool(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_pool *pool, Jager_Tracer&, const Span&);
   bool obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_raw_obj *raw_obj);
 
   int create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
@@ -841,6 +844,8 @@ public:
                      void *index_op, optional_yield y);
       int write_meta(uint64_t size, uint64_t accounted_size,
                      map<std::string, bufferlist>& attrs, optional_yield y);
+      int write_meta(uint64_t size, uint64_t accounted_size,
+                     map<std::string, bufferlist>& attrs, optional_yield y, Jager_Tracer&, const Span&);
       int write_data(const char *data, uint64_t ofs, uint64_t len, bool exclusive);
       const req_state* get_req_state() {
         return (req_state *)target->get_ctx().get_private();
@@ -1102,7 +1107,14 @@ public:
                             RGWBucketInfo& bucket_info,         /* in */
                             rgw_obj& obj,                       /* in */
                             const DoutPrefixProvider *dpp,      /* in/out */ 
-                            optional_yield y);                  /* in */                
+                            optional_yield y);    
+  int swift_versioning_copy(RGWObjectCtx& obj_ctx,              /* in/out */
+                            const rgw_user& user,               /* in */
+                            RGWBucketInfo& bucket_info,         /* in */
+                            rgw_obj& obj,                       /* in */
+                            const DoutPrefixProvider *dpp,      /* in/out */ 
+                            optional_yield y, 
+                            Jager_Tracer&, const Span&);                   /* in */                
   int swift_versioning_restore(RGWObjectCtx& obj_ctx,           /* in/out */
                                const rgw_user& user,            /* in */
                                RGWBucketInfo& bucket_info,      /* in */
@@ -1522,6 +1534,8 @@ public:
 
   int check_quota(const rgw_user& bucket_owner, rgw_bucket& bucket,
                   RGWQuotaInfo& user_quota, RGWQuotaInfo& bucket_quota, uint64_t obj_size, bool check_size_only = false);
+  int check_quota(const rgw_user& bucket_owner, rgw_bucket& bucket,
+                  RGWQuotaInfo& user_quota, RGWQuotaInfo& bucket_quota, uint64_t obj_size, Jager_Tracer&, const Span&, bool check_size_only = false);
 
   int check_bucket_shards(const RGWBucketInfo& bucket_info, const rgw_bucket& bucket,
 			  uint64_t num_objs);

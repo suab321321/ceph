@@ -21,6 +21,7 @@
 #include "rgw_rados.h"
 #include "services/svc_rados.h"
 #include "services/svc_tier_rados.h"
+#include "include/tracer.h"
 
 namespace rgw {
 
@@ -33,7 +34,7 @@ class ObjectProcessor : public DataProcessor {
  public:
   // prepare to start processing object data
   virtual int prepare(optional_yield y) = 0;
-
+  virtual int prepare(optional_yield y, Jager_Tracer&, const Span&) {}
   // complete the operation and make its result visible to clients
   virtual int complete(size_t accounted_size, const std::string& etag,
                        ceph::real_time *mtime, ceph::real_time set_mtime,
@@ -43,6 +44,15 @@ class ObjectProcessor : public DataProcessor {
                        const std::string *user_data,
                        rgw_zone_set *zones_trace, bool *canceled,
                        optional_yield y) = 0;
+
+virtual int complete(size_t accounted_size, const std::string& etag,
+                       ceph::real_time *mtime, ceph::real_time set_mtime,
+                       std::map<std::string, bufferlist>& attrs,
+                       ceph::real_time delete_at,
+                       const char *if_match, const char *if_nomatch,
+                       const std::string *user_data,
+                       rgw_zone_set *zones_trace, bool *canceled,
+                       optional_yield y, Jager_Tracer&, const Span&) {}
 };
 
 // an object processor with special handling for the first chunk of the head.
@@ -71,6 +81,7 @@ class HeadObjectProcessor : public ObjectProcessor {
   // cache first chunk for process_first_chunk(), then forward everything else
   // to the returned processor
   int process(bufferlist&& data, uint64_t logical_offset) final override;
+  int process(bufferlist&& data, uint64_t logical_offset, Jager_Tracer&, const Span&) final override;
 };
 
 
@@ -100,7 +111,7 @@ class RadosWriter : public DataProcessor {
 
   // change the current stripe object
   int set_stripe_obj(const rgw_raw_obj& obj);
-
+  int set_stripe_obj(const rgw_raw_obj& obj, Jager_Tracer&, const Span&);
   // write the data at the given offset of the current stripe object
   int process(bufferlist&& data, uint64_t stripe_offset) override;
 
@@ -192,6 +203,7 @@ class AtomicObjectProcessor : public ManifestObjectProcessor {
 
   // prepare a trivial manifest
   int prepare(optional_yield y) override;
+  int prepare(optional_yield y, Jager_Tracer&, const Span&) override;
   // write the head object atomically in a bucket index transaction
   int complete(size_t accounted_size, const std::string& etag,
                ceph::real_time *mtime, ceph::real_time set_mtime,
@@ -201,6 +213,15 @@ class AtomicObjectProcessor : public ManifestObjectProcessor {
                const std::string *user_data,
                rgw_zone_set *zones_trace, bool *canceled,
                optional_yield y) override;
+
+  int complete(size_t accounted_size, const std::string& etag,
+               ceph::real_time *mtime, ceph::real_time set_mtime,
+               std::map<std::string, bufferlist>& attrs,
+               ceph::real_time delete_at,
+               const char *if_match, const char *if_nomatch,
+               const std::string *user_data,
+               rgw_zone_set *zones_trace, bool *canceled,
+               optional_yield y, Jager_Tracer&, const Span&) override;
 
 };
 

@@ -10,6 +10,7 @@
 #include <set>
 
 #include "common/ceph_time.h"
+#include "include/tracer.h"
 
 #include "rgw_rados.h"
 #include "rgw_common.h"
@@ -129,6 +130,7 @@ public:
   void set_create_date(ceph::real_time& value);
   void set_info_name(const string& value);
   void update(bufferlist &bl);
+  void update(bufferlist &bl, Jager_Tracer&, const Span&);
   int complete();
 
 private:

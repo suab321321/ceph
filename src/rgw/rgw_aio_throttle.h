@@ -132,4 +132,10 @@ inline auto make_throttle(uint64_t window_size, optional_yield y)
 #endif
 }
 
+inline auto make_throttle(uint64_t window_size, optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_aio_throttle.h make_throttle", parent_span);
+  return make_throttle(window_size, y);
+}
+
 } // namespace rgw

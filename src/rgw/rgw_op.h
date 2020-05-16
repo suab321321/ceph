@@ -2169,6 +2169,16 @@ static inline int rgw_get_request_metadata(CephContext* const cct,
   return 0;
 } /* rgw_get_request_metadata */
 
+static inline int rgw_get_request_metadata(CephContext* const cct,
+                                           struct req_info& info,
+                                           std::map<std::string, ceph::bufferlist>& attrs,
+                                           Jager_Tracer& tracer, const Span& parent_span,
+                                           const bool allow_empty_attrs = true)
+{
+  Span span = tracer.child_span("rgw_op.h rgw_get_request_metadata", parent_span);
+  return rgw_get_request_metadata(cct, info, attrs, allow_empty_attrs);
+}
+
 static inline void encode_delete_at_attr(boost::optional<ceph::real_time> delete_at,
 					map<string, bufferlist>& attrs)
 {
@@ -2180,6 +2190,13 @@ static inline void encode_delete_at_attr(boost::optional<ceph::real_time> delete
   encode(*delete_at, delatbl);
   attrs[RGW_ATTR_DELETE_AT] = delatbl;
 } /* encode_delete_at_attr */
+
+static inline void encode_delete_at_attr(boost::optional<ceph::real_time> delete_at,
+					map<string, bufferlist>& attrs, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.h encode_delete_at_attr", parent_span);
+  encode_delete_at_attr(delete_at, attrs);
+}
 
 static inline void encode_obj_tags_attr(RGWObjTags* obj_tags, map<string, bufferlist>& attrs)
 {
@@ -2193,6 +2210,12 @@ static inline void encode_obj_tags_attr(RGWObjTags* obj_tags, map<string, buffer
   bufferlist tagsbl;
   obj_tags->encode(tagsbl);
   attrs[RGW_ATTR_TAGS] = tagsbl;
+}
+
+static inline void encode_obj_tags_attr(RGWObjTags* obj_tags, map<string, bufferlist>& attrs, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.h encode_obj_tags_attr", parent_span);
+  encode_obj_tags_attr(obj_tags, attrs);
 }
 
 static inline int encode_dlo_manifest_attr(const char * const dlo_manifest,

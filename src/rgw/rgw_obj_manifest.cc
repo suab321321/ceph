@@ -362,3 +362,12 @@ int RGWObjManifest::generator::create_begin(CephContext *cct, RGWObjManifest *_m
   return 0;
 }
 
+int RGWObjManifest::generator::create_begin(CephContext *cct, RGWObjManifest *_m,
+                                            const rgw_placement_rule& head_placement_rule,
+                                            const rgw_placement_rule *tail_placement_rule,
+                                            const rgw_bucket& _b, const rgw_obj& _obj, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_obj_manifest.cc RGWObjManifest::generator::create_begin", parent_span);
+  return RGWObjManifest::generator::create_begin(cct, _m, head_placement_rule, tail_placement_rule, _b, _obj);
+}
+

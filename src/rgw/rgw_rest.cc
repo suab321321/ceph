@@ -1036,6 +1036,12 @@ int RGWPutObj_ObjStore::get_params()
   return 0;
 }
 
+int RGWPutObj_ObjStore::get_params(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest.cc RGWPutObj_ObjStore::get_params", parent_span);
+  return RGWPutObj_ObjStore::get_params();
+}
+
 int RGWPutObj_ObjStore::get_data(bufferlist& bl)
 {
   size_t cl;
@@ -1074,37 +1080,7 @@ int RGWPutObj_ObjStore::get_data(bufferlist& bl)
 int RGWPutObj_ObjStore::get_data(bufferlist& bl,Jager_Tracer& tracer,const Span& parent_span)
 {
   Span span=tracer.child_span("rgw_rest.cc RGWPutObj_ObjStore::get_data",parent_span);
-  size_t cl;
-  uint64_t chunk_size = s->cct->_conf->rgw_max_chunk_size;
-  if (s->length) {
-    cl = atoll(s->length) - ofs;
-    if (cl > chunk_size)
-      cl = chunk_size;
-  } else {
-    cl = chunk_size;
-  }
-
-  int len = 0;
-  {
-    ACCOUNTING_IO(s)->set_account(true);
-    bufferptr bp(cl);
-
-    const auto read_len  = recv_body(s, bp.c_str(), cl);
-    if (read_len < 0) {
-      return read_len;
-    }
-
-    len = read_len;
-    bl.append(bp, 0, len);
-
-    ACCOUNTING_IO(s)->set_account(false);
-  }
-
-  if ((uint64_t)ofs + len > s->cct->_conf->rgw_max_put_size) {
-    return -ERR_TOO_LARGE;
-  }
-
-  return len;
+  return RGWPutObj_ObjStore::get_data(bl);
 }
 
 

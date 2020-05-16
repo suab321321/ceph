@@ -12,6 +12,7 @@
 #include <boost/utility/string_ref.hpp>
 
 #include "common/debug.h"
+#include "include/tracer.h"
 
 #include "rgw_basic_types.h"
 
@@ -433,6 +434,13 @@ public:
     encode(acl, bl);
     ENCODE_FINISH(bl);
   }
+  void encode(bufferlist& bl, Jager_Tracer& tracer, const Span& parent_span) const {
+    Span span = tracer.child_span("rgw_acl.h encode", parent_span);
+    ENCODE_START(2, 2, bl);
+    encode(owner, bl);
+    encode(acl, bl);
+    ENCODE_FINISH(bl);
+  }
   void decode(bufferlist::const_iterator& bl) {
     DECODE_START_LEGACY_COMPAT_LEN(2, 2, 2, bl);
     decode(owner, bl);
@@ -457,6 +465,14 @@ public:
     owner.set_id(id);
     owner.set_name(name);
   }
+
+  void create_default(const rgw_user& id, string& name, Jager_Tracer& tracer, const Span& parent_span) {
+    Span span = tracer.child_span("rgw_acl.h create_default", parent_span);
+    acl.create_default(id, name);
+    owner.set_id(id);
+    owner.set_name(name);
+  }
+
   RGWAccessControlList& get_acl() {
     return acl;
   }

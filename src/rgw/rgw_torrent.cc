@@ -101,6 +101,12 @@ void seed::update(bufferlist &bl)
   sha1(&h, bl, bl.length());
 }
 
+void seed::update(bufferlist &bl, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_torrent.cc seed::update", parent_span);
+  seed::update(bl);
+}
+
 int seed::complete()
 {
   uint64_t remain = info.len%info.piece_length;

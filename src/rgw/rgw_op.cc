@@ -2575,6 +2575,14 @@ static inline void rgw_cond_decode_objtags(
   }
 }
 
+static inline void rgw_cond_decode_objtags(
+  struct req_state *s,
+  const std::map<std::string, buffer::list> &attrs, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc rgw_cond_decode_objtags", parent_span);
+  rgw_cond_decode_objtags(s, attrs);
+}
+
 void RGWGetObj::execute()
 {
   bufferlist bl;
@@ -4902,6 +4910,7 @@ int RGWPutObj::verify_permission()
 
 int RGWPutObj::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
 {
+  Span span = tracer.child_span("rgw_op.cc RGWPutObj::verify_permission", parent_span);
   if (! copy_source.empty()) {
 
     RGWAccessControlPolicy cs_acl(s->cct);
@@ -4963,7 +4972,7 @@ int RGWPutObj::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
       return -EACCES;
   }
 
-  auto op_ret = get_params();
+  auto op_ret = get_params(tracer, span);
   if (op_ret < 0) {
     ldpp_dout(this, 20) << "get_params() returned ret=" << op_ret << dendl;
     return op_ret;
@@ -5017,7 +5026,7 @@ int RGWPutObj::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
     }
   }
 
-  if (!verify_bucket_permission_no_policy(this, s, RGW_PERM_WRITE)) {
+  if (!verify_bucket_permission_no_policy(this, s, RGW_PERM_WRITE, tracer, span)) {
     return -EACCES;
   }
 
@@ -5028,7 +5037,7 @@ int RGWPutObj::verify_permission(Jager_Tracer& tracer,const Span& parent_span)
 void RGWPutObj::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 {
   Span span=tracer.child_span("rgw_op.cc RGWPutObj::pre_exec",parent_span);
-  rgw_bucket_object_pre_exec(s);
+  rgw_bucket_object_pre_exec(s, tracer, span);
 }
 
 
@@ -5212,7 +5221,7 @@ void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
   if (!chunked_upload) { /* with chunked upload we don't know how big is the upload.
                             we also check sizes at the end anyway */
     op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
-				user_quota, bucket_quota, s->content_length);
+				user_quota, bucket_quota, s->content_length, tracer, span);
     if (op_ret < 0) {
       ldpp_dout(this, 20) << "check_quota() returned ret=" << op_ret << dendl;
       return;
@@ -5235,7 +5244,7 @@ void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
                                           s->bucket_info,
                                           obj,
                                           this,
-                                          s->yield);
+                                          s->yield, tracer, span);
     if (op_ret < 0) {
       return;
     }
@@ -5243,7 +5252,7 @@ void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
 
   // create the object processor
   auto aio = rgw::make_throttle(s->cct->_conf->rgw_put_obj_min_window_size,
-                                s->yield);
+                                s->yield, tracer, span);
   using namespace rgw::putobj;
   constexpr auto max_processor_size = std::max({sizeof(MultipartObjectProcessor),
                                                sizeof(AtomicObjectProcessor),
@@ -5297,7 +5306,7 @@ void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
         s->req_id, this, s->yield);
   }
 
-  op_ret = processor->prepare(s->yield);
+  op_ret = processor->prepare(s->yield, tracer, span);
   if (op_ret < 0) {
     ldpp_dout(this, 20) << "processor->prepare() returned ret=" << op_ret
 		      << dendl;
@@ -5360,7 +5369,7 @@ void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
       break;
     if (copy_source.empty()) {
       // len = get_data(data,tracer,span);
-      len=get_data(data);
+      len=get_data(data, tracer, span);
     } else {
       uint64_t cur_lst = min(fst + s->cct->_conf->rgw_max_chunk_size - 1, lst);
       op_ret = get_data(fst, cur_lst, data);
@@ -5383,9 +5392,9 @@ void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
     }
 
     /* update torrrent */
-    torrent.update(data);
+    torrent.update(data, tracer, span);
 
-    op_ret = filter->process(std::move(data), ofs);
+    op_ret = filter->process(std::move(data), ofs, tracer, span);
     if (op_ret < 0) {
       ldpp_dout(this, 20) << "processor->process() returned ret="
           << op_ret << dendl;
@@ -5416,7 +5425,7 @@ void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
   }
 
   op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
-                              user_quota, bucket_quota, s->obj_size);
+                              user_quota, bucket_quota, s->obj_size, tracer, span);
   if (op_ret < 0) {
     ldpp_dout(this, 20) << "second check_quota() returned op_ret=" << op_ret << dendl;
     return;
@@ -5438,7 +5447,7 @@ void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
         << ", blocks=" << cs_info.blocks.size() << dendl;
   }
 
-  buf_to_hex(m, CEPH_CRYPTO_MD5_DIGESTSIZE, calc_md5);
+  buf_to_hex(m, CEPH_CRYPTO_MD5_DIGESTSIZE, calc_md5, tracer, span);
 
   etag = calc_md5;
 
@@ -5476,9 +5485,9 @@ void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
   if (op_ret < 0) {
     return;
   }
-  encode_delete_at_attr(delete_at, attrs);
-  encode_obj_tags_attr(obj_tags.get(), attrs);
-  rgw_cond_decode_objtags(s, attrs);
+  encode_delete_at_attr(delete_at, attrs, tracer, span);
+  encode_obj_tags_attr(obj_tags.get(), attrs, tracer, span);
+  rgw_cond_decode_objtags(s, attrs, tracer, span);
 
   /* Add a custom metadata to expose the information whether an object
    * is an SLO or not. Appending the attribute must be performed AFTER
@@ -5503,7 +5512,7 @@ void RGWPutObj::execute(Jager_Tracer& tracer,const Span& parent_span)
   op_ret = processor->complete(s->obj_size, etag, &mtime, real_time(), attrs,
                                (delete_at ? *delete_at : real_time()), if_match, if_nomatch,
                                (user_data.empty() ? nullptr : &user_data), nullptr, nullptr,
-                               s->yield);
+                               s->yield, tracer, span);
   tracepoint(rgw_op, processor_complete_exit, s->req_id.c_str());
 
   /* produce torrent */

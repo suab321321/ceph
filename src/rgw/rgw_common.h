@@ -1995,6 +1995,14 @@ static inline void buf_to_hex(const unsigned char* const buf,
   }
 }
 
+static inline void buf_to_hex(const unsigned char* const buf,
+                              const size_t len,
+                              char* const str, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_common.h inline void buf_to_hex", parent_span);
+  buf_to_hex(buf, len, str);
+}
+
 template<size_t N> static inline std::array<char, N * 2 + 1>
 buf_to_hex(const std::array<unsigned char, N>& buf)
 {
@@ -2250,6 +2258,9 @@ bool verify_bucket_permission_no_policy(
 bool verify_bucket_permission_no_policy(const DoutPrefixProvider* dpp,
                                         struct req_state * const s,
 					const int perm);
+bool verify_bucket_permission_no_policy(const DoutPrefixProvider* dpp,
+                                        struct req_state * const s,
+					const int perm, Jager_Tracer&, const Span&);
 int verify_bucket_owner_or_policy(struct req_state* const s,
 				  const uint64_t op);
 extern bool verify_object_permission(

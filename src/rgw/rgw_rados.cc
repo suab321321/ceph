@@ -714,6 +714,12 @@ void RGWRados::get_max_aligned_size(uint64_t size, uint64_t alignment, uint64_t 
   *max_size = size - (size % alignment);
 }
 
+void RGWRados::get_max_aligned_size(uint64_t size, uint64_t alignment, uint64_t *max_size, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::get_max_aligned_size", parent_span);
+  RGWRados::get_max_aligned_size(size, alignment, max_size);
+}
+
 int RGWRados::get_max_chunk_size(const rgw_pool& pool, uint64_t *max_chunk_size, uint64_t *palignment)
 {
   uint64_t alignment;
@@ -733,6 +739,12 @@ int RGWRados::get_max_chunk_size(const rgw_pool& pool, uint64_t *max_chunk_size,
   ldout(cct, 20) << "max_chunk_size=" << *max_chunk_size << dendl;
 
   return 0;
+}
+
+int RGWRados::get_max_chunk_size(const rgw_pool& pool, uint64_t *max_chunk_size, Jager_Tracer& tracer, const Span& parent_span, uint64_t *palignment)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::get_max_chunk_size", parent_span);
+  return RGWRados::get_max_chunk_size(pool, max_chunk_size, palignment);
 }
 
 int RGWRados::get_max_chunk_size(const rgw_placement_rule& placement_rule, const rgw_obj& obj,
@@ -2593,6 +2605,12 @@ bool RGWRados::get_obj_data_pool(const rgw_placement_rule& placement_rule, const
   return rgw_get_obj_data_pool(svc.zone->get_zonegroup(), svc.zone->get_zone_params(), placement_rule, obj, pool);
 }
 
+bool RGWRados::get_obj_data_pool(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_pool *pool, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::get_obj_data_pool", parent_span);
+  return RGWRados::get_obj_data_pool(placement_rule, obj, pool);
+}
+
 bool RGWRados::obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_raw_obj *raw_obj)
 {
   get_obj_bucket_and_oid_loc(obj, raw_obj->oid, raw_obj->loc);
@@ -3139,6 +3157,99 @@ int RGWRados::swift_versioning_copy(RGWObjectCtx& obj_ctx,
   return r;
 }
 
+int RGWRados::swift_versioning_copy(RGWObjectCtx& obj_ctx,
+                                    const rgw_user& user,
+                                    RGWBucketInfo& bucket_info,
+                                    rgw_obj& obj, 
+                                    const DoutPrefixProvider *dpp,
+                                    optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::swift_versioning_copy", parent_span);
+  if (! swift_versioning_enabled(bucket_info)) {
+    return 0;
+  }
+
+  obj_ctx.set_atomic(obj);
+
+  RGWObjState * state = nullptr;
+  int r = get_obj_state(&obj_ctx, bucket_info, obj, &state, false, y);
+  if (r < 0) {
+    return r;
+  }
+
+  if (!state->exists) {
+    return 0;
+  }
+
+  const string& src_name = obj.get_oid();
+  char buf[src_name.size() + 32];
+  struct timespec ts = ceph::real_clock::to_timespec(state->mtime);
+  snprintf(buf, sizeof(buf), "%03x%s/%lld.%06ld", (int)src_name.size(),
+           src_name.c_str(), (long long)ts.tv_sec, ts.tv_nsec / 1000);
+
+  RGWBucketInfo dest_bucket_info;
+
+  r = get_bucket_info(&svc, bucket_info.bucket.tenant, bucket_info.swift_ver_location, dest_bucket_info, NULL, null_yield, NULL);
+  if (r < 0) {
+    ldout(cct, 10) << "failed to read dest bucket info: r=" << r << dendl;
+    if (r == -ENOENT) {
+      return -ERR_PRECONDITION_FAILED;
+    }
+    return r;
+  }
+
+  if (dest_bucket_info.owner != bucket_info.owner) {
+    return -ERR_PRECONDITION_FAILED;
+  }
+
+  rgw_obj dest_obj(dest_bucket_info.bucket, buf);
+
+  if (dest_bucket_info.versioning_enabled()){
+    gen_rand_obj_instance_name(&dest_obj);
+  }
+
+  obj_ctx.set_atomic(dest_obj);
+
+  rgw_zone_id no_zone;
+
+  r = copy_obj(obj_ctx,
+               user,
+               NULL, /* req_info *info */
+               no_zone,
+               dest_obj,
+               obj,
+               dest_bucket_info,
+               bucket_info,
+               bucket_info.placement_rule,
+               NULL, /* time_t *src_mtime */
+               NULL, /* time_t *mtime */
+               NULL, /* const time_t *mod_ptr */
+               NULL, /* const time_t *unmod_ptr */
+               false, /* bool high_precision_time */
+               NULL, /* const char *if_match */
+               NULL, /* const char *if_nomatch */
+               RGWRados::ATTRSMOD_NONE,
+               true, /* bool copy_if_newer */
+               state->attrset,
+               RGWObjCategory::Main,
+               0, /* uint64_t olh_epoch */
+               real_time(), /* time_t delete_at */
+               NULL, /* string *version_id */
+               NULL, /* string *ptag */
+               NULL, /* string *petag */
+               NULL, /* void (*progress_cb)(off_t, void *) */
+               NULL, /* void *progress_data */
+               dpp,
+               null_yield);
+  if (r == -ECANCELED || r == -ENOENT) {
+    /* Has already been overwritten, meaning another rgw process already
+     * copied it out */
+    return 0;
+  }
+
+  return r;
+}
+
 int RGWRados::swift_versioning_restore(RGWObjectCtx& obj_ctx,
                                        const rgw_user& user,
                                        RGWBucketInfo& bucket_info,
@@ -3556,6 +3667,13 @@ int RGWRados::Object::Write::write_meta(uint64_t size, uint64_t accounted_size,
     r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
   }
   return r;
+}
+
+int RGWRados::Object::Write::write_meta(uint64_t size, uint64_t accounted_size,
+                                           map<string, bufferlist>& attrs, optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::Object::Write::write_meta", parent_span);
+  return RGWRados::Object::Write::write_meta(size, accounted_size, attrs, y);
 }
 
 class RGWRadosPutObj : public RGWHTTPStreamRWRequest::ReceiveCB
@@ -9940,6 +10058,13 @@ int RGWRados::check_quota(const rgw_user& bucket_owner, rgw_bucket& bucket,
     return quota_handler->check_quota(bucket_owner, bucket, user_quota, bucket_quota, 0, obj_size);
 
   return quota_handler->check_quota(bucket_owner, bucket, user_quota, bucket_quota, 1, obj_size);
+}
+
+int RGWRados::check_quota(const rgw_user& bucket_owner, rgw_bucket& bucket,
+                          RGWQuotaInfo& user_quota, RGWQuotaInfo& bucket_quota, uint64_t obj_size, Jager_Tracer& tracer, const Span& parent_span, bool check_size_only)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::check_quota", parent_span);
+  return RGWRados::check_quota(bucket_owner, bucket, user_quota, bucket_quota, obj_size, check_size_only);
 }
 
 int RGWRados::get_target_shard_id(const RGWBucketInfo& bucket_info, const string& obj_key,

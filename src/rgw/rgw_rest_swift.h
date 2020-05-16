@@ -134,7 +134,9 @@ public:
   int update_slo_segment_size(rgw_slo_entry& entry);
 
   int verify_permission() override;
+  int verify_permission(Jager_Tracer&, const Span&) override;
   int get_params() override;
+  int get_params(Jager_Tracer&, const Span&) override;
   void send_response() override;
   void send_response(Jager_Tracer&, const Span&) override;
 };

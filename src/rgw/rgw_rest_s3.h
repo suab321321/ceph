@@ -286,6 +286,7 @@ public:
   ~RGWPutObj_ObjStore_S3() override {}
 
   int get_params() override;
+  int get_params(Jager_Tracer&, const Span&) override;
   int get_data(bufferlist& bl) override;
   void send_response() override;
   void send_response(Jager_Tracer&, const Span&) override;

@@ -1239,6 +1239,12 @@ bool verify_bucket_permission_no_policy(const DoutPrefixProvider* dpp, struct re
                                             perm);
 }
 
+bool verify_bucket_permission_no_policy(const DoutPrefixProvider* dpp, struct req_state * const s, const int perm, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_common.cc verify_bucket_permission_no_policy", parent_span);
+  return verify_bucket_permission_no_policy(dpp, s, perm);
+}
+
 bool verify_bucket_permission(const DoutPrefixProvider* dpp, struct req_state * const s, const uint64_t op)
 {
   perm_state_from_req_state ps(s);

@@ -263,6 +263,7 @@ public:
 
   int verify_params() override;
   int get_params() override;
+  int get_params(Jager_Tracer&, const Span&) override;
   int get_data(bufferlist& bl) override;
   int get_data(bufferlist& bl,Jager_Tracer&,const Span&) override;
 };
