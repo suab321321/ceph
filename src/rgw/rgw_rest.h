@@ -169,6 +169,7 @@ public:
   }
 
   int get_params() override;
+  int get_params(Jager_Tracer&, const Span&) override;
 };
 
 class RGWGetObjTags_ObjStore : public RGWGetObjTags {

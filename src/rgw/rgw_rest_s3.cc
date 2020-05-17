@@ -161,6 +161,12 @@ int RGWGetObj_ObjStore_S3::get_params()
   return RGWGetObj_ObjStore::get_params();
 }
 
+int RGWGetObj_ObjStore_S3::get_params(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest_3.cc RGWGetObj_ObjStore_S3::get_params", parent_span);
+  return RGWGetObj_ObjStore_S3::get_params();
+}
+
 int RGWGetObj_ObjStore_S3::send_response_data_error()
 {
   bufferlist bl;

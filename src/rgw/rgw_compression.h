@@ -10,8 +10,10 @@
 #include "rgw_putobj.h"
 #include "rgw_op.h"
 #include "rgw_compression_types.h"
+#include "include/tracer.h"
 
 int rgw_compression_info_from_attrset(map<string, bufferlist>& attrs, bool& need_decompress, RGWCompressionInfo& cs_info);
+int rgw_compression_info_from_attrset(map<string, bufferlist>& attrs, bool& need_decompress, RGWCompressionInfo& cs_info, Jager_Tracer&, const Span&);
 
 class RGWGetObj_Decompress : public RGWGetObj_Filter
 {

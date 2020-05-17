@@ -30,6 +30,13 @@ int rgw_compression_info_from_attrset(map<string, bufferlist>& attrs,
   }
 }
 
+int rgw_compression_info_from_attrset(map<string, bufferlist>& attrs,
+                                      bool& need_decompress,
+                                      RGWCompressionInfo& cs_info, Jager_Tracer& tracer, const Span& parent_span) {
+  Span span = tracer.child_span("rgw_compression.cc rgw_compression_info_from_attrset", parent_span);
+  return rgw_compression_info_from_attrset(attrs, need_decompress, cs_info);
+}
+
 //------------RGWPutObj_Compress---------------
 
 int RGWPutObj_Compress::process(bufferlist&& in, uint64_t logical_offset)

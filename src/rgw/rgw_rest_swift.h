@@ -21,7 +21,9 @@ public:
   ~RGWGetObj_ObjStore_SWIFT() override {}
 
   int verify_permission() override;
+  int verify_permission(Jager_Tracer&, const Span&) override;
   int get_params() override;
+  int get_params(Jager_Tracer&, const Span&) override;
   int send_response_data_error() override;
   int send_response_data_error(const Span&) override;
   int send_response_data(bufferlist& bl, off_t ofs, off_t len) override;

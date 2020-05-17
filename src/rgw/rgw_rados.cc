@@ -2618,6 +2618,12 @@ bool RGWRados::obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_ob
   return get_obj_data_pool(placement_rule, obj, &raw_obj->pool);
 }
 
+bool RGWRados::obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_raw_obj *raw_obj, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::obj_to_raw", parent_span);
+  return RGWRados::obj_to_raw(placement_rule, obj, raw_obj);
+}
+
 int RGWRados::get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj& obj, librados::IoCtx *ioctx)
 {
   string oid, key;
@@ -2637,6 +2643,12 @@ int RGWRados::get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj
   ioctx->locator_set_key(key);
 
   return 0;
+}
+
+int RGWRados::get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj& obj, librados::IoCtx *ioctx, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::get_obj_head_ioctx", parent_span);
+  return RGWRados::get_obj_head_ioctx(bucket_info, obj, ioctx);
 }
 
 int RGWRados::get_obj_head_ref(const RGWBucketInfo& bucket_info, const rgw_obj& obj, rgw_rados_ref *ref)
@@ -6147,6 +6159,12 @@ int RGWRados::Object::Read::get_attr(const char *name, bufferlist& dest, optiona
   return 0;
 }
 
+int RGWRados::Object::Read::get_attr(const char *name, bufferlist& dest, optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::Object::Read::get_attr", parent_span);
+  return RGWRados::Object::Read::get_attr(name, dest, y);
+}
+
 int RGWRados::Object::Stat::stat_async()
 {
   RGWObjectCtx& ctx = source->get_ctx();
@@ -6632,12 +6650,12 @@ int RGWRados::Object::Read::prepare(optional_yield y,Jager_Tracer& tracer, const
   const RGWBucketInfo& bucket_info = source->get_bucket_info();
 
   state.obj = astate->obj;
-  store->obj_to_raw(bucket_info.placement_rule, state.obj, &state.head_obj);
+  store->obj_to_raw(bucket_info.placement_rule, state.obj, &state.head_obj, tracer, span);
 
   state.cur_pool = state.head_obj.pool;
   state.cur_ioctx = &state.io_ctxs[state.cur_pool];
 
-  r = store->get_obj_head_ioctx(bucket_info, state.obj, state.cur_ioctx);
+  r = store->get_obj_head_ioctx(bucket_info, state.obj, state.cur_ioctx, tracer, span);
   if (r < 0) {
     return r;
   }
@@ -6728,6 +6746,12 @@ int RGWRados::Object::Read::range_to_ofs(uint64_t obj_size, int64_t &ofs, int64_
     }
   }
   return 0;
+}
+
+int RGWRados::Object::Read::range_to_ofs(uint64_t obj_size, int64_t &ofs, int64_t &end, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::Object::Read::range_to_ofs", parent_span);
+  return RGWRados::Object::Read::range_to_ofs(obj_size, ofs, end);
 }
 
 int RGWRados::Bucket::UpdateIndex::guard_reshard(BucketShard **pbs, std::function<int(BucketShard *)> call)
@@ -7161,6 +7185,13 @@ int RGWRados::Object::Read::iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb,
   }
 
   return data.drain();
+}
+
+int RGWRados::Object::Read::iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb,
+                                    optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::Object::Read::iterate", parent_span);
+  return RGWRados::Object::Read::iterate(ofs, end, cb, y);
 }
 
 int RGWRados::iterate_obj(RGWObjectCtx& obj_ctx,

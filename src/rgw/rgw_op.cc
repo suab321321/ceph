@@ -234,6 +234,16 @@ int rgw_op_get_bucket_policy_from_attr(CephContext *cct,
   return 0;
 }
 
+int rgw_op_get_bucket_policy_from_attr(CephContext *cct,
+				       rgw::sal::RGWRadosStore *store,
+				       RGWBucketInfo& bucket_info,
+				       map<string, bufferlist>& bucket_attrs,
+				       RGWAccessControlPolicy *policy, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc rgw_op_get_bucket_policy_from_attr", parent_span);
+  return rgw_op_get_bucket_policy_from_attr(cct, store, bucket_info, bucket_attrs, policy);
+}
+
 static int get_obj_policy_from_attr(CephContext *cct,
 				    rgw::sal::RGWRadosStore *store,
 				    RGWObjectCtx& obj_ctx,
@@ -251,6 +261,52 @@ static int get_obj_policy_from_attr(CephContext *cct,
   RGWRados::Object::Read rop(&op_target);
 
   ret = rop.get_attr(RGW_ATTR_ACL, bl, y);
+  if (ret >= 0) {
+    ret = decode_policy(cct, bl, policy);
+    if (ret < 0)
+      return ret;
+  } else if (ret == -ENODATA) {
+    /* object exists, but policy is broken */
+    ldout(cct, 0) << "WARNING: couldn't find acl header for object, generating default" << dendl;
+    rgw::sal::RGWRadosUser user(store);
+    ret = user.get_by_id(bucket_info.owner, y);
+    if (ret < 0)
+      return ret;
+
+    policy->create_default(bucket_info.owner, user.get_display_name());
+  }
+
+  if (storage_class) {
+    bufferlist scbl;
+    int r = rop.get_attr(RGW_ATTR_STORAGE_CLASS, scbl, y);
+    if (r >= 0) {
+      *storage_class = scbl.to_str();
+    } else {
+      storage_class->clear();
+    }
+  }
+
+  return ret;
+}
+
+static int get_obj_policy_from_attr(CephContext *cct,
+				    rgw::sal::RGWRadosStore *store,
+				    RGWObjectCtx& obj_ctx,
+				    RGWBucketInfo& bucket_info,
+				    map<string, bufferlist>& bucket_attrs,
+				    RGWAccessControlPolicy *policy,
+                                    string *storage_class,
+				    rgw_obj& obj,
+                                    optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc get_obj_policy_from_attr", parent_span);
+  bufferlist bl;
+  int ret = 0;
+
+  RGWRados::Object op_target(store->getRados(), bucket_info, obj_ctx, obj);
+  RGWRados::Object::Read rop(&op_target);
+
+  ret = rop.get_attr(RGW_ATTR_ACL, bl, y, tracer, span);
   if (ret >= 0) {
     ret = decode_policy(cct, bl, policy);
     if (ret < 0)
@@ -501,6 +557,32 @@ static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
   return ret;
 }
 
+static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
+                              struct req_state *s,
+                              RGWBucketInfo& bucket_info,
+                              map<string, bufferlist>& bucket_attrs,
+                              RGWAccessControlPolicy *policy,
+                              rgw_bucket& bucket, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc read_bucket_policy", parent_span);
+  if (!s->system_request && bucket_info.flags & BUCKET_SUSPENDED) {
+    ldpp_dout(s, 0) << "NOTICE: bucket " << bucket_info.bucket.name
+        << " is suspended" << dendl;
+    return -ERR_USER_SUSPENDED;
+  }
+
+  if (bucket.name.empty()) {
+    return 0;
+  }
+
+  int ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, policy, tracer, span);
+  if (ret == -ENOENT) {
+      ret = -ERR_NO_SUCH_BUCKET;
+  }
+
+  return ret;
+}
+
 static int read_obj_policy(rgw::sal::RGWRadosStore *store,
                            struct req_state *s,
                            RGWBucketInfo& bucket_info,
@@ -535,6 +617,71 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
   RGWObjectCtx *obj_ctx = static_cast<RGWObjectCtx *>(s->obj_ctx);
   int ret = get_obj_policy_from_attr(s->cct, store, *obj_ctx,
                                      bucket_info, bucket_attrs, acl, storage_class, obj, s->yield);
+  if (ret == -ENOENT) {
+    /* object does not exist checking the bucket's ACL to make sure
+       that we send a proper error code */
+    RGWAccessControlPolicy bucket_policy(s->cct);
+    ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, &bucket_policy);
+    if (ret < 0) {
+      return ret;
+    }
+    const rgw_user& bucket_owner = bucket_policy.get_owner().get_id();
+    if (bucket_owner.compare(s->user->get_id()) != 0 &&
+        ! s->auth.identity->is_admin_of(bucket_owner)) {
+      if (policy) {
+        auto r =  policy->eval(s->env, *s->auth.identity, rgw::IAM::s3ListBucket, ARN(bucket));
+        if (r == Effect::Allow)
+          return -ENOENT;
+        if (r == Effect::Deny)
+          return -EACCES;
+      }
+      if (! bucket_policy.verify_permission(s, *s->auth.identity, s->perm_mask, RGW_PERM_READ))
+        ret = -EACCES;
+      else
+        ret = -ENOENT;
+    } else {
+      ret = -ENOENT;
+    }
+  }
+
+  return ret;
+}
+
+static int read_obj_policy(rgw::sal::RGWRadosStore *store,
+                           struct req_state *s,
+                           RGWBucketInfo& bucket_info,
+                           map<string, bufferlist>& bucket_attrs,
+                           RGWAccessControlPolicy* acl,
+                           string *storage_class,
+			   boost::optional<Policy>& policy,
+                           rgw_bucket& bucket,
+                           rgw_obj_key& object, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc read_obj_policy", parent_span);
+  string upload_id;
+  upload_id = s->info.args.get("uploadId");
+  rgw_obj obj;
+
+  if (!s->system_request && bucket_info.flags & BUCKET_SUSPENDED) {
+    ldpp_dout(s, 0) << "NOTICE: bucket " << bucket_info.bucket.name
+        << " is suspended" << dendl;
+    return -ERR_USER_SUSPENDED;
+  }
+
+  if (!upload_id.empty()) {
+    /* multipart upload */
+    RGWMPObj mp(object.name, upload_id);
+    string oid = mp.get_meta();
+    obj.init_ns(bucket, oid, mp_ns);
+    obj.set_in_extra_data(true);
+  } else {
+    obj = rgw_obj(bucket, object);
+  }
+  policy = get_iam_policy_from_attr(s->cct, store, bucket_attrs, bucket.tenant);
+
+  RGWObjectCtx *obj_ctx = static_cast<RGWObjectCtx *>(s->obj_ctx);
+  int ret = get_obj_policy_from_attr(s->cct, store, *obj_ctx,
+                                     bucket_info, bucket_attrs, acl, storage_class, obj, s->yield, tracer, span);
   if (ret == -ENOENT) {
     /* object does not exist checking the bucket's ACL to make sure
        that we send a proper error code */
@@ -652,7 +799,7 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
 
      if (s->bucket_exists) {
        ret = read_bucket_policy(store, s, s->bucket_info, s->bucket_attrs,
-                                s->bucket_acl.get(), s->bucket);
+                                s->bucket_acl.get(), s->bucket, tracer, span);
        acct_acl_user = {
          s->bucket_info.owner,
          s->bucket_acl->get_owner().get_display_name(),
@@ -1023,6 +1170,31 @@ int rgw_build_object_policies(rgw::sal::RGWRadosStore *store, struct req_state *
     ret = read_obj_policy(store, s, s->bucket_info, s->bucket_attrs,
 			  s->object_acl.get(), nullptr, s->iam_policy, s->bucket,
                           s->object);
+  }
+
+  return ret;
+}
+
+int rgw_build_object_policies(rgw::sal::RGWRadosStore *store, struct req_state *s,
+			      bool prefetch_data, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc rgw_build_object_policies", parent_span);
+  int ret = 0;
+
+  if (!s->object.empty()) {
+    if (!s->bucket_exists) {
+      return -ERR_NO_SUCH_BUCKET;
+    }
+    s->object_acl = std::make_unique<RGWAccessControlPolicy>(s->cct);
+    rgw_obj obj(s->bucket, s->object);
+
+    store->getRados()->set_atomic(s->obj_ctx, obj);
+    if (prefetch_data) {
+      store->getRados()->set_prefetch_data(s->obj_ctx, obj);
+    }
+    ret = read_obj_policy(store, s, s->bucket_info, s->bucket_attrs,
+			  s->object_acl.get(), nullptr, s->iam_policy, s->bucket,
+                          s->object, tracer, span);
   }
 
   return ret;
@@ -2537,7 +2709,7 @@ void RGWGetObj::pre_exec()
 void RGWGetObj::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 {
   Span span=tracer.child_span("rgw_op.cc RGWGetObj::pre_exec",parent_span);
-  rgw_bucket_object_pre_exec(s);
+  rgw_bucket_object_pre_exec(s, tracer, span);
 }
 
 static bool object_is_expired(map<string, bufferlist>& attrs) {
@@ -2836,7 +3008,7 @@ void RGWGetObj::execute(Jager_Tracer& tracer,const Span& parent_span)
   }
   /* end gettorrent */
 
-  op_ret = rgw_compression_info_from_attrset(attrs, need_decompress, cs_info);
+  op_ret = rgw_compression_info_from_attrset(attrs, need_decompress, cs_info, tracer, span);
   if (op_ret < 0) {
     ldpp_dout(s, 0) << "ERROR: failed to decode compression info, cannot decompress" << dendl;
     goto done_err;
@@ -2877,7 +3049,7 @@ void RGWGetObj::execute(Jager_Tracer& tracer,const Span& parent_span)
     goto done_err;
   }
 
-  op_ret = read_op.range_to_ofs(s->obj_size, ofs, end);
+  op_ret = read_op.range_to_ofs(s->obj_size, ofs, end, tracer, span);
   if (op_ret < 0)
     goto done_err;
   total_len = (ofs <= end ? end + 1 - ofs : 0);
@@ -2890,7 +3062,7 @@ void RGWGetObj::execute(Jager_Tracer& tracer,const Span& parent_span)
   }
 
   /* Decode S3 objtags, if any */
-  rgw_cond_decode_objtags(s, attrs);
+  rgw_cond_decode_objtags(s, attrs, tracer, span);
 
   start = ofs;
 
@@ -2914,7 +3086,7 @@ void RGWGetObj::execute(Jager_Tracer& tracer,const Span& parent_span)
   ofs_x = ofs;
   end_x = end;
   filter->fixup_range(ofs_x, end_x);
-  op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield);
+  op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield, tracer, span);
 
   if (op_ret >= 0)
     op_ret = filter->flush();
@@ -9553,7 +9725,7 @@ int RGWHandler::init(rgw::sal::RGWRadosStore *_store,
 int RGWHandler::do_init_permissions(Jager_Tracer& tracer,const Span& parent_span)
 {
   Span span=tracer.child_span("rgw_op.cc RGWHandler::do_init_permissions()",parent_span);
-  int ret = rgw_build_bucket_policies(store, s);
+  int ret = rgw_build_bucket_policies(store, s, tracer, span);
   if (ret < 0) {
     ldpp_dout(s, 10) << "init_permissions on " << s->bucket
         << " failed, ret=" << ret << dendl;
@@ -9585,6 +9757,26 @@ int RGWHandler::do_read_permissions(RGWOp *op, bool only_bucket)
     return 0;
   }
   int ret = rgw_build_object_policies(store, s, op->prefetch_data());
+
+  if (ret < 0) {
+    ldpp_dout(op, 10) << "read_permissions on " << s->bucket << ":"
+		      << s->object << " only_bucket=" << only_bucket
+		      << " ret=" << ret << dendl;
+    if (ret == -ENODATA)
+      ret = -EACCES;
+  }
+
+  return ret;
+}
+
+int RGWHandler::do_read_permissions(RGWOp *op, bool only_bucket, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_op.cc RGWHandler::do_read_permissions", parent_span);
+  if (only_bucket) {
+    /* already read bucket info */
+    return 0;
+  }
+  int ret = rgw_build_object_policies(store, s, op->prefetch_data(), tracer, span);
 
   if (ret < 0) {
     ldpp_dout(op, 10) << "read_permissions on " << s->bucket << ":"

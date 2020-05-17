@@ -462,6 +462,7 @@ class RGWRados
   uint32_t bucket_index_max_shards;
 
   int get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj& obj, librados::IoCtx *ioctx);
+  int get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj& obj, librados::IoCtx *ioctx, Jager_Tracer&, const Span&);
   int get_obj_head_ref(const RGWBucketInfo& bucket_info, const rgw_obj& obj, rgw_rados_ref *ref);
   int get_system_obj_ref(const rgw_raw_obj& obj, rgw_rados_ref *ref);
   uint64_t max_bucket_id;
@@ -661,6 +662,7 @@ public:
   bool get_obj_data_pool(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_pool *pool);
   bool get_obj_data_pool(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_pool *pool, Jager_Tracer&, const Span&);
   bool obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_raw_obj *raw_obj);
+  bool obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_raw_obj *raw_obj, Jager_Tracer&, const Span&);
 
   int create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
                             const string& zonegroup_id,
@@ -800,9 +802,12 @@ public:
       int prepare(optional_yield y);
       int prepare(optional_yield y,Jager_Tracer&, const Span&);
       static int range_to_ofs(uint64_t obj_size, int64_t &ofs, int64_t &end);
+      static int range_to_ofs(uint64_t obj_size, int64_t &ofs, int64_t &end, Jager_Tracer&, const Span&);
       int read(int64_t ofs, int64_t end, bufferlist& bl, optional_yield y);
       int iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb, optional_yield y);
+      int iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb, optional_yield y, Jager_Tracer&, const Span&);
       int get_attr(const char *name, bufferlist& dest, optional_yield y);
+      int get_attr(const char *name, bufferlist& dest, optional_yield y, Jager_Tracer&, const Span&);
     };
 
     struct Write {

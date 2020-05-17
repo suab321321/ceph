@@ -81,6 +81,11 @@ int rgw_op_get_bucket_policy_from_attr(CephContext *cct,
                                        RGWBucketInfo& bucket_info,
                                        map<string, bufferlist>& bucket_attrs,
                                        RGWAccessControlPolicy *policy);
+int rgw_op_get_bucket_policy_from_attr(CephContext *cct,
+				       rgw::sal::RGWRadosStore *store,
+                                       RGWBucketInfo& bucket_info,
+                                       map<string, bufferlist>& bucket_attrs,
+                                       RGWAccessControlPolicy *policy, Jager_Tracer&, const Span&);
 
 class RGWHandler {
 protected:
@@ -89,6 +94,7 @@ protected:
 	int do_init_permissions(Jager_Tracer&,const Span&);
   int do_init_permissions();
   int do_read_permissions(RGWOp* op, bool only_bucket);
+  int do_read_permissions(RGWOp* op, bool only_bucket, Jager_Tracer&, const Span&);
 
 public:
   RGWHandler() {}
@@ -393,6 +399,7 @@ public:
   int get_data_cb(bufferlist& bl, off_t ofs, off_t len, const Span&);
 
   virtual int get_params() = 0;
+  virtual int get_params(Jager_Tracer&, const Span&) = 0;
   virtual int send_response_data_error() = 0;
   virtual int send_response_data_error(const Span&) = 0;
   virtual int send_response_data(bufferlist& bl, off_t ofs, off_t len) = 0;

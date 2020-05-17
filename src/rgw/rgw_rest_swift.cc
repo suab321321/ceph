@@ -1751,12 +1751,36 @@ int RGWGetObj_ObjStore_SWIFT::verify_permission()
   }
 }
 
+int RGWGetObj_ObjStore_SWIFT::verify_permission(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::verify_permission", parent_span);
+  op_ret = RGWGetObj_ObjStore::verify_permission(tracer, span);
+
+  /* We have to differentiate error codes depending on whether user is
+   * anonymous (401 Unauthorized) or he doesn't have necessary permissions
+   * (403 Forbidden). */
+  if (s->auth.identity->is_anonymous() && op_ret == -EACCES) {
+    return -EPERM;
+  } else {
+    return op_ret;
+  }
+}
+
 int RGWGetObj_ObjStore_SWIFT::get_params()
 {
   const string& mm = s->info.args.get("multipart-manifest");
   skip_manifest = (mm.compare("get") == 0);
 
   return RGWGetObj_ObjStore::get_params();
+}
+
+int RGWGetObj_ObjStore_SWIFT::get_params(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::get_params", parent_span);
+  const string& mm = s->info.args.get("multipart-manifest");
+  skip_manifest = (mm.compare("get") == 0);
+
+  return RGWGetObj_ObjStore::get_params(tracer, span);
 }
 
 int RGWGetObj_ObjStore_SWIFT::send_response_data_error()

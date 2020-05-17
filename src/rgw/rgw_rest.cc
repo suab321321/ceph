@@ -811,6 +811,12 @@ int RGWGetObj_ObjStore::get_params()
   return 0;
 }
 
+int RGWGetObj_ObjStore::get_params(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest.cc RGWGetObj_ObjStore::get_params", parent_span);
+  return RGWGetObj_ObjStore::get_params();
+}
+
 int RESTArgs::get_string(struct req_state *s, const string& name,
 			 const string& def_val, string *val, bool *existed)
 {
@@ -1886,7 +1892,7 @@ int RGWHandler_REST::init_permissions(RGWOp* op,Jager_Tracer& tracer,const Span&
     return 0;
   }
 
-  return do_init_permissions();
+  return do_init_permissions(tracer, span);
 }
 
 int RGWHandler_REST::init_permissions(RGWOp* op)
@@ -1956,7 +1962,7 @@ int RGWHandler_REST::read_permissions(RGWOp* op_obj,Jager_Tracer& tracer,const S
     return -EINVAL;
   }
 
-  return do_read_permissions(op_obj, only_bucket);
+  return do_read_permissions(op_obj, only_bucket, tracer, span);
 }
 
 
