@@ -8,6 +8,7 @@
 #include "rgw_xml.h"
 #include "rgw_obj_manifest.h"
 #include "rgw_compression_types.h"
+#include "include/tracer.h"
 
 namespace rgw { namespace sal {
   class RGWRadosStore;
@@ -136,4 +137,7 @@ extern int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo&
 
 extern int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RGWBucketInfo& bucket_info,
                                 string& prefix, string& delim);
+
+extern int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RGWBucketInfo& bucket_info,
+                                string& prefix, string& delim, Jager_Tracer&, const Span&);
 #endif

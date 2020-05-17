@@ -19,6 +19,7 @@
 
 #include "rgw/rgw_service.h"
 #include "rgw/rgw_tools.h"
+#include "../include/tracer.h"
 
 #include "svc_bi.h"
 #include "svc_rados.h"
@@ -101,6 +102,9 @@ public:
   int read_stats(const RGWBucketInfo& bucket_info,
                  RGWBucketEnt *stats,
                  optional_yield y) override;
+  int read_stats(const RGWBucketInfo& bucket_info,
+                 RGWBucketEnt *stats,
+                 optional_yield y, Jager_Tracer&, const Span&) override;
 
   int get_reshard_status(const RGWBucketInfo& bucket_info,
                          std::list<cls_rgw_bucket_instance_entry> *status);
@@ -126,6 +130,12 @@ public:
                         RGWSI_RADOS::Pool *index_pool,
                         map<int, string> *bucket_objs,
                         map<int, string> *bucket_instance_ids);
+
+  int open_bucket_index(const RGWBucketInfo& bucket_info,
+                        std::optional<int> shard_id,
+                        RGWSI_RADOS::Pool *index_pool,
+                        map<int, string> *bucket_objs,
+                        map<int, string> *bucket_instance_ids, Jager_Tracer&, const Span&);
 };
 
 

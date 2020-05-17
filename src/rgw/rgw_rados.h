@@ -1480,6 +1480,17 @@ public:
 				rgw_obj_index_key *last_entry,
                                 optional_yield y,
 				check_filter_t = nullptr);
+  int cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
+				int shard_id,
+				const rgw_obj_index_key& start_after,
+				const string& prefix,
+				uint32_t num_entries,
+				bool list_versions,
+				vector<rgw_bucket_dir_entry>& ent_list,
+				bool *is_truncated,
+				rgw_obj_index_key *last_entry,
+        optional_yield y, Jager_Tracer&, const Span&,
+				check_filter_t = nullptr);
   int cls_bucket_head(const RGWBucketInfo& bucket_info, int shard_id, vector<rgw_bucket_dir_header>& headers, map<int, string> *bucket_instance_ids = NULL);
   int cls_bucket_head_async(const RGWBucketInfo& bucket_info, int shard_id, RGWGetDirHeader_CB *ctx, int *num_aio);
 

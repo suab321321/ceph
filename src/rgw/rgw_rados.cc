@@ -4980,7 +4980,7 @@ int RGWRados::check_bucket_empty(RGWBucketInfo& bucket_info, optional_yield y, J
 				      ent_list,
 				      &is_truncated,
 				      &marker,
-                                      y);
+              y, tracer, span);
     if (r < 0) {
       return r;
     }
@@ -5110,7 +5110,7 @@ int RGWRados::delete_bucket(RGWBucketInfo& bucket_info, RGWObjVersionTracker& ob
   }
  
   if (remove_ep) {
-    r = ctl.bucket->remove_bucket_entrypoint_info(bucket_info.bucket, null_yield,
+    r = ctl.bucket->remove_bucket_entrypoint_info(bucket_info.bucket, null_yield, tracer, span,
                                                   RGWBucketCtl::Bucket::RemoveParams()
                                                   .set_objv_tracker(&objv_tracker));
     if (r < 0)
@@ -5120,7 +5120,7 @@ int RGWRados::delete_bucket(RGWBucketInfo& bucket_info, RGWObjVersionTracker& ob
   /* if the bucket is not synced we can remove the meta file */
   if (!svc.zone->is_syncing_bucket_meta(bucket)) {
     RGWObjVersionTracker objv_tracker;
-    r = ctl.bucket->remove_bucket_instance_info(bucket, bucket_info, null_yield);
+    r = ctl.bucket->remove_bucket_instance_info(bucket, bucket_info, null_yield, tracer, span);
     if (r < 0) {
       return r;
     }
@@ -9739,6 +9739,164 @@ check_updates:
 
   return 0;
 } // RGWRados::cls_bucket_list_unordered
+
+int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
+					int shard_id,
+					const rgw_obj_index_key& start_after,
+					const string& prefix,
+					uint32_t num_entries,
+					bool list_versions,
+					std::vector<rgw_bucket_dir_entry>& ent_list,
+					bool *is_truncated,
+					rgw_obj_index_key *last_entry,
+          optional_yield y, Jager_Tracer&  tracer, const Span& parent_span,
+					check_filter_t force_check_filter )
+{
+  ldout(cct, 10) << "cls_bucket_list_unordered " << bucket_info.bucket <<
+    " start_after " << start_after.name << "[" << start_after.instance <<
+    "] num_entries " << num_entries << dendl;
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::cls_bucket_list_unordered", parent_span);
+  ent_list.clear();
+  static MultipartMetaFilter multipart_meta_filter;
+
+  *is_truncated = false;
+  RGWSI_RADOS::Pool index_pool;
+
+  map<int, string> oids;
+  int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id, &index_pool, &oids, nullptr, tracer, span);
+  if (r < 0)
+    return r;
+
+  auto& ioctx = index_pool.ioctx();
+
+  const uint32_t num_shards = oids.size();
+
+  rgw_obj_index_key marker = start_after;
+  uint32_t current_shard;
+  if (shard_id >= 0) {
+    current_shard = shard_id;
+  } else if (start_after.empty()) {
+    current_shard = 0u;
+  } else {
+    // at this point we have a marker (start_after) that has something
+    // in it, so we need to get to the bucket shard index, so we can
+    // start reading from there
+
+    std::string key;
+    // test whether object name is a multipart meta name
+    if(! multipart_meta_filter.filter(start_after.name, key)) {
+      // if multipart_meta_filter fails, must be "regular" (i.e.,
+      // unadorned) and the name is the key
+      key = start_after.name;
+    }
+
+    // now convert the key (oid) to an rgw_obj_key since that will
+    // separate out the namespace, name, and instance
+    rgw_obj_key obj_key;
+    bool parsed = rgw_obj_key::parse_raw_oid(key, &obj_key);
+    if (!parsed) {
+      ldout(cct, 0) <<
+	"ERROR: RGWRados::cls_bucket_list_unordered received an invalid "
+	"start marker: '" << start_after << "'" << dendl;
+      return -EINVAL;
+    } else if (obj_key.name.empty()) {
+      // if the name is empty that means the object name came in with
+      // a namespace only, and therefore we need to start our scan at
+      // the first bucket index shard
+      current_shard = 0u;
+    } else {
+      // so now we have the key used to compute the bucket index shard
+      // and can extract the specific shard from it
+      current_shard = svc.bi_rados->bucket_shard_index(obj_key.name, num_shards);
+    }
+  }
+
+  uint32_t count = 0u;
+  map<string, bufferlist> updates;
+  rgw_obj_index_key last_added_entry;
+  while (count <= num_entries &&
+	 ((shard_id >= 0 && current_shard == uint32_t(shard_id)) ||
+	  current_shard < num_shards)) {
+    const std::string& oid = oids[current_shard];
+    rgw_cls_list_ret result;
+
+    librados::ObjectReadOperation op;
+    string empty_delimiter;
+    cls_rgw_bucket_list_op(op, marker, prefix, empty_delimiter,
+			   num_entries,
+                           list_versions, &result);
+    r = rgw_rados_operate(ioctx, oid, &op, nullptr, null_yield, tracer, span);
+    if (r < 0)
+      return r;
+
+    for (auto& entry : result.dir.m) {
+      rgw_bucket_dir_entry& dirent = entry.second;
+
+      bool force_check = force_check_filter &&
+	force_check_filter(dirent.key.name);
+      if ((!dirent.exists && !dirent.is_delete_marker()) ||
+	  !dirent.pending_map.empty() ||
+	  force_check) {
+	/* there are uncommitted ops. We need to check the current state,
+	 * and if the tags are old we need to do cleanup as well. */
+	librados::IoCtx sub_ctx;
+	sub_ctx.dup(ioctx);
+	r = check_disk_state(sub_ctx, bucket_info, dirent, dirent, updates[oid], y);
+	if (r < 0 && r != -ENOENT) {
+	  return r;
+	}
+      } else {
+        r = 0;
+      }
+
+      // at this point either r >=0 or r == -ENOENT
+      if (r >= 0) { // i.e., if r != -ENOENT
+	ldout(cct, 10) << "RGWRados::cls_bucket_list_unordered: got " <<
+	  dirent.key.name << "[" << dirent.key.instance << "]" << dendl;
+
+	if (count < num_entries) {
+	  marker = last_added_entry = dirent.key; // double assign
+	  ent_list.emplace_back(std::move(dirent));
+	  ++count;
+	} else {
+	  *is_truncated = true;
+	  goto check_updates;
+	}
+      } else { // r == -ENOENT
+	// in the case of -ENOENT, make sure we're advancing marker
+	// for possible next call to CLSRGWIssueBucketList
+	marker = dirent.key;
+      }
+    } // entry for loop
+
+    if (!result.is_truncated) {
+      // if we reached the end of the shard read next shard
+      ++current_shard;
+      marker = rgw_obj_index_key();
+    }
+  } // shard loop
+
+check_updates:
+
+  // suggest updates if there is any
+  map<string, bufferlist>::iterator miter = updates.begin();
+  for (; miter != updates.end(); ++miter) {
+    if (miter->second.length()) {
+      ObjectWriteOperation o;
+      cls_rgw_suggest_changes(o, miter->second);
+      // we don't care if we lose suggested updates, send them off blindly
+      AioCompletion *c = librados::Rados::aio_create_completion(nullptr, nullptr);
+      ioctx.aio_operate(miter->first, c, &o);
+      c->release();
+    }
+  }
+
+  if (last_entry && !ent_list.empty()) {
+    *last_entry = last_added_entry;
+  }
+
+  return 0; 
+}
 
 
 int RGWRados::cls_obj_usage_log_add(const string& oid,

@@ -3195,6 +3195,15 @@ int RGWBucketCtl::remove_bucket_entrypoint_info(const rgw_bucket& bucket,
   });
 }
 
+int RGWBucketCtl::remove_bucket_entrypoint_info(const rgw_bucket& bucket,
+                                                optional_yield y,
+                                                 Jager_Tracer& tracer, const Span& parent_span,
+                                                const Bucket::RemoveParams& param)
+{
+  Span span = tracer.child_span("rgw_bucket.cc", parent_span);
+  return RGWBucketCtl::remove_bucket_entrypoint_info(bucket, y, param);
+}
+
 int RGWBucketCtl::read_bucket_instance_info(const rgw_bucket& bucket,
                                             RGWBucketInfo *info,
                                             optional_yield y,
@@ -3313,6 +3322,16 @@ int RGWBucketCtl::remove_bucket_instance_info(const rgw_bucket& bucket,
                                                    &info.objv_tracker,
                                                    y);
   });
+}
+
+int RGWBucketCtl::remove_bucket_instance_info(const rgw_bucket& bucket,
+                                              RGWBucketInfo& info,
+                                              optional_yield y,
+                                              Jager_Tracer& tracer, const Span& parent_span,
+                                              const BucketInstance::RemoveParams& params)
+{
+  Span span = tracer.child_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_instance_info", parent_span);
+  return RGWBucketCtl::remove_bucket_instance_info(bucket, info, y, params);
 }
 
 int RGWBucketCtl::do_store_linked_bucket_info(RGWSI_Bucket_X_Ctx& ctx,
@@ -3521,6 +3540,12 @@ int RGWBucketCtl::unlink_bucket(const rgw_user& user_id, const rgw_bucket& bucke
   });
 }
 
+int RGWBucketCtl::unlink_bucket(const rgw_user& user_id, const rgw_bucket& bucket, optional_yield y, Jager_Tracer& tracer, const Span& parent_span, bool update_entrypoint)
+{
+  Span span = tracer.child_span("rgw_bucket.cc RGWBucketCtl::unlink_bucket", parent_span);
+  return RGWBucketCtl::unlink_bucket(user_id, bucket, y, update_entrypoint);
+}
+
 int RGWBucketCtl::do_unlink_bucket(RGWSI_Bucket_EP_Ctx& ctx,
                                    const rgw_user& user_id,
                                    const rgw_bucket& bucket,
@@ -3697,6 +3722,25 @@ int RGWBucketCtl::sync_user_stats(const rgw_user& user_id,
     pent = &ent;
   }
   int r = svc.bi->read_stats(bucket_info, pent, null_yield);
+  if (r < 0) {
+    ldout(cct, 20) << __func__ << "(): failed to read bucket stats (r=" << r << ")" << dendl;
+    return r;
+  }
+
+  return ctl.user->flush_bucket_stats(user_id, *pent);
+}
+
+int RGWBucketCtl::sync_user_stats(const rgw_user& user_id,
+                                  const RGWBucketInfo& bucket_info,
+                                  Jager_Tracer& tracer, const Span& parent_span,
+                                  RGWBucketEnt* pent)
+{
+  Span span = tracer.child_span("rgw_bucket.cc RGWBucketCtl::sync_user_stats", parent_span);
+  RGWBucketEnt ent;
+  if (!pent) {
+    pent = &ent;
+  }
+  int r = svc.bi->read_stats(bucket_info, pent, null_yield, tracer, span);
   if (r < 0) {
     ldout(cct, 20) << __func__ << "(): failed to read bucket stats (r=" << r << ")" << dendl;
     return r;

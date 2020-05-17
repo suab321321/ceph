@@ -272,6 +272,14 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
 }
 
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
+                      librados::ObjectReadOperation *op, bufferlist* pbl,
+                      optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_tools.cc rgw_rados_operate", parent_span);
+  return rgw_rados_operate(ioctx, oid, op, pbl, y);
+}
+
+int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       librados::ObjectWriteOperation *op, optional_yield y)
 {
 #ifdef HAVE_BOOST_CONTEXT

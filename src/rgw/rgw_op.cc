@@ -4743,7 +4743,7 @@ int RGWDeleteBucket::verify_permission()
 int RGWDeleteBucket::verify_permission(Jager_Tracer& tracer, const Span& parent_span)
 {
   Span span = tracer.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", parent_span);
-  if (!verify_bucket_permission(this, s, rgw::IAM::s3DeleteBucket)) {
+  if (!verify_bucket_permission(this, s, rgw::IAM::s3DeleteBucket, tracer, span)) {
     return -EACCES;
   }
 
@@ -4758,7 +4758,7 @@ void RGWDeleteBucket::pre_exec()
 void RGWDeleteBucket::pre_exec(Jager_Tracer& tracer, const Span& parent_span)
 {
   Span span=tracer.child_span("rgw_op.cc  RGWDeleteBucket::pre_exec", parent_span);
-  rgw_bucket_object_pre_exec(s);
+  rgw_bucket_object_pre_exec(s, tracer, span);
 }
 
 void RGWDeleteBucket::execute()
@@ -4890,7 +4890,7 @@ void RGWDeleteBucket::execute(Jager_Tracer& tracer, const Span& parent_span)
     }
   }
 
-  op_ret = store->ctl()->bucket->sync_user_stats(s->user->get_id(), s->bucket_info);
+  op_ret = store->ctl()->bucket->sync_user_stats(s->user->get_id(), s->bucket_info, tracer, span);
   if ( op_ret < 0) {
      ldpp_dout(this, 1) << "WARNING: failed to sync user stats before bucket delete: op_ret= " << op_ret << dendl;
   }
@@ -4929,7 +4929,7 @@ void RGWDeleteBucket::execute(Jager_Tracer& tracer, const Span& parent_span)
     }
   }
 
-  op_ret = abort_bucket_multiparts(store, s->cct, s->bucket_info, prefix, delimiter);
+  op_ret = abort_bucket_multiparts(store, s->cct, s->bucket_info, prefix, delimiter, tracer, span);
 
   if (op_ret < 0) {
     return;
@@ -4946,7 +4946,7 @@ void RGWDeleteBucket::execute(Jager_Tracer& tracer, const Span& parent_span)
 
   if (op_ret == 0) {
     op_ret = store->ctl()->bucket->unlink_bucket(s->bucket_info.owner,
-                                              s->bucket, s->yield, false);
+                                              s->bucket, s->yield, tracer, span, false);
     if (op_ret < 0) {
       ldpp_dout(this, 0) << "WARNING: failed to unlink bucket: ret=" << op_ret
 		       << dendl;

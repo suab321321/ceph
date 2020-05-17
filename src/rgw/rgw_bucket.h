@@ -839,6 +839,10 @@ public:
   int remove_bucket_entrypoint_info(const rgw_bucket& bucket,
                                     optional_yield y,
                                     const Bucket::RemoveParams& params = {});
+  int remove_bucket_entrypoint_info(const rgw_bucket& bucket,
+                                    optional_yield y,
+                                    Jager_Tracer&, const Span&,
+                                    const Bucket::RemoveParams& params = {});
 
   /* bucket instance */
   int read_bucket_instance_info(const rgw_bucket& bucket,
@@ -852,6 +856,11 @@ public:
   int remove_bucket_instance_info(const rgw_bucket& bucket,
                                   RGWBucketInfo& info,
                                   optional_yield y,
+                                  const BucketInstance::RemoveParams& params = {});
+  int remove_bucket_instance_info(const rgw_bucket& bucket,
+                                  RGWBucketInfo& info,
+                                  optional_yield y,
+                                  Jager_Tracer&, const Span&,
                                   const BucketInstance::RemoveParams& params = {});
 
   /*
@@ -884,6 +893,10 @@ public:
                     const rgw_bucket& bucket,
 		    optional_yield y,
                     bool update_entrypoint = true);
+   int unlink_bucket(const rgw_user& user_id,
+                    const rgw_bucket& bucket,
+		    optional_yield y, Jager_Tracer&, const Span&,
+                    bool update_entrypoint = true);
 
   int chown(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket_info,
             const rgw_user& user_id, const std::string& display_name,
@@ -901,6 +914,9 @@ public:
 
   /* quota related */
   int sync_user_stats(const rgw_user& user_id, const RGWBucketInfo& bucket_info,
+                      RGWBucketEnt* pent = nullptr);
+  int sync_user_stats(const rgw_user& user_id, const RGWBucketInfo& bucket_info,
+                      Jager_Tracer&, const Span&,
                       RGWBucketEnt* pent = nullptr);
 
   /* bucket sync */

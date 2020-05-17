@@ -18,6 +18,7 @@
 #pragma once
 
 #include "rgw/rgw_service.h"
+#include "../include/tracer.h"
 
 class RGWBucketInfo;
 struct RGWBucketEnt;
@@ -35,6 +36,9 @@ public:
   virtual int read_stats(const RGWBucketInfo& bucket_info,
                          RGWBucketEnt *stats,
                          optional_yield y) = 0;
+  virtual int read_stats(const RGWBucketInfo& bucket_info,
+                         RGWBucketEnt *stats,
+                         optional_yield y, Jager_Tracer& tracer, const Span& child_span) {return 0;}
 
   virtual int handle_overwrite(const RGWBucketInfo& info,
                                const RGWBucketInfo& orig_info) = 0;

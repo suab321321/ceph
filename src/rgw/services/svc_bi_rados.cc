@@ -183,6 +183,17 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
   return 0;
 }
 
+int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
+                                               std::optional<int> _shard_id,
+                                               RGWSI_RADOS::Pool *index_pool,
+                                               map<int, string> *bucket_objs,
+                                               map<int, string> *bucket_instance_ids, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index", parent_span);
+  return RGWSI_BucketIndex_RADOS::open_bucket_index(bucket_info, _shard_id, index_pool, bucket_objs, bucket_instance_ids);
+}
+
+
 void RGWSI_BucketIndex_RADOS::get_bucket_index_object(const string& bucket_oid_base,
                                                       uint32_t num_shards,
                                                       int shard_id,
@@ -376,6 +387,14 @@ int RGWSI_BucketIndex_RADOS::read_stats(const RGWBucketInfo& bucket_info,
   result->placement_rule = std::move(bucket_info.placement_rule);
 
   return 0;
+}
+
+int RGWSI_BucketIndex_RADOS::read_stats(const RGWBucketInfo& bucket_info,
+                                        RGWBucketEnt *result,
+                                        optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::read_stats", parent_span);
+  return RGWSI_BucketIndex_RADOS::read_stats(bucket_info, result, y);
 }
 
 int RGWSI_BucketIndex_RADOS::get_reshard_status(const RGWBucketInfo& bucket_info, list<cls_rgw_bucket_instance_entry> *status)

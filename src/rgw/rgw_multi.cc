@@ -364,3 +364,10 @@ int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RG
 
   return 0;
 }
+
+int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RGWBucketInfo& bucket_info,
+				string& prefix, string& delim, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_multi.cc abort_bucket_multiparts", parent_span);
+  return abort_bucket_multiparts(store, cct, bucket_info, prefix, delim);
+}
