@@ -464,6 +464,7 @@ class RGWRados
   int get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj& obj, librados::IoCtx *ioctx);
   int get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj& obj, librados::IoCtx *ioctx, Jager_Tracer&, const Span&);
   int get_obj_head_ref(const RGWBucketInfo& bucket_info, const rgw_obj& obj, rgw_rados_ref *ref);
+  int get_obj_head_ref(const RGWBucketInfo& bucket_info, const rgw_obj& obj, rgw_rados_ref *ref, Jager_Tracer&, const Span&);
   int get_system_obj_ref(const rgw_raw_obj& obj, rgw_rados_ref *ref);
   uint64_t max_bucket_id;
 
@@ -728,7 +729,10 @@ public:
 
     int prepare_atomic_modification(librados::ObjectWriteOperation& op, bool reset_obj, const string *ptag,
                                     const char *ifmatch, const char *ifnomatch, bool removal_op, bool modify_tail, optional_yield y);
+    int prepare_atomic_modification(librados::ObjectWriteOperation& op, bool reset_obj, const string *ptag,
+                                    const char *ifmatch, const char *ifnomatch, bool removal_op, bool modify_tail, optional_yield y, Jager_Tracer&, const Span&);
     int complete_atomic_modification();
+    int complete_atomic_modification(Jager_Tracer&, const Span&);
 
   public:
     Object(RGWRados *_store, const RGWBucketInfo& _bucket_info, RGWObjectCtx& _ctx, const rgw_obj& _obj) : store(_store), bucket_info(_bucket_info),
@@ -996,6 +1000,7 @@ public:
       }
 
       int prepare(RGWModifyOp, const string *write_tag, optional_yield y);
+      int prepare(RGWModifyOp, const string *write_tag, optional_yield y, Jager_Tracer&, const Span&);
       int complete(int64_t poolid, uint64_t epoch, uint64_t size,
                    uint64_t accounted_size, ceph::real_time& ut,
                    const string& etag, const string& content_type,
@@ -1126,7 +1131,13 @@ public:
                                RGWBucketInfo& bucket_info,      /* in */
                                rgw_obj& obj,                    /* in */
                                bool& restored,                 /* out */
-                               const DoutPrefixProvider *dpp);     /* in/out */                
+                               const DoutPrefixProvider *dpp);/* in/out */
+  int swift_versioning_restore(RGWObjectCtx& obj_ctx,           /* in/out */
+                               const rgw_user& user,            /* in */
+                               RGWBucketInfo& bucket_info,      /* in */
+                               rgw_obj& obj,                    /* in */
+                               bool& restored,                 /* out */
+                               const DoutPrefixProvider *dpp, Jager_Tracer&, const Span&);                
   int copy_obj_to_remote_dest(RGWObjState *astate,
                               map<string, bufferlist>& src_attrs,
                               RGWRados::Object::Read& read_op,

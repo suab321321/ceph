@@ -6725,7 +6725,7 @@ int RGWDeleteObj::verify_permission()
 int RGWDeleteObj::verify_permission(Jager_Tracer& tracer, const Span& parent_span)
 {
   Span span = tracer.child_span("rgw_op.cc RGWDeleteObj::verify_permission",parent_span);
-  int op_ret = get_params();
+  int op_ret = get_params(tracer, span);
   if (op_ret) {
     return op_ret;
   }
@@ -6769,7 +6769,7 @@ int RGWDeleteObj::verify_permission(Jager_Tracer& tracer, const Span& parent_spa
       return 0;
   }
 
-  if (!verify_bucket_permission_no_policy(this, s, RGW_PERM_WRITE)) {
+  if (!verify_bucket_permission_no_policy(this, s, RGW_PERM_WRITE, tracer, span)) {
     return -EACCES;
   }
 
@@ -6791,7 +6791,7 @@ void RGWDeleteObj::pre_exec()
 void RGWDeleteObj::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 {
   Span span = tracer.child_span("rgw_op.cc RGWDeleteObj::pre_exec",parent_span);
-  rgw_bucket_object_pre_exec(s);
+  rgw_bucket_object_pre_exec(s, tracer, span);
 }
 
 void RGWDeleteObj::execute()
@@ -7047,7 +7047,7 @@ void RGWDeleteObj::execute(Jager_Tracer& tracer, const Span& parent_span)
 
     bool ver_restored = false;
     op_ret = store->getRados()->swift_versioning_restore(*obj_ctx, s->bucket_owner.get_id(),
-                                             s->bucket_info, obj, ver_restored, this);
+                                             s->bucket_info, obj, ver_restored, this, tracer, span);
     if (op_ret < 0) {
       return;
     }
@@ -7071,7 +7071,7 @@ void RGWDeleteObj::execute(Jager_Tracer& tracer, const Span& parent_span)
       del_op.params.unmod_since = unmod_since;
       del_op.params.high_precision_time = s->system_request; /* system request uses high precision time */
 
-      op_ret = del_op.delete_obj(s->yield);
+      op_ret = del_op.delete_obj(s->yield, tracer, span);
       if (op_ret >= 0) {
         delete_marker = del_op.result.delete_marker;
         version_id = del_op.result.version_id;

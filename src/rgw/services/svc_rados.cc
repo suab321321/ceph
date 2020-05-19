@@ -61,6 +61,16 @@ int RGWSI_RADOS::open_pool_ctx(const rgw_pool& pool, librados::IoCtx& io_ctx,
                         params.mostly_omap);
 }
 
+int RGWSI_RADOS::open_pool_ctx(const rgw_pool& pool, librados::IoCtx& io_ctx,
+                               Jager_Tracer& tracer, const Span& parent_span,
+                               const OpenParams& params)
+{
+  Span span = tracer.child_span("svc_rados.cc RGWSI_RADOS::open_pool_ctx", parent_span);
+  return rgw_init_ioctx(get_rados_handle(), pool, io_ctx, tracer, span,
+                        params.create,
+                        params.mostly_omap);
+}
+
 int RGWSI_RADOS::pool_iterate(librados::IoCtx& io_ctx,
                               librados::NObjectIterator& iter,
                               uint32_t num, vector<rgw_bucket_dir_entry>& objs,
@@ -287,6 +297,12 @@ int RGWSI_RADOS::Pool::lookup()
 int RGWSI_RADOS::Pool::open(const OpenParams& params)
 {
   return rados_svc->open_pool_ctx(pool, state.ioctx, params);
+}
+
+int RGWSI_RADOS::Pool::open( Jager_Tracer& tracer, const Span& parent_span, const OpenParams& params)
+{
+  Span span = tracer.child_span("svc_rados.cc RGWSI_RADOS::Pool::open", parent_span);
+  return rados_svc->open_pool_ctx(pool, state.ioctx, tracer, span, params);
 }
 
 int RGWSI_RADOS::Pool::List::init(const string& marker, RGWAccessListFilter *filter)

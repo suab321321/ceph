@@ -2764,6 +2764,31 @@ int RGWRados::get_obj_head_ref(const RGWBucketInfo& bucket_info, const rgw_obj& 
   return 0;
 }
 
+int RGWRados::get_obj_head_ref(const RGWBucketInfo& bucket_info, const rgw_obj& obj, rgw_rados_ref *ref, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::get_obj_head_ref", parent_span);
+  get_obj_bucket_and_oid_loc(obj, ref->obj.oid, ref->obj.loc);
+
+  rgw_pool pool;
+  if (!get_obj_data_pool(bucket_info.placement_rule, obj, &pool)) {
+    ldout(cct, 0) << "ERROR: cannot get data pool for obj=" << obj << ", probably misconfiguration" << dendl;
+    return -EIO;
+  }
+
+  ref->pool = svc.rados->pool(pool);
+
+  int r = ref->pool.open( tracer, span, RGWSI_RADOS::OpenParams()
+                         .set_mostly_omap(false));
+  if (r < 0) {
+    ldout(cct, 0) << "ERROR: failed opening data pool (pool=" << pool << "); r=" << r << dendl;
+    return r;
+  }
+
+  ref->pool.ioctx().locator_set_key(ref->obj.loc);
+
+  return 0;
+}
+
 int RGWRados::get_raw_obj_ref(const rgw_raw_obj& obj, rgw_rados_ref *ref)
 {
   ref->obj = obj;
@@ -3459,6 +3484,18 @@ int RGWRados::swift_versioning_restore(RGWObjectCtx& obj_ctx,
 
   return on_last_entry_in_listing(archive_binfo, prefix, std::string(),
                                   handler);
+}
+
+int RGWRados::swift_versioning_restore(RGWObjectCtx& obj_ctx,
+                                       const rgw_user& user,
+                                       RGWBucketInfo& bucket_info,
+                                       rgw_obj& obj,
+                                       bool& restored,                  /* out */
+                                       const DoutPrefixProvider *dpp, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::swift_versioning_restore", parent_span);
+  return RGWRados::swift_versioning_restore(obj_ctx, user, bucket_info, obj, restored, dpp);
+
 }
 
 int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_size,
@@ -5322,6 +5359,12 @@ int RGWRados::Object::complete_atomic_modification()
   return 0;
 }
 
+int RGWRados::Object::complete_atomic_modification(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc int RGWRados::Object::complete_atomic_modification", parent_span);
+  return RGWRados::Object::complete_atomic_modification();
+}
+
 void RGWRados::update_gc_chain(rgw_obj& head_obj, RGWObjManifest& manifest, cls_rgw_obj_chain *chain)
 {
   RGWObjManifest::obj_iterator iter;
@@ -5793,7 +5836,7 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, Jager_Tracer& tracer,
   }
 
   rgw_rados_ref ref;
-  int r = store->get_obj_head_ref(target->get_bucket_info(), obj, &ref);
+  int r = store->get_obj_head_ref(target->get_bucket_info(), obj, &ref, tracer, span);
   if (r < 0) {
     return r;
   }
@@ -5853,7 +5896,7 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, Jager_Tracer& tracer,
     return -ENOENT;
   }
 
-  r = target->prepare_atomic_modification(op, false, NULL, NULL, NULL, true, false, y);
+  r = target->prepare_atomic_modification(op, false, NULL, NULL, NULL, true, false, y, tracer, span);
   if (r < 0)
     return r;
 
@@ -5865,14 +5908,14 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, Jager_Tracer& tracer,
   index_op.set_zones_trace(params.zones_trace);
   index_op.set_bilog_flags(params.bilog_flags);
 
-  r = index_op.prepare(CLS_RGW_OP_DEL, &state->write_tag, y);
+  r = index_op.prepare(CLS_RGW_OP_DEL, &state->write_tag, y, tracer , span);
   if (r < 0)
     return r;
 
   store->remove_rgw_head_obj(op);
 
   auto& ioctx = ref.pool.ioctx();
-  r = rgw_rados_operate(ioctx, ref.obj.oid, &op, null_yield);
+  r = rgw_rados_operate(ioctx, ref.obj.oid, &op, null_yield, tracer, span);
 
   /* raced with another operation, object state is indeterminate */
   const bool need_invalidate = (r == -ECANCELED);
@@ -5886,7 +5929,7 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, Jager_Tracer& tracer,
     }
     r = index_op.complete_del(poolid, ioctx.get_last_version(), state->mtime, params.remove_objs);
     
-    int ret = target->complete_atomic_modification();
+    int ret = target->complete_atomic_modification(tracer, span);
     if (ret < 0) {
       ldout(store->ctx(), 0) << "ERROR: complete_atomic_modification returned ret=" << ret << dendl;
     }
@@ -6466,6 +6509,14 @@ int RGWRados::Object::prepare_atomic_modification(ObjectWriteOperation& op, bool
   return 0;
 }
 
+int RGWRados::Object::prepare_atomic_modification(ObjectWriteOperation& op, bool reset_obj, const string *ptag,
+                                                  const char *if_match, const char *if_nomatch, bool removal_op,
+                                                  bool modify_tail, optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::Object::prepare_atomic_modification", parent_span);
+  return RGWRados::Object::prepare_atomic_modification(op, reset_obj, ptag, if_match, if_nomatch, removal_op, modify_tail, y);
+}
+
 /**
  * Set an attr on an object.
  * bucket: name of the bucket holding the object
@@ -6916,6 +6967,12 @@ int RGWRados::Bucket::UpdateIndex::prepare(RGWModifyOp op, const string *write_t
   prepared = true;
 
   return 0;
+}
+
+int RGWRados::Bucket::UpdateIndex::prepare(RGWModifyOp op, const string *write_tag, optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rados.cc RGWRados::Bucket::UpdateIndex::prepare", parent_span);
+  return RGWRados::Bucket::UpdateIndex::prepare(op, write_tag, y);
 }
 
 int RGWRados::Bucket::UpdateIndex::complete(int64_t poolid, uint64_t epoch,

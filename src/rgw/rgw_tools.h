@@ -30,6 +30,10 @@ int rgw_init_ioctx(librados::Rados *rados, const rgw_pool& pool,
                    librados::IoCtx& ioctx,
 		   bool create = false,
 		   bool mostly_omap = false);
+int rgw_init_ioctx(librados::Rados *rados, const rgw_pool& pool,
+                   librados::IoCtx& ioctx, Jager_Tracer&, const Span&,
+		   bool create = false,
+		   bool mostly_omap = false);
 
 #define RGW_NO_SHARD -1
 
@@ -100,6 +104,8 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       optional_yield y, Jager_Tracer&, const Span&);
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       librados::ObjectWriteOperation *op, optional_yield y);
+int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
+                      librados::ObjectWriteOperation *op, optional_yield y, Jager_Tracer&, const Span&);
 int rgw_rados_notify(librados::IoCtx& ioctx, const std::string& oid,
                      bufferlist& bl, uint64_t timeout_ms, bufferlist* pbl,
                      optional_yield y);

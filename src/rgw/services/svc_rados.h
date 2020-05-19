@@ -54,6 +54,9 @@ private:
   librados::Rados* get_rados_handle();
   int open_pool_ctx(const rgw_pool& pool, librados::IoCtx& io_ctx,
                     const OpenParams& params = {});
+  int open_pool_ctx(const rgw_pool& pool, librados::IoCtx& io_ctx,
+                    Jager_Tracer&, const Span&,
+                    const OpenParams& params = {});
   int pool_iterate(librados::IoCtx& ioctx,
                    librados::NObjectIterator& iter,
                    uint32_t num, vector<rgw_bucket_dir_entry>& objs,
@@ -99,6 +102,7 @@ public:
     int create(const std::vector<rgw_pool>& pools, std::vector<int> *retcodes);
     int lookup();
     int open(const OpenParams& params = {});
+    int open(Jager_Tracer&, const Span&, const OpenParams& params = {});
 
     const rgw_pool& get_pool() {
       return pool;

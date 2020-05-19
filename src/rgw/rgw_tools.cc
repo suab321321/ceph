@@ -107,6 +107,14 @@ int rgw_init_ioctx(librados::Rados *rados, const rgw_pool& pool,
   return 0;
 }
 
+int rgw_init_ioctx(librados::Rados *rados, const rgw_pool& pool,
+                   librados::IoCtx& ioctx,  Jager_Tracer& tracer, const Span& parent_span, bool create,
+		   bool mostly_omap)
+{
+  Span span = tracer.child_span("rgw_tools.cc rgw_init_ioctx", parent_span);
+  return rgw_init_ioctx(rados, pool, ioctx, create, mostly_omap);
+}
+
 void rgw_shard_name(const string& prefix, unsigned max_shards, const string& key, string& name, int *shard_id)
 {
   uint32_t val = ceph_str_hash_linux(key.c_str(), key.size());
@@ -295,6 +303,13 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
   }
 #endif
   return ioctx.operate(oid, op);
+}
+
+int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
+                      librados::ObjectWriteOperation *op, optional_yield y, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_tools.cc rgw_rados_operate", parent_span);
+  return rgw_rados_operate(ioctx, oid, op, y);
 }
 
 int rgw_rados_notify(librados::IoCtx& ioctx, const std::string& oid,
