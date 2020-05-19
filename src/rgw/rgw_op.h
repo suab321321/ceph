@@ -1110,6 +1110,7 @@ public:
 	s->cct->_conf.get_val<bool>("rgw_relaxed_region_enforcement");
   }
   virtual int get_params() { return 0; }
+  virtual int get_params(Jager_Tracer& tracer, const Span& parent_span) { return 0; }
   void send_response() override = 0;
   void send_response(Jager_Tracer&, const Span&) override {}
   const char* name() const override { return "create_bucket"; }

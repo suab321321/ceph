@@ -127,6 +127,9 @@ public:
   int select_bucket_placement(const RGWUserInfo& user_info, const string& zonegroup_id,
                               const rgw_placement_rule& rule,
                               rgw_placement_rule *pselected_rule, RGWZonePlacementInfo *rule_info);
+  int select_bucket_placement(const RGWUserInfo& user_info, const string& zonegroup_id,
+                              const rgw_placement_rule& rule,
+                              rgw_placement_rule *pselected_rule, RGWZonePlacementInfo *rule_info, Jager_Tracer&, const Span&);
   int select_legacy_bucket_placement(RGWZonePlacementInfo *rule_info);
   int select_new_bucket_location(const RGWUserInfo& user_info, const string& zonegroup_id,
                                  const rgw_placement_rule& rule,

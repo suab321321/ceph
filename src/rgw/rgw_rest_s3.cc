@@ -2277,6 +2277,11 @@ int RGWCreateBucket_ObjStore_S3::get_params()
   return 0;
 }
 
+int RGWCreateBucket_ObjStore_S3::get_params(Jager_Tracer& tracer, const Span& parent_span){
+  Span span = tracer.child_span("rgw_rest_s3.cc RGWCreateBucket_ObjStore_S3::get_params", parent_span);
+  return RGWCreateBucket_ObjStore_S3::get_params();
+}
+
 void RGWCreateBucket_ObjStore_S3::send_response()
 {
   if (op_ret == -ERR_BUCKET_EXISTS)

@@ -658,6 +658,7 @@ public:
   int create_pool(const rgw_pool& pool);
 
   void create_bucket_id(string *bucket_id);
+  void create_bucket_id(string *bucket_id, Jager_Tracer&, const Span&);
 
   bool get_obj_data_pool(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_pool *pool);
   bool get_obj_data_pool(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_pool *pool, Jager_Tracer&, const Span&);
@@ -1422,6 +1423,8 @@ public:
 
   int put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, ceph::real_time mtime, obj_version *pep_objv,
 			     map<string, bufferlist> *pattrs, bool create_entry_point);
+  int put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, ceph::real_time mtime, obj_version *pep_objv,
+			     map<string, bufferlist> *pattrs, bool create_entry_point, Jager_Tracer&, const Span&);
 
   int cls_obj_prepare_op(BucketShard& bs, RGWModifyOp op, string& tag, rgw_obj& obj, uint16_t bilog_flags, optional_yield y, rgw_zone_set *zones_trace = nullptr);
   int cls_obj_complete_op(BucketShard& bs, const rgw_obj& obj, RGWModifyOp op, string& tag, int64_t pool, uint64_t epoch,

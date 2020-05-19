@@ -888,6 +888,12 @@ public:
 		  optional_yield y,
                   bool update_entrypoint = true,
                   rgw_ep_info *pinfo = nullptr);
+   int link_bucket(const rgw_user& user_id,
+                  const rgw_bucket& bucket,
+                  ceph::real_time creation_time,
+		  optional_yield y, Jager_Tracer&, const Span&,
+                  bool update_entrypoint = true,
+                  rgw_ep_info *pinfo = nullptr);
 
   int unlink_bucket(const rgw_user& user_id,
                     const rgw_bucket& bucket,

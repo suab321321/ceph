@@ -3949,7 +3949,7 @@ int RGWCreateBucket::verify_permission(Jager_Tracer& tracer,const Span& parent_s
   bucket.name = s->bucket_name;
   bucket.tenant = s->bucket_tenant;
   ARN arn = ARN(bucket);
-  if (!verify_user_permission(this, s, arn, rgw::IAM::s3CreateBucket)) {
+  if (!verify_user_permission(this, s, arn, rgw::IAM::s3CreateBucket, tracer, span)) {
     return -EACCES;
   }
 
@@ -4016,7 +4016,7 @@ void RGWCreateBucket::pre_exec()
 void RGWCreateBucket::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 {
   Span span=tracer.child_span("rgw_op.cc RGWCreateBucket::pre_exec",parent_span);
-  rgw_bucket_object_pre_exec(s);
+  rgw_bucket_object_pre_exec(s, tracer , span);
 }
 
 static void prepare_add_del_attrs(const map<string, bufferlist>& orig_attrs,
@@ -4142,6 +4142,15 @@ static int filter_out_quota_info(std::map<std::string, bufferlist>& add_attrs,
   }
 
   return 0;
+}
+
+static int filter_out_quota_info(std::map<std::string, bufferlist>& add_attrs,
+                                 const std::set<std::string>& rmattr_names,
+                                 RGWQuotaInfo& quota, Jager_Tracer& tracer, const Span& parent_span,
+                                 bool * quota_extracted = nullptr)
+{
+  Span span = tracer.child_span("rgw_op.cc filter_out_quota_info", parent_span);
+  return filter_out_quota_info(add_attrs, rmattr_names, quota, quota_extracted);
 }
 
 
@@ -4469,7 +4478,7 @@ void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
   rgw_raw_obj obj(store->svc()->zone->get_zone_params().domain_root, bucket_name);
   obj_version objv, *pobjv = NULL;
 
-  op_ret = get_params();
+  op_ret = get_params(tracer, span);
   if (op_ret < 0)
     return;
 
@@ -4521,7 +4530,7 @@ void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
     s->bucket_attrs = bucket->get_attrs();
     delete bucket;
     int r = rgw_op_get_bucket_policy_from_attr(s->cct, store, s->bucket_info,
-                                               s->bucket_attrs, &old_policy);
+                                               s->bucket_attrs, &old_policy, tracer, span);
     if (r >= 0)  {
       if (old_policy.get_owner().get_id().compare(s->user->get_id()) != 0) {
         op_ret = -EEXIST;
@@ -4599,14 +4608,14 @@ void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
   if (need_metadata_upload()) {
     /* It's supposed that following functions WILL NOT change any special
      * attributes (like RGW_ATTR_ACL) if they are already present in attrs. */
-    op_ret = rgw_get_request_metadata(s->cct, s->info, attrs, false);
+    op_ret = rgw_get_request_metadata(s->cct, s->info, attrs, tracer, span, false);
     if (op_ret < 0) {
       return;
     }
     prepare_add_del_attrs(s->bucket_attrs, rmattr_names, attrs);
     populate_with_generic_attrs(s, attrs);
 
-    op_ret = filter_out_quota_info(attrs, rmattr_names, quota_info);
+    op_ret = filter_out_quota_info(attrs, rmattr_names, quota_info, tracer, span);
     if (op_ret < 0) {
       return;
     } else {
@@ -4635,7 +4644,7 @@ void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
                                 placement_rule, s->bucket_info.swift_ver_location,
                                 pquota_info, attrs,
                                 info, pobjv, &ep_objv, creation_time,
-                                pmaster_bucket, pmaster_num_shards, true);
+                                pmaster_bucket, pmaster_num_shards, tracer, span, true);
   /* continue if EEXIST and create_bucket will fail below.  this way we can
    * recover from a partial create by retrying it. */
   ldpp_dout(this, 20) << "rgw_create_bucket returned ret=" << op_ret << " bucket=" << s->bucket << dendl;
@@ -4660,7 +4669,7 @@ void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
   }
 
   op_ret = store->ctl()->bucket->link_bucket(s->user->get_id(), s->bucket,
-                                          info.creation_time, s->yield, false);
+                                          info.creation_time, s->yield, tracer, span, false);
   if (op_ret && !existed && op_ret != -EEXIST) {
     /* if it exists (or previously existed), don't remove it! */
     op_ret = store->ctl()->bucket->unlink_bucket(s->user->get_id(), s->bucket, s->yield);

@@ -2235,6 +2235,10 @@ bool verify_user_permission(const DoutPrefixProvider* dpp,
                             struct req_state * const s,
                             const rgw::ARN& res,
                             const uint64_t op);
+bool verify_user_permission(const DoutPrefixProvider* dpp,
+                            struct req_state * const s,
+                            const rgw::ARN& res,
+                            const uint64_t op, Jager_Tracer& tracer, const Span& parent_span);
 bool verify_user_permission_no_policy(const DoutPrefixProvider* dpp,
                                       struct req_state * const s,
                                       int perm);

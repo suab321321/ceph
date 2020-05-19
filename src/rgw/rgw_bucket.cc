@@ -3466,6 +3466,17 @@ int RGWBucketCtl::link_bucket(const rgw_user& user_id,
   });
 }
 
+int RGWBucketCtl::link_bucket(const rgw_user& user_id,
+                              const rgw_bucket& bucket,
+                              ceph::real_time creation_time,
+			                        optional_yield y, Jager_Tracer& tracer, const Span& parent_span,
+                              bool update_entrypoint,
+                              rgw_ep_info *pinfo)
+{
+  Span span = tracer.child_span("RGWBucketCtl::link_bucket", parent_span);
+  return RGWBucketCtl::link_bucket(user_id, bucket, creation_time, y, update_entrypoint, pinfo);
+}
+
 int RGWBucketCtl::do_link_bucket(RGWSI_Bucket_EP_Ctx& ctx,
                                  const rgw_user& user_id,
                                  const rgw_bucket& bucket,

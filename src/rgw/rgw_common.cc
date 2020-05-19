@@ -1113,6 +1113,15 @@ bool verify_user_permission(const DoutPrefixProvider* dpp,
   return verify_user_permission(dpp, &ps, s->user_acl.get(), s->iam_user_policies, res, op);
 }
 
+bool verify_user_permission(const DoutPrefixProvider* dpp,
+                            struct req_state * const s,
+                            const rgw::ARN& res,
+                            const uint64_t op, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_common.cc verify_user_permission", parent_span);
+  return verify_user_permission(dpp, s, res, op);
+}
+
 bool verify_user_permission_no_policy(const DoutPrefixProvider* dpp, 
                                       struct req_state * const s,
                                       const int perm)

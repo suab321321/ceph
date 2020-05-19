@@ -52,7 +52,7 @@ auto make_stack_allocator() {
 
 std::once_flag tracerInit;
 Jager_Tracer tracer;
-Span root_span = nullptr;
+// Span root_span = nullptr;
 
 template <typename Stream>
 class StreamIO : public rgw::asio::ClientIO {
@@ -140,7 +140,7 @@ void handle_connection(boost::asio::io_context& context,
 #endif
         ec == http::error::end_of_stream) {
       ldout(cct, 20) << "failed to read header: " << ec.message() << dendl;
-      root_span=nullptr;
+      // root_span=nullptr;
       return;
     }
     if (ec) {
@@ -155,7 +155,7 @@ void handle_connection(boost::asio::io_context& context,
         ldout(cct, 5) << "failed to write response: " << ec.message() << dendl;
       }
       ldout(cct, 1) << "====== req done http_status=400 ======" << dendl;
-      root_span=nullptr;
+      // root_span=nullptr;
       return;
     }
 
@@ -194,11 +194,11 @@ void handle_connection(boost::asio::io_context& context,
         auto time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
         span_name = std::ctime(&time);
         span_name = "rgw_asio_frontend "+span_name;
-        Span span=tracer.new_span(span_name.c_str());
-        if(root_span == nullptr)
-          root_span=tracer.new_span(span_name.c_str());
+        Span root_span=tracer.new_span(span_name.c_str());
+        // if(root_span == nullptr)
+        //   root_span=tracer.new_span(span_name.c_str());
         process_request(env.store, env.rest, &req, env.uri_prefix,
-                        *env.auth_registry, &client, env.olog, y, tracer, root_span, scheduler);
+                        *env.auth_registry, &client, env.olog, y, tracer, std::move(root_span), scheduler);
       #else
         process_request(env.store, env.rest, &req, env.uri_prefix,
                         *env.auth_registry, &client, env.olog, y, scheduler);

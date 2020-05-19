@@ -808,6 +808,12 @@ int RGWCreateBucket_ObjStore_SWIFT::get_params()
   return get_swift_versioning_settings(s, swift_ver_location);
 }
 
+int RGWCreateBucket_ObjStore_SWIFT::get_params(Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::get_params", parent_span);
+  return RGWCreateBucket_ObjStore_SWIFT::get_params();
+}
+
 static inline int handle_metadata_errors(req_state* const s, const int op_ret)
 {
   if (op_ret == -EFBIG) {

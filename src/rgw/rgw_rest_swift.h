@@ -114,6 +114,7 @@ public:
   ~RGWCreateBucket_ObjStore_SWIFT() override {}
 
   int get_params() override;
+  int get_params(Jager_Tracer&, const Span&) override;
   void send_response() override;
   void send_response(Jager_Tracer&, const Span&) override;
 };

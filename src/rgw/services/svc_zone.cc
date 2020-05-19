@@ -1128,6 +1128,15 @@ int RGWSI_Zone::select_bucket_placement(const RGWUserInfo& user_info, const stri
   return 0;
 }
 
+int RGWSI_Zone::select_bucket_placement(const RGWUserInfo& user_info, const string& zonegroup_id,
+                                        const rgw_placement_rule& placement_rule,
+                                        rgw_placement_rule *pselected_rule, RGWZonePlacementInfo *rule_info, Jager_Tracer& tracer, const Span& parent_span)
+{
+  Span span = tracer.child_span("RGWSI_Zone::select_bucket_placement", parent_span);
+  return RGWSI_Zone::select_bucket_placement(user_info, zonegroup_id, placement_rule, pselected_rule, rule_info);
+}
+
+
 int RGWSI_Zone::select_legacy_bucket_placement(RGWZonePlacementInfo *rule_info)
 {
   bufferlist map_bl;
