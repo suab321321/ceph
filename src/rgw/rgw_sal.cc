@@ -32,6 +32,16 @@ namespace rgw::sal {
 int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
 			       uint64_t max, bool need_stats, RGWBucketList &buckets)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_sal.cc RGWRadosUser::list_buckets", global_state->stack_span.top());
+    else
+      span = tracer_2.new_span("rgw_sal.cc RGWRadosUser::list_buckets");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   RGWUserBuckets ulist;
   bool is_truncated = false;
   int ret;

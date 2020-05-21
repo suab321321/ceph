@@ -1897,6 +1897,17 @@ int RGWHandler_REST::init_permissions(RGWOp* op,Jager_Tracer& tracer,const Span&
 
 int RGWHandler_REST::init_permissions(RGWOp* op)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::init_permissions", global_state->stack_span.top());
+    else
+      span = tracer_2.new_span("rgw_rest.cc RGWHandler_REST::init_permissions");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
+
   if (op->get_type() == RGW_OP_CREATE_BUCKET) {
     // We don't need user policies in case of STS token returned by AssumeRole, hence the check for user type
     if (! s->user->get_id().empty() && s->auth.identity->get_identity_type() != TYPE_ROLE) {
@@ -1970,6 +1981,16 @@ int RGWHandler_REST::read_permissions(RGWOp* op_obj,Jager_Tracer& tracer,const S
 
 int RGWHandler_REST::read_permissions(RGWOp* op_obj)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::read_permissions", global_state->stack_span.top());
+    else
+      span = tracer_2.new_span("rgw_rest.cc RGWHandler_REST::read_permissions");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   bool only_bucket = false;
 
   switch (s->op) {

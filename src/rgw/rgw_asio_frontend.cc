@@ -115,6 +115,7 @@ void handle_connection(boost::asio::io_context& context,
 {
   std::call_once(tracerInit,[](){
     tracer.init_tracer("RGW_Client_Process","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+    tracer_2.init_tracer("RGW_Client_Process","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
   });
   // limit header to 4k, since we read it all into a single flat_buffer
   static constexpr size_t header_limit = 4096;
@@ -195,6 +196,9 @@ void handle_connection(boost::asio::io_context& context,
         span_name = std::ctime(&time);
         span_name = "rgw_asio_frontend "+span_name;
         Span root_span=tracer.new_span(span_name.c_str());
+        // global_root_span = tracer_2.new_span(span_name.c_str());
+        // span_structure s1;
+        // s1.set_span(s1,&req);
         // if(root_span == nullptr)
         //   root_span=tracer.new_span(span_name.c_str());
         process_request(env.store, env.rest, &req, env.uri_prefix,

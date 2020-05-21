@@ -232,6 +232,23 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
                               req_state * const s,
                               const bool skip_retarget)
 {
+  RGWOpType type=op->get_type();
+  span_structure ss;
+  // if(s->stack_span.empty()){
+  //   Span span = tracer_2.new_span(RGWOpTypeMapper[type]);
+  //   ss.set_req_state(s);
+  //   ss.set_span(span);
+  // }
+  // else{
+    if(type>0){
+      Span span = tracer_2.new_span(RGWOpTypeMapper[type]);
+      // if(type>0){
+        span->SetTag("operation_success", true);
+        span->SetTag("operation_type", RGWOpTypeMapper[type]);
+      // }
+      ss.set_req_state(global_state);
+      ss.set_span(span);
+  }
   ldpp_dout(op, 2) << "init permissions" << dendl;
   int ret = handler->init_permissions(op);
   if (ret < 0) {
@@ -334,7 +351,8 @@ int process_request(rgw::sal::RGWRadosStore* const store,
 
   struct req_state rstate(g_ceph_context, &rgw_env, &user, req->id);
   struct req_state *s = &rstate;
-
+  // global_state = nullptr;
+  global_state = s;
   RGWObjectCtx rados_ctx(store, s);
   s->obj_ctx = &rados_ctx;
 
@@ -430,11 +448,11 @@ int process_request(rgw::sal::RGWRadosStore* const store,
       abort_early(s, op, -ERR_USER_SUSPENDED, handler);
       goto done;
     }
-    #ifdef WITH_JAEGER
-      ret = rgw_process_authenticated(handler, op, req, s, tracer, parent_span);
-    #else
+    // #ifdef WITH_JAEGER
+    //   ret = rgw_process_authenticated(handler, op, req, s, tracer, parent_span);
+    // #else
       ret = rgw_process_authenticated(handler, op, req, s);
-    #endif
+    // #endif
     if (ret < 0) {
       abort_early(s, op, ret, handler);
       goto done;

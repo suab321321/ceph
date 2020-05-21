@@ -20,6 +20,8 @@ class Jager_Tracer{
   public:
     Jager_Tracer(){}
     ~Jager_Tracer(){
+      if(this->tracer == NULL)
+	return;
       if(!this->isTracerClosed)
         this->tracer->Close();
         this->isTracerClosed=true;
@@ -55,7 +57,7 @@ class Jager_Tracer{
     return std::move(span);
   }
 private:
-  std::shared_ptr<opentracing::v2::Tracer> tracer;
+  std::shared_ptr<opentracing::v2::Tracer> tracer = NULL;
   bool isTracerClosed;
 };
 

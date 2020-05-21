@@ -277,6 +277,15 @@ enum HostStyle {
   VirtualStyle = 1,
 };
 
+/** store the span_structure responsible for storing the spans in stack_span in req_state */
+struct span_structure{
+  req_state* s = nullptr;
+  void set_req_state(req_state* s);
+	void set_span(Span& span);
+	~span_structure();
+};
+
+
 /** Store error returns for output at a different point in the program */
 struct rgw_err {
   rgw_err();
@@ -1645,6 +1654,9 @@ struct req_state : DoutPrefixProvider {
   ACLOwner bucket_owner;
   ACLOwner owner;
 
+  std::stack<Span> stack_span;
+
+  span_structure ss;
   string zonegroup_name;
   string zonegroup_endpoint;
   string bucket_instance_id;
@@ -2385,6 +2397,13 @@ extern string camelcase_dash_http_attr(const string& orig);
 extern string lowercase_dash_http_attr(const string& orig);
 
 extern std::unordered_map<int, const char*> RGWOpTypeMapper;
+extern Jager_Tracer tracer_2;
+extern Span global_root_span;
+extern req_state* global_state;
+// std::stack<Span> stack_span;
+
+// void push_to_stack_span(const Span&);
+// void pop_from_stack_span(const Span&);
 
 void rgw_setup_saved_curl_handles();
 void rgw_release_all_curl_handles();

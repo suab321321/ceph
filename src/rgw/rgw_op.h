@@ -182,6 +182,16 @@ public:
   }
 
   virtual int init_processing() {
+    span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.h init_processing", global_state->stack_span.top());
+    else
+      span = tracer_2.new_span("rgw_op.h init_processing");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
     if (dialect_handler->supports_quota()) {
       op_ret = init_quota();
       if (op_ret < 0)

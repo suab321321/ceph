@@ -2152,6 +2152,36 @@ bool RGWBucketInfo::empty_sync_policy() const
 
   return sync_policy->empty();
 }
+Jager_Tracer tracer_2;
+// std::stack<Span> stack_span;
+
+
+// void push_to_stack_span(const Span& span){
+//   st.push(std::move(span));
+// }
+// void pop_from_stack_span(){
+//   if(!stack_span.empty())
+//     st.pop();
+// }
+// std::mutex mut1;
+req_state* global_state = nullptr;
+void span_structure::set_span(Span& span){
+  // mut1.lock();
+  this->s->stack_span.push(std::move(span));
+  // mut1.unlock();
+}
+void span_structure::set_req_state(req_state* s){
+  // mut1.lock();
+  this->s = s;
+  // mut1.unlock();
+}
+span_structure::~span_structure(){
+  // mut1.lock();
+  if(this->s!=nullptr && !this->s->stack_span.empty())
+			this->s->stack_span.pop();
+  // mut1.unlock();
+}
+
 
 std::unordered_map<int, const char*> RGWOpTypeMapper={
   {0,"RGW_OP_UNKNOWN"},
