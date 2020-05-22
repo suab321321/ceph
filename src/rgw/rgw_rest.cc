@@ -408,6 +408,16 @@ void dump_etag(struct req_state* const s,
 
 void dump_bucket_from_state(struct req_state *s)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest.cc dump_bucket_from_state", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_rest.cc dump_bucket_from_state");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   if (g_conf()->rgw_expose_bucket && ! s->bucket_name.empty()) {
     if (! s->bucket_tenant.empty()) {
       dump_header(s, "Bucket",

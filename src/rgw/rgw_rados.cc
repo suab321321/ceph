@@ -8670,6 +8670,16 @@ int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_t
 
 int RGWRados::update_containers_stats(map<string, RGWBucketEnt>& m)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::update_containers_stats", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_rados.cc RGWRados::update_containers_stats");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   auto obj_ctx = svc.sysobj->init_obj_ctx();
 
   map<string, RGWBucketEnt>::iterator iter;
@@ -9215,6 +9225,17 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
                                       optional_yield y,
 				      check_filter_t force_check_filter)
 {
+
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::cls_bucket_list_ordered", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_rados.cc RGWRados::cls_bucket_list_ordered");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   /* expansion_factor allows the number of entries to read to grow
    * exponentially; this is used when earlier reads are producing too
    * few results, perhaps due to filtering or to a series of

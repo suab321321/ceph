@@ -1319,6 +1319,16 @@ void rgw_build_iam_environment(rgw::sal::RGWRadosStore* store,
 
 void rgw_bucket_object_pre_exec(struct req_state *s)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc rgw_bucket_object_pre_exec", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_op.cc rgw_bucket_object_pre_exec");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   if (s->expect_cont)
     dump_continue(s);
 
@@ -3768,6 +3778,16 @@ void RGWStatBucket::execute()
 
 int RGWListBucket::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWListBucket::verify_permission", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_op.cc RGWListBucket::verify_permission");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   op_ret = get_params();
   if (op_ret < 0) {
     return op_ret;
@@ -3846,6 +3866,16 @@ void RGWListBucket::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 
 void RGWListBucket::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWListBucket::execute", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_op.cc RGWListBucket::execute");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
     return;

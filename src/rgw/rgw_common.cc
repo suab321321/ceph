@@ -1256,6 +1256,16 @@ bool verify_bucket_permission_no_policy(const DoutPrefixProvider* dpp, struct re
 
 bool verify_bucket_permission(const DoutPrefixProvider* dpp, struct req_state * const s, const uint64_t op)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_common.cc verify_bucket_permission", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_common.cc verify_bucket_permission");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   perm_state_from_req_state ps(s);
 
   return verify_bucket_permission(dpp, 

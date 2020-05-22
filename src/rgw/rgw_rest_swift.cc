@@ -372,6 +372,16 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_end(Span span, const Span& par
 
 int RGWListBucket_ObjStore_SWIFT::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::get_params", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::get_params");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   prefix = s->info.args.get("prefix");
   marker = s->info.args.get("marker");
   end_marker = s->info.args.get("end_marker");
@@ -470,6 +480,18 @@ static void dump_container_metadata(struct req_state *,
 
 void RGWListBucket_ObjStore_SWIFT::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc send_response", global_state->stack_span.top());
+      global_state->stack_span.top()->SetTag("operation_gateway","swift");
+    }
+    else if(global_state)
+      span = tracer_2.new_span("rgw_rest_swift.cc send_response");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   vector<rgw_bucket_dir_entry>::iterator iter = objs.begin();
   map<string, bool>::iterator pref_iter = common_prefixes.begin();
 
