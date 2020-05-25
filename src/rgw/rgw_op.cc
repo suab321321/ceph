@@ -4812,6 +4812,16 @@ void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
 
 int RGWDeleteBucket::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_op.cc RGWDeleteBucket::verify_permission");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   if (!verify_bucket_permission(this, s, rgw::IAM::s3DeleteBucket)) {
     return -EACCES;
   }
@@ -4831,6 +4841,16 @@ int RGWDeleteBucket::verify_permission(Jager_Tracer& tracer, const Span& parent_
 
 void RGWDeleteBucket::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::pre_exec", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_op.cc RGWDeleteBucket::pre_exec");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -4842,6 +4862,16 @@ void RGWDeleteBucket::pre_exec(Jager_Tracer& tracer, const Span& parent_span)
 
 void RGWDeleteBucket::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::exec", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_op.cc RGWDeleteBucket::exec");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   if (s->bucket_name.empty()) {
     op_ret = -EINVAL;
     return;

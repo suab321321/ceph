@@ -5047,6 +5047,16 @@ int RGWRados::transition_obj(RGWObjectCtx& obj_ctx,
 
 int RGWRados::check_bucket_empty(RGWBucketInfo& bucket_info, optional_yield y)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::check_bucket_empty", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_rados.cc RGWRados::check_bucket_empty");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   constexpr uint NUM_ENTRIES = 1000u;
 
   rgw_obj_index_key marker;
@@ -5131,6 +5141,16 @@ int RGWRados::check_bucket_empty(RGWBucketInfo& bucket_info, optional_yield y, J
  */
 int RGWRados::delete_bucket(RGWBucketInfo& bucket_info, RGWObjVersionTracker& objv_tracker, optional_yield y, bool check_empty)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::delete_bucket", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_rados.cc RGWRados::delete_bucket");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   const rgw_bucket& bucket = bucket_info.bucket;
   RGWSI_RADOS::Pool index_pool;
   map<int, string> bucket_objs;
@@ -9768,6 +9788,16 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
 					rgw_obj_index_key *last_entry,
                                         optional_yield y,
 					check_filter_t force_check_filter) {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::cls_bucket_list_unordered", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_rados.cc RGWRados::cls_bucket_list_unordered");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   ldout(cct, 10) << "cls_bucket_list_unordered " << bucket_info.bucket <<
     " start_after " << start_after.name << "[" << start_after.instance <<
     "] num_entries " << num_entries << dendl;

@@ -167,6 +167,16 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
                                                map<int, string> *bucket_objs,
                                                map<int, string> *bucket_instance_ids)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   int shard_id = _shard_id.value_or(-1);
   string bucket_oid_base;
   int ret = open_bucket_index_base(bucket_info, index_pool, &bucket_oid_base);
@@ -364,6 +374,16 @@ int RGWSI_BucketIndex_RADOS::read_stats(const RGWBucketInfo& bucket_info,
                                         RGWBucketEnt *result,
                                         optional_yield y)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::read_stats", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::read_stats");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   vector<rgw_bucket_dir_header> headers;
 
   result->bucket = bucket_info.bucket;

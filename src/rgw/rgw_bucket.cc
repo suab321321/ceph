@@ -3311,6 +3311,16 @@ int RGWBucketCtl::remove_bucket_instance_info(const rgw_bucket& bucket,
                                               optional_yield y,
                                               const BucketInstance::RemoveParams& params)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_instance_info", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_instance_info");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   if (params.objv_tracker) {
     info.objv_tracker = *params.objv_tracker;
   }
@@ -3546,6 +3556,16 @@ done_err:
 
 int RGWBucketCtl::unlink_bucket(const rgw_user& user_id, const rgw_bucket& bucket, optional_yield y, bool update_entrypoint)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::unlink_bucket", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_bucket.cc RGWBucketCtl::unlink_bucket");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   return bm_handler->call([&](RGWSI_Bucket_EP_Ctx& ctx) {
     return do_unlink_bucket(ctx, user_id, bucket, y, update_entrypoint);
   });
@@ -3728,6 +3748,16 @@ int RGWBucketCtl::sync_user_stats(const rgw_user& user_id,
                                   const RGWBucketInfo& bucket_info,
                                   RGWBucketEnt* pent)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(global_state && !global_state->stack_span.empty())
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::sync_user_stats", global_state->stack_span.top());
+    else if(global_state)
+      span = tracer_2.new_span("rgw_bucket.cc RGWBucketCtl::sync_user_stats");
+    ss.set_req_state(global_state);
+    ss.set_span(span);
+  #endif
   RGWBucketEnt ent;
   if (!pent) {
     pent = &ent;

@@ -258,6 +258,16 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       librados::ObjectReadOperation *op, bufferlist* pbl,
                       optional_yield y)
 {
+  // span_structure ss;
+  // #ifdef WITH_JAEGER
+  //   Span span;
+  //   if(global_state && !global_state->stack_span.empty())
+  //     span = tracer_2.child_span("rgw_tools.cc rgw_rados_operate", global_state->stack_span.top());
+  //   else if(global_state)
+  //     span = tracer_2.new_span("rgw_tools.cc rgw_rados_operate");
+  //   ss.set_req_state(global_state);
+  //   ss.set_span(span);
+  // #endif
 #ifdef HAVE_BOOST_CONTEXT
   // given a yield_context, call async_operate() to yield the coroutine instead
   // of blocking
