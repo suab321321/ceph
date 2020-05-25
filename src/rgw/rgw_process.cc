@@ -7,7 +7,7 @@
 #include "include/scope_guard.h"
 #include "include/tracer.h"
 
-#include "rgw_rados.h"
+// #include "rgw_rados.h"
 #include "rgw_dmclock_scheduler.h"
 #include "rgw_rest.h"
 #include "rgw_frontend.h"
