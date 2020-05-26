@@ -44,11 +44,11 @@ int RGWListBuckets_ObjStore_SWIFT::get_params()
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_rest_swift.h get_params", global_state->stack_span.top());
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.h get_params", s->stack_span.top());
     else
       span = tracer_2.new_span("rgw_rest_swift.cc get_params");
-    ss.set_req_state(global_state);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
 
@@ -182,11 +182,11 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets)
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_begin", global_state->stack_span.top());
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_begin", s->stack_span.top());
     else
       span = tracer_2.new_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_begin");
-    ss.set_req_state(global_state);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   if (op_ret) {
@@ -229,11 +229,11 @@ void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk", global_state->stack_span.top());
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk", s->stack_span.top());
     else
       span = tracer_2.new_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk");
-    ss.set_req_state(global_state);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   if (wants_reversed) {
@@ -262,11 +262,12 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_data(rgw::sal::RGWBucketList& 
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_data", global_state->stack_span.top());
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_data", s->stack_span.top());
     else
       span = tracer_2.new_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_data");
-    ss.set_req_state(global_state);
+    span->SetTag("operation_gateway", "swift");
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   if (! sent_data) {

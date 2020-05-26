@@ -831,6 +831,7 @@ class RGWUserMetadataHandler;
 
 class RGWUserCtl
 {
+  req_state* s;
   struct Svc {
     RGWSI_Zone *zone{nullptr};
     RGWSI_User *user{nullptr};
@@ -851,6 +852,7 @@ public:
   void init(RGWBucketCtl *bucket_ctl) {
     ctl.bucket = bucket_ctl;
   }
+  void set_req_state(req_state* _s){ this->s = _s ;}
 
   RGWBucketCtl *get_bucket_ctl() {
     return ctl.bucket;

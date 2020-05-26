@@ -246,7 +246,7 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
         span->SetTag("operation_success", true);
         span->SetTag("operation_type", RGWOpTypeMapper[type]);
       // }
-      ss.set_req_state(global_state);
+      ss.set_req_state(s);
       ss.set_span(span);
   }
   ldpp_dout(op, 2) << "init permissions" << dendl;

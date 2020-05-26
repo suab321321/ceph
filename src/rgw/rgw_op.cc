@@ -1508,11 +1508,11 @@ int RGWOp::verify_op_mask()
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_op.h RGWOp::verify_op_mask", global_state->stack_span.top());
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.h RGWOp::verify_op_mask", s->stack_span.top());
     else
       span = tracer_2.new_span("rgw_op.h RGWOp::verify_op_mask");
-    ss.set_req_state(global_state);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   uint32_t required_mask = op_mask();
@@ -1933,11 +1933,11 @@ int RGWOp::init_quota()
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_op.h init_processing", global_state->stack_span.top());
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc init_quota", s->stack_span.top());
     else
-      span = tracer_2.new_span("rgw_op.h init_processing");
-    ss.set_req_state(global_state);
+      span = tracer_2.new_span("rgw_op.cc init_quota");
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   /* no quota enforcement for system requests */
@@ -3192,11 +3192,11 @@ int RGWListBuckets::verify_permission()
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && global_state->stack_span.empty())
+    if(s && s->stack_span.empty())
       span = tracer_2.new_span("rgw_op.cc RGWListBuckets::verify_permission()");
     else
-      span = tracer_2.child_span("rgw_op.cc RGWListBuckets::verify_permission()", global_state->stack_span.top());
-      ss.set_req_state(global_state);
+      span = tracer_2.child_span("rgw_op.cc RGWListBuckets::verify_permission()", s->stack_span.top());
+      ss.set_req_state(s);
     ss.set_span(span);
   #endif
   rgw::Partition partition = rgw::Partition::aws;
@@ -3332,11 +3332,11 @@ void RGWListBuckets::execute()
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_op.cc RGWListBuckets::execute", global_state->stack_span.top());
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWListBuckets::execute", s->stack_span.top());
     else
       span = tracer_2.new_span("rgw_op.cc RGWListBuckets::execute");
-    ss.set_req_state(global_state);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   bool done;
@@ -3366,7 +3366,7 @@ void RGWListBuckets::execute()
     } else {
       read_count = max_buckets;
     }
-
+    store->set_req_state(s);
     rgw::sal::RGWRadosUser user(store, s->user->get_id());
 
     op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
@@ -3986,7 +3986,7 @@ int RGWCreateBucket::verify_permission()
   if (s->user->get_max_buckets() < 0) {
     return -EPERM;
   }
-
+  store->set_req_state(s);
   if (s->user->get_max_buckets()) {
     rgw::sal::RGWBucketList buckets;
     string marker;

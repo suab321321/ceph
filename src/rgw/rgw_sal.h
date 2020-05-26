@@ -289,6 +289,7 @@ class RGWRadosStore : public RGWStore {
   private:
     RGWRados *rados;
     RGWUserCtl *user_ctl;
+    req_state* s;
 
   public:
     RGWRadosStore()
@@ -310,6 +311,9 @@ class RGWRadosStore : public RGWStore {
     RGWCtl *ctl() { return &rados->ctl; }
 
     void setUserCtl(RGWUserCtl *_ctl) { user_ctl = _ctl; }
+
+    void set_req_state(req_state* _s) { this->s = _s;}
+    req_state* get_req_state()const { return this->s; }
 
     void finalize(void) override;
 

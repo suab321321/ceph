@@ -2827,11 +2827,11 @@ int RGWUserCtl::list_buckets(const rgw_user& user,
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_user.cc RGWUserCtl::list_buckets", global_state->stack_span.top());
+    if(this->s && !this->s->stack_span.empty())
+      span = tracer_2.child_span("rgw_user.cc RGWUserCtl::list_buckets", this->s->stack_span.top());
     else
       span = tracer_2.new_span("rgw_user.cc RGWUserCtl::list_buckets");
-    ss.set_req_state(global_state);
+    ss.set_req_state(this->s);
     ss.set_span(span);
   #endif
   if (!max) {
