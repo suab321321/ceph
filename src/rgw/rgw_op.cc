@@ -215,6 +215,17 @@ int rgw_op_get_bucket_policy_from_attr(CephContext *cct,
 				       map<string, bufferlist>& bucket_attrs,
 				       RGWAccessControlPolicy *policy)
 {
+  req_state* s = store->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc rgw_op_get_bucket_policy_from_attr", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_op.cc rgw_op_get_bucket_policy_from_attr", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   map<string, bufferlist>::iterator aiter = bucket_attrs.find(RGW_ATTR_ACL);
 
   if (aiter != bucket_attrs.end()) {
@@ -548,7 +559,7 @@ static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
   if (bucket.name.empty()) {
     return 0;
   }
-
+  store->set_req_state(s);
   int ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, policy);
   if (ret == -ENOENT) {
       ret = -ERR_NO_SUCH_BUCKET;
@@ -574,7 +585,7 @@ static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
   if (bucket.name.empty()) {
     return 0;
   }
-
+  store->set_req_state(s);
   int ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, policy, tracer, span);
   if (ret == -ENOENT) {
       ret = -ERR_NO_SUCH_BUCKET;
@@ -621,6 +632,7 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
     /* object does not exist checking the bucket's ACL to make sure
        that we send a proper error code */
     RGWAccessControlPolicy bucket_policy(s->cct);
+    store->set_req_state(s);
     ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, &bucket_policy);
     if (ret < 0) {
       return ret;
@@ -686,6 +698,7 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
     /* object does not exist checking the bucket's ACL to make sure
        that we send a proper error code */
     RGWAccessControlPolicy bucket_policy(s->cct);
+    store->set_req_state(s);
     ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, &bucket_policy);
     if (ret < 0) {
       return ret;
@@ -1322,11 +1335,11 @@ void rgw_bucket_object_pre_exec(struct req_state *s)
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_op.cc rgw_bucket_object_pre_exec", global_state->stack_span.top());
-    else if(global_state)
-      span = tracer_2.new_span("rgw_op.cc rgw_bucket_object_pre_exec");
-    ss.set_req_state(global_state);
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc rgw_bucket_object_pre_exec", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_op.cc rgw_bucket_object_pre_exec", s->root_span);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   if (s->expect_cont)
@@ -1511,7 +1524,7 @@ int RGWOp::verify_op_mask()
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.h RGWOp::verify_op_mask", s->stack_span.top());
     else
-      span = tracer_2.new_span("rgw_op.h RGWOp::verify_op_mask");
+      span = tracer_2.child_span("rgw_op.h RGWOp::verify_op_mask", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
   #endif
@@ -1936,7 +1949,7 @@ int RGWOp::init_quota()
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc init_quota", s->stack_span.top());
     else
-      span = tracer_2.new_span("rgw_op.cc init_quota");
+      span = tracer_2.child_span("rgw_op.cc init_quota", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
   #endif
@@ -3193,7 +3206,7 @@ int RGWListBuckets::verify_permission()
   #ifdef WITH_JAEGER
     Span span;
     if(s && s->stack_span.empty())
-      span = tracer_2.new_span("rgw_op.cc RGWListBuckets::verify_permission()");
+      span = tracer_2.child_span("rgw_op.cc RGWListBuckets::verify_permission()", s->root_span);
     else
       span = tracer_2.child_span("rgw_op.cc RGWListBuckets::verify_permission()", s->stack_span.top());
       ss.set_req_state(s);
@@ -3335,7 +3348,7 @@ void RGWListBuckets::execute()
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc RGWListBuckets::execute", s->stack_span.top());
     else
-      span = tracer_2.new_span("rgw_op.cc RGWListBuckets::execute");
+      span = tracer_2.child_span("rgw_op.cc RGWListBuckets::execute", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
   #endif
@@ -3781,11 +3794,11 @@ int RGWListBucket::verify_permission()
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_op.cc RGWListBucket::verify_permission", global_state->stack_span.top());
-    else if(global_state)
-      span = tracer_2.new_span("rgw_op.cc RGWListBucket::verify_permission");
-    ss.set_req_state(global_state);
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWListBucket::verify_permission", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_op.cc RGWListBucket::verify_permission", s->root_span);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   op_ret = get_params();
@@ -3869,11 +3882,11 @@ void RGWListBucket::execute()
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_op.cc RGWListBucket::execute", global_state->stack_span.top());
-    else if(global_state)
-      span = tracer_2.new_span("rgw_op.cc RGWListBucket::execute");
-    ss.set_req_state(global_state);
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWListBucket::execute", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_op.cc RGWListBucket::execute", s->root_span);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   if (!s->bucket_exists) {
@@ -3961,6 +3974,16 @@ int RGWGetBucketLocation::verify_permission()
 
 int RGWCreateBucket::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::verify_permission", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::verify_permission", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   /* This check is mostly needed for S3 that doesn't support account ACL.
    * Swift doesn't allow to delegate any permission to an anonymous user,
    * so it will become an early exit in such case. */
@@ -4080,6 +4103,16 @@ int forward_request_to_master(struct req_state *s, obj_version *objv,
 
 void RGWCreateBucket::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::pre_exec", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::pre_exec", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -4266,6 +4299,16 @@ static void filter_out_website(std::map<std::string, ceph::bufferlist>& add_attr
 
 void RGWCreateBucket::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::execute", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::execute", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   RGWAccessControlPolicy old_policy(s->cct);
   buffer::list aclbl;
   buffer::list corsbl;
@@ -4325,6 +4368,7 @@ void RGWCreateBucket::execute()
     s->bucket_info = bucket->get_info();
     s->bucket_attrs = bucket->get_attrs();
     delete bucket;
+    store->set_req_state(s);
     int r = rgw_op_get_bucket_policy_from_attr(s->cct, store, s->bucket_info,
                                                s->bucket_attrs, &old_policy);
     if (r >= 0)  {
@@ -4599,6 +4643,7 @@ void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
     s->bucket_info = bucket->get_info();
     s->bucket_attrs = bucket->get_attrs();
     delete bucket;
+    store->set_req_state(s);
     int r = rgw_op_get_bucket_policy_from_attr(s->cct, store, s->bucket_info,
                                                s->bucket_attrs, &old_policy, tracer, span);
     if (r >= 0)  {
@@ -9183,6 +9228,7 @@ int RGWBulkUploadOp::handle_dir(const boost::string_ref path)
 
   if (bucket_exists) {
     RGWAccessControlPolicy old_policy(s->cct);
+    store->set_req_state(s);
     int r = rgw_op_get_bucket_policy_from_attr(s->cct, store, binfo,
                                                battrs, &old_policy);
     if (r >= 0)  {

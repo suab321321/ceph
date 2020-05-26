@@ -188,7 +188,7 @@ public:
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.h init_processing", s->stack_span.top());
     else
-      span = tracer_2.new_span("rgw_op.h init_processing");
+      span = tracer_2.child_span("rgw_op.h init_processing", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
   #endif

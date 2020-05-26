@@ -411,11 +411,11 @@ void dump_bucket_from_state(struct req_state *s)
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_rest.cc dump_bucket_from_state", global_state->stack_span.top());
-    else if(global_state)
-      span = tracer_2.new_span("rgw_rest.cc dump_bucket_from_state");
-    ss.set_req_state(global_state);
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest.cc dump_bucket_from_state", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_rest.cc dump_bucket_from_state", s->root_span);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   if (g_conf()->rgw_expose_bucket && ! s->bucket_name.empty()) {
@@ -1913,7 +1913,7 @@ int RGWHandler_REST::init_permissions(RGWOp* op)
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::init_permissions", s->stack_span.top());
     else
-      span = tracer_2.new_span("rgw_rest.cc RGWHandler_REST::init_permissions");
+      span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::init_permissions", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
   #endif
@@ -1997,7 +1997,7 @@ int RGWHandler_REST::read_permissions(RGWOp* op_obj)
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::read_permissions", s->stack_span.top());
     else
-      span = tracer_2.new_span("rgw_rest.cc RGWHandler_REST::read_permissions");
+      span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::read_permissions", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
   #endif

@@ -39,7 +39,7 @@ int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_sal.cc RGWRadosUser::list_buckets", s->stack_span.top());
     else
-      span = tracer_2.new_span("rgw_sal.cc RGWRadosUser::list_buckets");
+      span = tracer_2.child_span("rgw_sal.cc RGWRadosUser::list_buckets", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
   #endif
@@ -215,14 +215,15 @@ int RGWRadosBucket::sync_user_stats()
 
 int RGWRadosBucket::update_container_stats(void)
 {
+  req_state* s = store->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", global_state->stack_span.top());
-    else if(global_state)
-      span = tracer_2.new_span("rgw_sal.cc RGWRadosBucket::update_container_stats");
-    ss.set_req_state(global_state);
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", s->root_span);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   int ret;

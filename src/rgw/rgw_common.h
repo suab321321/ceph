@@ -1655,7 +1655,7 @@ struct req_state : DoutPrefixProvider {
   ACLOwner owner;
 
   std::stack<Span> stack_span;
-
+  Span root_span;
   span_structure ss;
   string zonegroup_name;
   string zonegroup_endpoint;

@@ -1110,6 +1110,16 @@ bool verify_user_permission(const DoutPrefixProvider* dpp,
                             const uint64_t op)
 {
   perm_state_from_req_state ps(s);
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_common.cc verify_user_permission", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_common.cc verify_user_permission",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   return verify_user_permission(dpp, &ps, s->user_acl.get(), s->iam_user_policies, res, op);
 }
 
@@ -1259,11 +1269,11 @@ bool verify_bucket_permission(const DoutPrefixProvider* dpp, struct req_state * 
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_common.cc verify_bucket_permission", global_state->stack_span.top());
-    else if(global_state)
-      span = tracer_2.new_span("rgw_common.cc verify_bucket_permission");
-    ss.set_req_state(global_state);
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_common.cc verify_bucket_permission", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_common.cc verify_bucket_permission", s->root_span);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   perm_state_from_req_state ps(s);

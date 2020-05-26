@@ -2830,7 +2830,7 @@ int RGWUserCtl::list_buckets(const rgw_user& user,
     if(this->s && !this->s->stack_span.empty())
       span = tracer_2.child_span("rgw_user.cc RGWUserCtl::list_buckets", this->s->stack_span.top());
     else
-      span = tracer_2.new_span("rgw_user.cc RGWUserCtl::list_buckets");
+      span = tracer_2.child_span("rgw_user.cc RGWUserCtl::list_buckets", this->s->root_span);
     ss.set_req_state(this->s);
     ss.set_span(span);
   #endif
