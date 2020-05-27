@@ -952,6 +952,18 @@ void RGWCreateBucket_ObjStore_SWIFT::send_response(Jager_Tracer& tracer, const S
 
 void RGWDeleteBucket_ObjStore_SWIFT::send_response()
 {
+  s->root_span->SetTag("operation_gateway", "swift");
+  s->root_span->SetTag("operation_success", true);
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteBucket_ObjStore_SWIFT::send_response", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteBucket_ObjStore_SWIFT::send_response", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   int r = op_ret;
   if (!r)
     r = STATUS_NO_CONTENT;

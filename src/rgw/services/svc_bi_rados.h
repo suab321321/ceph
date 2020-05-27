@@ -104,6 +104,9 @@ public:
                  optional_yield y) override;
   int read_stats(const RGWBucketInfo& bucket_info,
                  RGWBucketEnt *stats,
+                 optional_yield y, req_state* s) override;
+  int read_stats(const RGWBucketInfo& bucket_info,
+                 RGWBucketEnt *stats,
                  optional_yield y, Jager_Tracer&, const Span&) override;
 
   int get_reshard_status(const RGWBucketInfo& bucket_info,
@@ -130,6 +133,11 @@ public:
                         RGWSI_RADOS::Pool *index_pool,
                         map<int, string> *bucket_objs,
                         map<int, string> *bucket_instance_ids);
+  int open_bucket_index(const RGWBucketInfo& bucket_info,
+                        std::optional<int> shard_id,
+                        RGWSI_RADOS::Pool *index_pool,
+                        map<int, string> *bucket_objs,
+                        map<int, string> *bucket_instance_ids, req_state* s);
 
   int open_bucket_index(const RGWBucketInfo& bucket_info,
                         std::optional<int> shard_id,

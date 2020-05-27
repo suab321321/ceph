@@ -4312,7 +4312,7 @@ void RGWCreateBucket::execute()
     ss.set_req_state(s);
     ss.set_span(span);
   #endif
-  // store->set_req_state(s);
+  store->set_req_state(s);
   store->ctl()->bucket->get_ctl().user->set_req_state(s);
   RGWAccessControlPolicy old_policy(s->cct);
   buffer::list aclbl;
@@ -4861,6 +4861,16 @@ void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
 
 int RGWDeleteBucket::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (!verify_bucket_permission(this, s, rgw::IAM::s3DeleteBucket)) {
     return -EACCES;
   }
@@ -4880,6 +4890,16 @@ int RGWDeleteBucket::verify_permission(Jager_Tracer& tracer, const Span& parent_
 
 void RGWDeleteBucket::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::pre_exec", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::pre_exec", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -4891,6 +4911,18 @@ void RGWDeleteBucket::pre_exec(Jager_Tracer& tracer, const Span& parent_span)
 
 void RGWDeleteBucket::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::execute", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::execute", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
+  store->set_req_state(s);
+  store->ctl()->bucket->get_ctl().user->set_req_state(s);
   if (s->bucket_name.empty()) {
     op_ret = -EINVAL;
     return;
