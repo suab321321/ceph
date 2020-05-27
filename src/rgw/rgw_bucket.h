@@ -653,7 +653,7 @@ public:
             RGWBucketMetadataHandler *_bm_handler,
             RGWBucketInstanceMetadataHandler *_bmi_handler,
             RGWDataChangesLog *datalog);
-
+  Ctl& get_ctl(){ return this->ctl ;}
   struct Bucket {
     struct GetParams {
       RGWObjVersionTracker *objv_tracker{nullptr};

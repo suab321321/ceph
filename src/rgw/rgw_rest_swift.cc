@@ -374,7 +374,7 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_end(Span span, const Span& par
 
 int RGWListBucket_ObjStore_SWIFT::get_params()
 {
-  s->root_span->SetTag("operation_gateway", "true");
+  s->root_span->SetTag("operation_gateway", "swift");
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;

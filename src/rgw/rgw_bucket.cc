@@ -3301,6 +3301,17 @@ int RGWBucketCtl::store_bucket_instance_info(const rgw_bucket& bucket,
                                             optional_yield y,
                                             const BucketInstance::PutParams& params)
 {
+  req_state* s = this->get_ctl().user->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::store_bucket_instance_info", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::store_bucket_instance_info", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   return bmi_handler->call([&](RGWSI_Bucket_BI_Ctx& ctx) {
     return do_store_bucket_instance_info(ctx, bucket, info, y, params);
   });
@@ -3460,6 +3471,18 @@ int RGWBucketCtl::link_bucket(const rgw_user& user_id,
                               bool update_entrypoint,
                               rgw_ep_info *pinfo)
 {
+  //(working when changed to new_span in else if) this particular thing fails when runninh, but when trying to debug with gdb it is working fine and after I close the gdb then also it continues to work fine
+  req_state* s = this->get_ctl().user->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::link_bucket", s->stack_span.top());
+    else if(s)
+      span = tracer_2.new_span("rgw_bucket.cc RGWBucketCtl::link_bucket");
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   return bm_handler->call([&](RGWSI_Bucket_EP_Ctx& ctx) {
     return do_link_bucket(ctx, user_id, bucket, creation_time, y,
                           update_entrypoint, pinfo);

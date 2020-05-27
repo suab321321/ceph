@@ -5,7 +5,6 @@
 
 #include "rgw/rgw_service.h"
 
-
 class RGWSI_RADOS;
 class RGWSI_SysObj;
 class RGWSI_SyncModules;
@@ -127,6 +126,9 @@ public:
   int select_bucket_placement(const RGWUserInfo& user_info, const string& zonegroup_id,
                               const rgw_placement_rule& rule,
                               rgw_placement_rule *pselected_rule, RGWZonePlacementInfo *rule_info);
+  int select_bucket_placement(const RGWUserInfo& user_info, const string& zonegroup_id,
+                              const rgw_placement_rule& rule,
+                              rgw_placement_rule *pselected_rule, RGWZonePlacementInfo *rule_info, req_state *s);
   int select_bucket_placement(const RGWUserInfo& user_info, const string& zonegroup_id,
                               const rgw_placement_rule& rule,
                               rgw_placement_rule *pselected_rule, RGWZonePlacementInfo *rule_info, Jager_Tracer&, const Span&);

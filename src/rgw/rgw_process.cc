@@ -242,11 +242,10 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
   // else{
     // if(type>0){
       Span span = tracer_2.new_span(RGWOpTypeMapper[type]);
+      if(type>0){
+        span->SetTag("operation_type", RGWOpTypeMapper[type]);
+      }
       s->root_span = std::move(span);
-      // if(type>0){
-        // span->SetTag("operation_success", true);
-        // span->SetTag("operation_type", RGWOpTypeMapper[type]);
-      // }
       // ss.set_req_state(s);
       // ss.set_span(span);
   // }

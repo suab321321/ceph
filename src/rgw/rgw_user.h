@@ -853,6 +853,7 @@ public:
     ctl.bucket = bucket_ctl;
   }
   void set_req_state(req_state* _s){ this->s = _s ;}
+  req_state* get_req_state(){ return this->s ;}
 
   RGWBucketCtl *get_bucket_ctl() {
     return ctl.bucket;

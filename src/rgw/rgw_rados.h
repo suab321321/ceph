@@ -557,6 +557,8 @@ public:
     return *this;
   }
 
+  rgw::sal::RGWRadosStore* get_store(){ return this->store; }
+
   uint64_t get_new_req_id() {
     return ++max_req_id;
   }

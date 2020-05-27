@@ -1112,6 +1112,7 @@ int RGWSI_Zone::select_bucket_placement(const RGWUserInfo& user_info, const stri
                                         const rgw_placement_rule& placement_rule,
                                         rgw_placement_rule *pselected_rule, RGWZonePlacementInfo *rule_info)
 {
+
   if (!zone_params->placement_pools.empty()) {
     return select_new_bucket_location(user_info, zonegroup_id, placement_rule,
                                       pselected_rule, rule_info);
@@ -1126,6 +1127,21 @@ int RGWSI_Zone::select_bucket_placement(const RGWUserInfo& user_info, const stri
   }
 
   return 0;
+}
+
+int RGWSI_Zone::select_bucket_placement(const RGWUserInfo& user_info, const string& zonegroup_id,
+                                        const rgw_placement_rule& placement_rule,
+                                        rgw_placement_rule *pselected_rule, RGWZonePlacementInfo *rule_info, req_state *s)
+{
+  span_structure ss;
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("svc_zone.cc RGWSI_Zone::select_bucket_placement", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("svc_zone.cc RGWSI_Zone::select_bucket_placement", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  return RGWSI_Zone::select_bucket_placement(user_info, zonegroup_id, placement_rule, pselected_rule, rule_info);
 }
 
 int RGWSI_Zone::select_bucket_placement(const RGWUserInfo& user_info, const string& zonegroup_id,

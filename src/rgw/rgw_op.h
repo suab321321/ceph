@@ -929,6 +929,7 @@ public:
   void execute() override;
   void execute(Jager_Tracer&,const Span&) override;
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     bucket = new rgw::sal::RGWRadosBucket(store, *s->user, s->bucket);
   }
@@ -1114,6 +1115,7 @@ public:
   void execute(Jager_Tracer&,const Span&);
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     policy.set_ctx(s->cct);
     relaxed_region_enforcement =
@@ -1273,6 +1275,7 @@ public:
   }
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     policy.set_ctx(s->cct);
   }
@@ -1351,6 +1354,7 @@ public:
   }
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     policy.set_ctx(s->cct);
   }
@@ -1392,6 +1396,7 @@ public:
   }
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     policy.set_ctx(s->cct);
   }
@@ -1431,6 +1436,7 @@ public:
   }
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     policy.set_ctx(s->cct);
   }
@@ -1458,6 +1464,7 @@ public:
   {}
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     policy.set_ctx(s->cct);
   }
@@ -1585,6 +1592,7 @@ public:
   }
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     dest_policy.set_ctx(s->cct);
   }
@@ -1675,6 +1683,7 @@ public:
   ~RGWPutLC() override {}
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *dialect_handler) override {
+    store->set_req_state(s);
 #define COOKIE_LEN 16
     char buf[COOKIE_LEN + 1];
 
@@ -1822,6 +1831,7 @@ public:
   RGWInitMultipart() {}
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     policy.set_ctx(s->cct);
   }
@@ -1912,6 +1922,7 @@ public:
   }
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     policy = RGWAccessControlPolicy(s->cct);
   }
@@ -1952,6 +1963,7 @@ public:
   }
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
     max_uploads = default_max;
   }
@@ -2499,6 +2511,7 @@ public:
   RGWGetClusterStat() {}
 
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
+    store->set_req_state(s);
     RGWOp::init(store, s, h);
   }
   int verify_permission() override {return 0;}

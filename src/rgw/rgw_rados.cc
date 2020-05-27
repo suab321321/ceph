@@ -1748,6 +1748,17 @@ int RGWRados::Bucket::List::list_objects_ordered(
   optional_yield y)
 {
   RGWRados *store = target->get_store();
+  req_state* s = store->get_store()->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Bucket::List::list_objects_ordered", s->root_span);
+    else
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Bucket::List::list_objects_ordered", s->stack_span.top());
+      ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   CephContext *cct = store->ctx();
   int shard_id = target->get_shard_id();
 
@@ -2306,6 +2317,17 @@ int RGWRados::Bucket::List::list_objects_unordered(int64_t max_p,
                                                    optional_yield y)
 {
   RGWRados *store = target->get_store();
+  req_state* s = store->get_store()->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Bucket::List::list_objects_unordered", s->root_span);
+    else
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Bucket::List::list_objects_unordered", s->stack_span.top());
+      ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   CephContext *cct = store->ctx();
   int shard_id = target->get_shard_id();
 
@@ -2450,6 +2472,17 @@ int RGWRados::create_pool(const rgw_pool& pool)
 
 void RGWRados::create_bucket_id(string *bucket_id)
 {
+  req_state* s = this->get_store()->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::create_bucket_id", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::create_bucket_id", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   uint64_t iid = instance_id();
   uint64_t bid = next_bucket_id();
   char buf[svc.zone->get_zone_params().get_id().size() + 48];
@@ -2478,6 +2511,17 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
                             uint32_t *pmaster_num_shards,
 			    bool exclusive)
 {
+  req_state* s = this->get_store()->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::create_bucket", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::create_bucket", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
 #define MAX_CREATE_RETRIES 20 /* need to bound retries */
   rgw_placement_rule selected_placement_rule;
   RGWZonePlacementInfo rule_info;
@@ -2485,7 +2529,7 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
   for (int i = 0; i < MAX_CREATE_RETRIES; i++) {
     int ret = 0;
     ret = svc.zone->select_bucket_placement(owner, zonegroup_id, placement_rule,
-                                            &selected_placement_rule, &rule_info);
+                                            &selected_placement_rule, &rule_info, s);
     if (ret < 0)
       return ret;
 
@@ -8627,6 +8671,19 @@ int RGWRados::put_bucket_instance_info(RGWBucketInfo& info, bool exclusive,
 int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_time mtime, obj_version *pep_objv,
                                      map<string, bufferlist> *pattrs, bool create_entry_point)
 {
+
+  //(working when changed to new_span in else if) this particular thing fails when runninh, but when trying to debug with gdb it is working fine and after I close the gdb then also it continues to work fine
+  req_state* s = this->get_store()->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::put_linked_bucket_info", s->stack_span.top());
+    else if(s)
+      span = tracer_2.new_span("rgw_rados.cc RGWRados::put_linked_bucket_info");
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   bool create_head = !info.has_instance_obj || create_entry_point;
 
   int ret = put_bucket_instance_info(info, exclusive, mtime, pattrs);
@@ -8670,14 +8727,15 @@ int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_t
 
 int RGWRados::update_containers_stats(map<string, RGWBucketEnt>& m)
 {
+  req_state* s = this->get_store()->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_rados.cc RGWRados::update_containers_stats", global_state->stack_span.top());
-    else if(global_state)
-      span = tracer_2.new_span("rgw_rados.cc RGWRados::update_containers_stats");
-    ss.set_req_state(global_state);
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::update_containers_stats", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::update_containers_stats", s->root_span);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   auto obj_ctx = svc.sysobj->init_obj_ctx();
@@ -9225,15 +9283,15 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
                                       optional_yield y,
 				      check_filter_t force_check_filter)
 {
-
+  req_state* s = this->get_store()->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(global_state && !global_state->stack_span.empty())
-      span = tracer_2.child_span("rgw_rados.cc RGWRados::cls_bucket_list_ordered", global_state->stack_span.top());
-    else if(global_state)
-      span = tracer_2.new_span("rgw_rados.cc RGWRados::cls_bucket_list_ordered");
-    ss.set_req_state(global_state);
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::cls_bucket_list_ordered", s->stack_span.top());
+    else if(s)
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::cls_bucket_list_ordered", s->root_span);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   /* expansion_factor allows the number of entries to read to grow
