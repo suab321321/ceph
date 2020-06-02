@@ -1115,7 +1115,7 @@ bool verify_user_permission(const DoutPrefixProvider* dpp,
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_common.cc verify_user_permission", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_common.cc verify_user_permission",s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -1271,7 +1271,7 @@ bool verify_bucket_permission(const DoutPrefixProvider* dpp, struct req_state * 
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_common.cc verify_bucket_permission", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_common.cc verify_bucket_permission", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -1495,6 +1495,16 @@ bool verify_object_permission_no_policy(const DoutPrefixProvider* dpp, struct re
 
 bool verify_object_permission(const DoutPrefixProvider* dpp, struct req_state *s, uint64_t op)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_common.cc verify_object_permission", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_common.cc verify_object_permission",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   perm_state_from_req_state ps(s);
 
   return verify_object_permission(dpp,

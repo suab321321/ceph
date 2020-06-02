@@ -197,7 +197,7 @@ class RGWRadosUser : public RGWUser {
 
     /* Placeholders */
     int get_by_id(rgw_user id, optional_yield y);
-
+    RGWRadosStore* get_store()const{ return this->store; }
     friend class RGWRadosBucket;
 };
 
@@ -227,6 +227,7 @@ class RGWRadosObject : public RGWObject {
     int delete_object(void) { return 0; }
     RGWAccessControlPolicy& get_acl(void) { return acls; }
     int set_acl(const RGWAccessControlPolicy& acl) { acls = acl; return 0; }
+    RGWRadosStore* get_store()const{ return this->store; }
 };
 
 class RGWRadosBucket : public RGWBucket {
@@ -264,6 +265,7 @@ class RGWRadosBucket : public RGWBucket {
 
     RGWObject* get_object(const rgw_obj_key& key) { return object; }
     RGWBucketList* list(void) { return new RGWBucketList(); }
+    RGWRadosStore* get_store()const{ return this->store; }
     RGWObject* create_object(const rgw_obj_key& key /* Attributes */) override;
     virtual int remove_bucket(bool delete_children, optional_yield y) override;
     RGWAccessControlPolicy& get_acl(void) { return acls; }
@@ -287,10 +289,9 @@ class RGWRadosBucket : public RGWBucket {
 
 class RGWRadosStore : public RGWStore {
   private:
+    req_state* s;
     RGWRados *rados;
     RGWUserCtl *user_ctl;
-    req_state* s;
-
   public:
     RGWRadosStore()
       : rados(nullptr) {
@@ -311,10 +312,8 @@ class RGWRadosStore : public RGWStore {
     RGWCtl *ctl() { return &rados->ctl; }
 
     void setUserCtl(RGWUserCtl *_ctl) { user_ctl = _ctl; }
-
-    void set_req_state(req_state* _s) { this->s = _s;}
-    req_state* get_req_state()const { return this->s; }
-
+    void set_req_state(req_state* _s) { this->s = _s; }
+    req_state* get_req_state()const {return this->s; }
     void finalize(void) override;
 
     virtual CephContext *ctx(void) { return rados->ctx(); }

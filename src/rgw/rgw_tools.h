@@ -101,9 +101,14 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       optional_yield y);
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       librados::ObjectReadOperation *op, bufferlist* pbl,
+                      optional_yield y, const Span& parent_span);
+int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
+                      librados::ObjectReadOperation *op, bufferlist* pbl,
                       optional_yield y, Jager_Tracer&, const Span&);
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       librados::ObjectWriteOperation *op, optional_yield y);
+int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
+                      librados::ObjectWriteOperation *op, optional_yield y, const Span& parent_span);
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       librados::ObjectWriteOperation *op, optional_yield y, Jager_Tracer&, const Span&);
 int rgw_rados_notify(librados::IoCtx& ioctx, const std::string& oid,

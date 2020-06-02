@@ -380,7 +380,7 @@ int RGWListBucket_ObjStore_SWIFT::get_params()
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::get_params", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::get_params", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -488,10 +488,10 @@ void RGWListBucket_ObjStore_SWIFT::send_response()
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty()){
-      span = tracer_2.child_span("rgw_rest_swift.cc send_response", s->stack_span.top());
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::send_response", s->stack_span.top());
     }
-    else if(s)
-      span = tracer_2.child_span("rgw_rest_swift.cc send_response", s->root_span);
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::send_response", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
   #endif
@@ -859,7 +859,7 @@ int RGWCreateBucket_ObjStore_SWIFT::get_params()
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::get_params", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::get_params", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -920,7 +920,7 @@ void RGWCreateBucket_ObjStore_SWIFT::send_response()
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::send_response", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::send_response", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -959,7 +959,7 @@ void RGWDeleteBucket_ObjStore_SWIFT::send_response()
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteBucket_ObjStore_SWIFT::send_response", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteBucket_ObjStore_SWIFT::send_response", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -1589,6 +1589,16 @@ static void bulkdelete_respond(const unsigned num_deleted,
 
 int RGWDeleteObj_ObjStore_SWIFT::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::verify_permission", s->stack_span.top());
+    else
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::verify_permission", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   op_ret = RGWDeleteObj_ObjStore::verify_permission();
 
   /* We have to differentiate error codes depending on whether user is
@@ -1618,6 +1628,18 @@ int RGWDeleteObj_ObjStore_SWIFT::verify_permission(Jager_Tracer& tracer, const S
 
 int RGWDeleteObj_ObjStore_SWIFT::get_params()
 {
+  if(s && s->root_span)
+    s->root_span->SetTag("operation_gateway","swift");
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::get_params", s->stack_span.top());
+    else
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::get_params", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   const string& mm = s->info.args.get("multipart-manifest");
   multipart_delete = (mm.compare("delete") == 0);
 
@@ -1635,6 +1657,18 @@ int RGWDeleteObj_ObjStore_SWIFT::get_params(Jager_Tracer& tracer, const Span& pa
 
 void RGWDeleteObj_ObjStore_SWIFT::send_response()
 {
+  if(s && s->root_span)
+    s->root_span->SetTag("operation_success","true");
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::send_response", s->stack_span.top());
+    else
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::send_response", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   int r = op_ret;
 
   if (multipart_delete) {
@@ -1874,6 +1908,18 @@ int RGWGetObj_ObjStore_SWIFT::verify_permission(Jager_Tracer& tracer, const Span
 
 int RGWGetObj_ObjStore_SWIFT::get_params()
 {
+  if(s && s->root_span)
+    s->root_span->SetTag("operation_gateway","swift");
+    span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::get_params", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::get_params", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   const string& mm = s->info.args.get("multipart-manifest");
   skip_manifest = (mm.compare("get") == 0);
 
@@ -1913,6 +1959,18 @@ int RGWGetObj_ObjStore_SWIFT::send_response_data(bufferlist& bl,
                                                  const off_t bl_ofs,
                                                  const off_t bl_len)
 {
+  if(s && s->root_span)
+    s->root_span->SetTag("operation_success","true");
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::send_response_data", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::send_response_data",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   string content_type;
 
   if (sent_header) {

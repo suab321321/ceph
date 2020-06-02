@@ -36,9 +36,7 @@ public:
   virtual int read_stats(const RGWBucketInfo& bucket_info,
                          RGWBucketEnt *stats,
                          optional_yield y) = 0;
-  virtual int read_stats(const RGWBucketInfo& bucket_info,
-                         RGWBucketEnt *stats,
-                         optional_yield y, req_state* s) { return 0;}
+
   virtual int read_stats(const RGWBucketInfo& bucket_info,
                          RGWBucketEnt *stats,
                          optional_yield y, Jager_Tracer& tracer, const Span& child_span) {return 0;}

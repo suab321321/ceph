@@ -308,13 +308,14 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
 int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RGWBucketInfo& bucket_info,
 				string& prefix, string& delim)
 {
-  req_state* s = store->get_req_state();
+  // req_state* s = store->get_req_state();
+  req_state* s = cct->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_bucket.cc abort_bucket_multiparts", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_bucket.cc abort_bucket_multiparts", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);

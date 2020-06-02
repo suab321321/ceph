@@ -215,13 +215,14 @@ int rgw_op_get_bucket_policy_from_attr(CephContext *cct,
 				       map<string, bufferlist>& bucket_attrs,
 				       RGWAccessControlPolicy *policy)
 {
-  req_state* s = store->get_req_state();
+  // req_state* s = store->get_req_state();
+  req_state* s = cct->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc rgw_op_get_bucket_policy_from_attr", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_op.cc rgw_op_get_bucket_policy_from_attr", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -265,6 +266,17 @@ static int get_obj_policy_from_attr(CephContext *cct,
 				    rgw_obj& obj,
                                     optional_yield y)
 {
+  req_state* s = cct->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc get_obj_policy_from_attr", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc get_obj_policy_from_attr",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   bufferlist bl;
   int ret = 0;
 
@@ -396,6 +408,17 @@ vector<Policy> get_iam_user_policy_from_attr(CephContext* cct,
 
 static int get_obj_attrs(rgw::sal::RGWRadosStore *store, struct req_state *s, const rgw_obj& obj, map<string, bufferlist>& attrs, rgw_obj *target_obj = nullptr)
 {
+  s->cct->set_req_state(s);
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc get_obj_attrs", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc get_obj_attrs", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   RGWRados::Object op_target(store->getRados(), s->bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), obj);
   RGWRados::Object::Read read_op(&op_target);
 
@@ -550,6 +573,16 @@ static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
                               RGWAccessControlPolicy *policy,
                               rgw_bucket& bucket)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc read_bucket_policy", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc read_bucket_policy",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (!s->system_request && bucket_info.flags & BUCKET_SUSPENDED) {
     ldpp_dout(s, 0) << "NOTICE: bucket " << bucket_info.bucket.name
         << " is suspended" << dendl;
@@ -560,6 +593,7 @@ static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
     return 0;
   }
   store->set_req_state(s);
+  s->cct->set_req_state(s);
   int ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, policy);
   if (ret == -ENOENT) {
       ret = -ERR_NO_SUCH_BUCKET;
@@ -604,6 +638,16 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
                            rgw_bucket& bucket,
                            rgw_obj_key& object)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc read_obj_policy", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc read_obj_policy",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   string upload_id;
   upload_id = s->info.args.get("uploadId");
   rgw_obj obj;
@@ -626,6 +670,7 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
   policy = get_iam_policy_from_attr(s->cct, store, bucket_attrs, bucket.tenant);
 
   RGWObjectCtx *obj_ctx = static_cast<RGWObjectCtx *>(s->obj_ctx);
+  s->cct->get_req_state();
   int ret = get_obj_policy_from_attr(s->cct, store, *obj_ctx,
                                      bucket_info, bucket_attrs, acl, storage_class, obj, s->yield);
   if (ret == -ENOENT) {
@@ -633,6 +678,7 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
        that we send a proper error code */
     RGWAccessControlPolicy bucket_policy(s->cct);
     store->set_req_state(s);
+    s->cct->set_req_state(s);
     ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, &bucket_policy);
     if (ret < 0) {
       return ret;
@@ -699,6 +745,7 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
        that we send a proper error code */
     RGWAccessControlPolicy bucket_policy(s->cct);
     store->set_req_state(s);
+    s->cct->set_req_state(s);
     ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, &bucket_policy);
     if (ret < 0) {
       return ret;
@@ -948,6 +995,16 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
 
 int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc rgw_build_bucket_policies", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc rgw_build_bucket_policies",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   int ret = 0;
   rgw_obj_key obj;
   auto obj_ctx = store->svc()->sysobj->init_obj_ctx();
@@ -1337,7 +1394,7 @@ void rgw_bucket_object_pre_exec(struct req_state *s)
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc rgw_bucket_object_pre_exec", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_op.cc rgw_bucket_object_pre_exec", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -1390,6 +1447,17 @@ int retry_raced_bucket_write(RGWRados* g, req_state* s, const F& f) {
 
 int RGWGetObj::verify_permission()
 {
+  s->cct->set_req_state(s);
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::verify_permission", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::verify_permission",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   obj = rgw_obj(s->bucket, s->object);
   store->getRados()->set_atomic(s->obj_ctx, obj);
   if (get_data) {
@@ -2161,6 +2229,17 @@ int RGWGetObj::read_user_manifest_part(rgw_bucket& bucket,
                                        const off_t end_ofs,
                                        bool swift_slo)
 {
+  s->cct->set_req_state(s);
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::read_user_manifest_part", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::read_user_manifest_part",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   ldpp_dout(this, 20) << "user manifest obj=" << ent.key.name
       << "[" << ent.key.instance << "]" << dendl;
   RGWGetObj_CB cb(this);
@@ -2457,6 +2536,17 @@ static int get_obj_user_manifest_iterate_cb(rgw_bucket& bucket,
 
 int RGWGetObj::handle_user_manifest(const char *prefix)
 {
+  s->cct->set_req_state(s);
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::handle_user_manifest", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::handle_user_manifest",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   const boost::string_view prefix_view(prefix);
   ldpp_dout(this, 2) << "RGWGetObj::handle_user_manifest() prefix="
                    << prefix_view << dendl;
@@ -2556,6 +2646,17 @@ int RGWGetObj::handle_user_manifest(const char *prefix)
 
 int RGWGetObj::handle_slo_manifest(bufferlist& bl)
 {
+  s->cct->set_req_state(s);
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::handle_slo_manifest", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::handle_slo_manifest",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   RGWSLOInfo slo_info;
   auto bliter = bl.cbegin();
   try {
@@ -2691,6 +2792,16 @@ int RGWGetObj::handle_slo_manifest(bufferlist& bl)
 
 int RGWGetObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::get_data_cb", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::get_data_cb",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   /* garbage collection related handling */
   utime_t start_time = ceph_clock_now();
   if (start_time > gc_invalidate_time) {
@@ -2721,6 +2832,16 @@ int RGWGetObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len, const Spa
 
 bool RGWGetObj::prefetch_data()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::prefetch_data", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::prefetch_data",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   /* HEAD request, stop prefetch*/
   if (!get_data) {
     return false;
@@ -2746,6 +2867,16 @@ bool RGWGetObj::prefetch_data()
 
 void RGWGetObj::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::pre_exec", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::pre_exec",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -2800,6 +2931,17 @@ static inline void rgw_cond_decode_objtags(
 
 void RGWGetObj::execute()
 {
+  s->cct->set_req_state(s);
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::execute", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::execute",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   bufferlist bl;
   gc_invalidate_time = ceph_clock_now();
   gc_invalidate_time += (s->cct->_conf->rgw_gc_obj_min_wait / 2);
@@ -3151,6 +3293,16 @@ done_err:
 
 int RGWGetObj::init_common()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::init_common", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::init_common",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (range_str) {
     /* range parsed error when prefetch */
     if (!range_parsed) {
@@ -3343,6 +3495,7 @@ send_end:
 
 void RGWListBuckets::execute()
 {
+  s->cct->set_req_state(s);
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
@@ -3798,7 +3951,7 @@ int RGWListBucket::verify_permission()
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc RGWListBucket::verify_permission", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_op.cc RGWListBucket::verify_permission", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -3881,17 +4034,20 @@ void RGWListBucket::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 
 void RGWListBucket::execute()
 {
+  s->cct->set_req_state(s);
+
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc RGWListBucket::execute", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_op.cc RGWListBucket::execute", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
   #endif
-  // store->set_req_state(s);
+  store->set_req_state(s);
+  store->ctl()->bucket->get_ctl().user->set_req_state(s);
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
     return;
@@ -3977,12 +4133,13 @@ int RGWGetBucketLocation::verify_permission()
 
 int RGWCreateBucket::verify_permission()
 {
+  s->cct->set_req_state(s);
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::verify_permission", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::verify_permission", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -4106,12 +4263,13 @@ int forward_request_to_master(struct req_state *s, obj_version *objv,
 
 void RGWCreateBucket::pre_exec()
 {
+  s->cct->set_req_state(s);
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::pre_exec", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::pre_exec", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -4302,12 +4460,13 @@ static void filter_out_website(std::map<std::string, ceph::bufferlist>& add_attr
 
 void RGWCreateBucket::execute()
 {
+  s->cct->set_req_state(s);
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::execute", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::execute", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -4648,6 +4807,7 @@ void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
     s->bucket_info = bucket->get_info();
     s->bucket_attrs = bucket->get_attrs();
     delete bucket;
+    s->cct->set_req_state(s);
     int r = rgw_op_get_bucket_policy_from_attr(s->cct, store, s->bucket_info,
                                                s->bucket_attrs, &old_policy, tracer, span);
     if (r >= 0)  {
@@ -4861,12 +5021,13 @@ void RGWCreateBucket::execute(Jager_Tracer& tracer,const Span& parent_span)
 
 int RGWDeleteBucket::verify_permission()
 {
+  s->cct->set_req_state(s);
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -4890,12 +5051,13 @@ int RGWDeleteBucket::verify_permission(Jager_Tracer& tracer, const Span& parent_
 
 void RGWDeleteBucket::pre_exec()
 {
+  s->cct->set_req_state(s);
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::pre_exec", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::pre_exec", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -4911,12 +5073,13 @@ void RGWDeleteBucket::pre_exec(Jager_Tracer& tracer, const Span& parent_span)
 
 void RGWDeleteBucket::execute()
 {
+  s->cct->set_req_state(s);
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::execute", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::execute", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -6815,6 +6978,17 @@ int RGWDeleteObj::handle_slo_manifest(bufferlist& bl)
 
 int RGWDeleteObj::verify_permission()
 {
+  s->cct->set_req_state(s);
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::verify_permission", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::verify_permission", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   int op_ret = get_params();
   if (op_ret) {
     return op_ret;
@@ -6936,6 +7110,16 @@ int RGWDeleteObj::verify_permission(Jager_Tracer& tracer, const Span& parent_spa
 
 void RGWDeleteObj::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::pre_exec", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::pre_exec", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -6947,6 +7131,16 @@ void RGWDeleteObj::pre_exec(Jager_Tracer& tracer,const Span& parent_span)
 
 void RGWDeleteObj::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::execute", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::execute", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
     return;
@@ -9265,6 +9459,7 @@ int RGWBulkUploadOp::handle_dir(const boost::string_ref path)
 
   if (bucket_exists) {
     RGWAccessControlPolicy old_policy(s->cct);
+    s->cct->set_req_state(s);
     int r = rgw_op_get_bucket_policy_from_attr(s->cct, store, binfo,
                                                battrs, &old_policy);
     if (r >= 0)  {
@@ -9900,6 +10095,7 @@ int RGWHandler::do_init_permissions(Jager_Tracer& tracer,const Span& parent_span
 
 int RGWHandler::do_init_permissions()
 {
+  s->cct->set_req_state(s);
   int ret = rgw_build_bucket_policies(store, s);
   if (ret < 0) {
     ldpp_dout(s, 10) << "init_permissions on " << s->bucket

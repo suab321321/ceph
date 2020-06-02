@@ -2824,14 +2824,16 @@ int RGWUserCtl::list_buckets(const rgw_user& user,
                              bool *is_truncated,
                              uint64_t default_max)
 {
+  //prev direct access to req_state s
+  req_state* s = get_bucket_ctl()->get_cct()->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(this->s && !this->s->stack_span.empty())
-      span = tracer_2.child_span("rgw_user.cc RGWUserCtl::list_buckets", this->s->stack_span.top());
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_user.cc RGWUserCtl::list_buckets", s->stack_span.top());
     else
-      span = tracer_2.child_span("rgw_user.cc RGWUserCtl::list_buckets", this->s->root_span);
-    ss.set_req_state(this->s);
+      span = tracer_2.child_span("rgw_user.cc RGWUserCtl::list_buckets", s->root_span);
+    ss.set_req_state(s);
     ss.set_span(span);
   #endif
   if (!max) {

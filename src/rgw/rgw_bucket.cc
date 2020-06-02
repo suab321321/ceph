@@ -3153,6 +3153,17 @@ int RGWBucketCtl::read_bucket_entrypoint_info(const rgw_bucket& bucket,
                                               optional_yield y,
                                               const Bucket::GetParams& params)
 {
+  req_state* s = this->get_cct()->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_entrypoint_info", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_entrypoint_info", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   return bm_handler->call(params.bectx_params, [&](RGWSI_Bucket_EP_Ctx& ctx) {
     return svc.bucket->read_bucket_entrypoint_info(ctx,
                                                    RGWSI_Bucket::get_entrypoint_meta_key(bucket),
@@ -3171,6 +3182,17 @@ int RGWBucketCtl::store_bucket_entrypoint_info(const rgw_bucket& bucket,
                                                optional_yield y,
                                                const Bucket::PutParams& params)
 {
+  req_state* s = this->get_cct()->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_entrypoint_info", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_entrypoint_info", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   return bm_handler->call([&](RGWSI_Bucket_EP_Ctx& ctx) {
     return svc.bucket->store_bucket_entrypoint_info(ctx,
                                                     RGWSI_Bucket::get_entrypoint_meta_key(bucket),
@@ -3187,13 +3209,14 @@ int RGWBucketCtl::remove_bucket_entrypoint_info(const rgw_bucket& bucket,
                                                 optional_yield y,
                                                 const Bucket::RemoveParams& params)
 {
-  req_state* s = this->get_ctl().user->get_req_state();
+  // req_state* s = this->get_ctl().user->get_req_state();
+  req_state* s = this->get_cct()->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_entrypoint_info", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_entrypoint_info", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -3312,13 +3335,15 @@ int RGWBucketCtl::store_bucket_instance_info(const rgw_bucket& bucket,
                                             optional_yield y,
                                             const BucketInstance::PutParams& params)
 {
-  req_state* s = this->get_ctl().user->get_req_state();
+  // req_state* s = this->get_ctl().user->get_req_state();
+
+  req_state* s = this->get_cct()->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::store_bucket_instance_info", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::store_bucket_instance_info", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -3333,13 +3358,14 @@ int RGWBucketCtl::remove_bucket_instance_info(const rgw_bucket& bucket,
                                               optional_yield y,
                                               const BucketInstance::RemoveParams& params)
 {
-  req_state* s = this->get_ctl().user->get_req_state();
+  // req_state* s = this->get_ctl().user->get_req_state();
+  req_state* s = this->get_cct()->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_instance_info", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::remove_bucket_instance_info", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -3494,13 +3520,14 @@ int RGWBucketCtl::link_bucket(const rgw_user& user_id,
                               rgw_ep_info *pinfo)
 {
   //(working when changed to new_span in else if) this particular thing fails when runninh, but when trying to debug with gdb it is working fine and after I close the gdb then also it continues to work fine
-  req_state* s = this->get_ctl().user->get_req_state();
+  // req_state* s = this->get_ctl().user->get_req_state();
+  req_state* s = this->get_cct()->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::link_bucket", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::link_bucket", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -3591,13 +3618,14 @@ done_err:
 
 int RGWBucketCtl::unlink_bucket(const rgw_user& user_id, const rgw_bucket& bucket, optional_yield y, bool update_entrypoint)
 {
-  req_state* s = this->get_ctl().user->get_req_state();
+  // req_state* s = this->get_ctl().user->get_req_state();
+  req_state* s = this->get_cct()->get_req_state();
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty())
       span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::unlink_bucket", s->stack_span.top());
-    else if(s)
+    else if(s && s->root_span)
       span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::unlink_bucket", s->root_span);
     ss.set_req_state(s);
     ss.set_span(span);
@@ -3784,22 +3812,24 @@ int RGWBucketCtl::sync_user_stats(const rgw_user& user_id,
                                   const RGWBucketInfo& bucket_info,
                                   RGWBucketEnt* pent)
 {
-  req_state* s = this->get_ctl().user->get_req_state();
-  span_structure ss;
-  #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty())
-      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::sync_user_stats", s->stack_span.top());
-    else if(s)
-      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::sync_user_stats", s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
-  #endif
+  // req_state* s = this->get_ctl().user->get_req_state();
+  req_state* s = get_cct()->get_req_state();
+  // span_structure ss;
+  // #ifdef WITH_JAEGER
+  //   Span span;
+  //   if(s && !s->stack_span.empty())
+  //     span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::sync_user_stats", s->stack_span.top());
+  //   else if(s && s->root_span)
+  //     span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::sync_user_stats", s->root_span);
+  //   ss.set_req_state(s);
+  //   ss.set_span(span);
+  // #endif
   RGWBucketEnt ent;
   if (!pent) {
     pent = &ent;
   }
-  int r = svc.bi->read_stats(bucket_info, pent, null_yield, s);
+  // int r = svc.bi->read_stats(bucket_info, pent, null_yield, s);
+  int r = svc.bi->read_stats(bucket_info, pent, null_yield);
   if (r < 0) {
     ldout(cct, 20) << __func__ << "(): failed to read bucket stats (r=" << r << ")" << dendl;
     return r;

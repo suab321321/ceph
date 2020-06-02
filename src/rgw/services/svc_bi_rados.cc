@@ -167,6 +167,17 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
                                                map<int, string> *bucket_objs,
                                                map<int, string> *bucket_instance_ids)
 {
+  // req_state* s = ctx()->get_req_state();
+  // span_structure ss;
+  // #ifdef WITH_JAEGER
+  //   Span span;
+  //   if(s && !s->stack_span.empty())
+  //     span = tracer_2.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index", s->stack_span.top());
+  //   else if(s && s->root_span)
+  //     span = tracer_2.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index", s->root_span);
+  //   ss.set_req_state(s);
+  //   ss.set_span(span);
+  // #endif
   int shard_id = _shard_id.value_or(-1);
   string bucket_oid_base;
   int ret = open_bucket_index_base(bucket_info, index_pool, &bucket_oid_base);
@@ -181,24 +192,6 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
     get_bucket_instance_ids(bucket_info, shard_id, bucket_instance_ids);
   }
   return 0;
-}
-int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
-                                               std::optional<int> _shard_id,
-                                               RGWSI_RADOS::Pool *index_pool,
-                                               map<int, string> *bucket_objs,
-                                               map<int, string> *bucket_instance_ids, req_state* s)
-{
-span_structure ss;
-  #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty())
-      span = tracer_2.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index", s->stack_span.top());
-    else if(s)
-      span = tracer_2.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index", s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
-  #endif
-  return RGWSI_BucketIndex_RADOS::open_bucket_index(bucket_info, _shard_id, index_pool, bucket_objs, bucket_instance_ids);
 }
 
 int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
@@ -382,6 +375,17 @@ int RGWSI_BucketIndex_RADOS::read_stats(const RGWBucketInfo& bucket_info,
                                         RGWBucketEnt *result,
                                         optional_yield y)
 {
+  // req_state* s = ctx()->get_req_state();
+  // span_structure ss;
+  // #ifdef WITH_JAEGER
+  //   Span span;
+  //   if(s && !s->stack_span.empty())
+  //     span = tracer_2.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::read_stats", s->stack_span.top());
+  //   else if(s && s->root_span)
+  //     span = tracer_2.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::read_stats", s->root_span);
+  //   ss.set_req_state(s);
+  //   ss.set_span(span);
+  // #endif
   vector<rgw_bucket_dir_header> headers;
 
   result->bucket = bucket_info.bucket;
@@ -405,23 +409,6 @@ int RGWSI_BucketIndex_RADOS::read_stats(const RGWBucketInfo& bucket_info,
   result->placement_rule = std::move(bucket_info.placement_rule);
 
   return 0;
-}
-
-int RGWSI_BucketIndex_RADOS::read_stats(const RGWBucketInfo& bucket_info,
-                                        RGWBucketEnt *result,
-                                        optional_yield y, req_state* s)
-{
-  span_structure ss;
-  #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty())
-      span = tracer_2.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::read_stats", s->stack_span.top());
-    else if(s)
-      span = tracer_2.child_span("svc_bi_rados.cc RGWSI_BucketIndex_RADOS::read_stats", s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
-  #endif
-  return RGWSI_BucketIndex_RADOS::read_stats(bucket_info, result, y);
 }
 
 int RGWSI_BucketIndex_RADOS::read_stats(const RGWBucketInfo& bucket_info,

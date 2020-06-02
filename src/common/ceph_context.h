@@ -59,6 +59,7 @@ namespace ceph {
     class Log;
   }
 }
+struct req_state;
 
 #if defined(WITH_SEASTAR) && !defined(WITH_ALIEN)
 namespace crimson::common {
@@ -84,9 +85,12 @@ public:
   crimson::common::PerfCountersCollection& _perf_counters_collection;
   CephContext* get();
   void put();
+  void set_req_state(req_state* _s){ this->s = _s;}
+  req_state* get_req_state()const { return this->s;}
 private:
   std::unique_ptr<CryptoRandom> _crypto_random;
   unsigned nref;
+  req_state* s;
 };
 }
 #else
@@ -117,12 +121,16 @@ public:
   // ref count!
 private:
   std::atomic<unsigned> nref;
+  req_state* s = NULL;
 public:
   CephContext *get() {
     ++nref;
     return this;
   }
   void put();
+
+  void set_req_state(req_state* _s){ this->s = _s;}
+  req_state* get_req_state()const { return this->s;}
 
   ConfigProxy _conf;
   ceph::logging::Log *_log;
