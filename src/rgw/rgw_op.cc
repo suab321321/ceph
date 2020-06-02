@@ -216,17 +216,17 @@ int rgw_op_get_bucket_policy_from_attr(CephContext *cct,
 				       RGWAccessControlPolicy *policy)
 {
   // req_state* s = store->get_req_state();
-  req_state* s = cct->get_req_state();
-  span_structure ss;
-  #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty())
-      span = tracer_2.child_span("rgw_op.cc rgw_op_get_bucket_policy_from_attr", s->stack_span.top());
-    else if(s && s->root_span)
-      span = tracer_2.child_span("rgw_op.cc rgw_op_get_bucket_policy_from_attr", s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
-  #endif
+  // req_state* s = cct->get_req_state();
+  // span_structure ss;
+  // #ifdef WITH_JAEGER
+  //   Span span;
+  //   if(s && !s->stack_span.empty())
+  //     span = tracer_2.child_span("rgw_op.cc rgw_op_get_bucket_policy_from_attr", s->stack_span.top());
+  //   else if(s && s->root_span)
+  //     span = tracer_2.child_span("rgw_op.cc rgw_op_get_bucket_policy_from_attr", s->root_span);
+  //   ss.set_req_state(s);
+  //   ss.set_span(span);
+  // #endif
   map<string, bufferlist>::iterator aiter = bucket_attrs.find(RGW_ATTR_ACL);
 
   if (aiter != bucket_attrs.end()) {
@@ -594,7 +594,9 @@ static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
   }
   store->set_req_state(s);
   s->cct->set_req_state(s);
+  Span span1 = tracer_2.child_span("rgw_op_get_bucket_policy_from_attr", s->stack_span.top());
   int ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, policy);
+  span1->Finish();
   if (ret == -ENOENT) {
       ret = -ERR_NO_SUCH_BUCKET;
   }
@@ -679,7 +681,9 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
     RGWAccessControlPolicy bucket_policy(s->cct);
     store->set_req_state(s);
     s->cct->set_req_state(s);
+    Span span1 = tracer_2.child_span("rgw_op_get_bucket_policy_from_attr", s->stack_span.top());
     ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, &bucket_policy);
+    span1->Finish();
     if (ret < 0) {
       return ret;
     }
@@ -3536,7 +3540,9 @@ void RGWListBuckets::execute()
     }
     rgw::sal::RGWRadosUser user(store, s->user->get_id());
 
-    op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
+    // op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
+    if(s && !s->stack_span.empty())
+      op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets, s->stack_span.top());
 
     if (op_ret < 0) {
       /* hmm.. something wrong here.. the user was authenticated, so it
@@ -4532,9 +4538,10 @@ void RGWCreateBucket::execute()
     s->bucket_info = bucket->get_info();
     s->bucket_attrs = bucket->get_attrs();
     delete bucket;
-
+    Span span1 = tracer_2.child_span("rgw_op_get_bucket_policy_from_attr", s->stack_span.top());
     int r = rgw_op_get_bucket_policy_from_attr(s->cct, store, s->bucket_info,
                                                s->bucket_attrs, &old_policy);
+    span1->Finish();
     if (r >= 0)  {
       if (old_policy.get_owner().get_id().compare(s->user->get_id()) != 0) {
         op_ret = -EEXIST;

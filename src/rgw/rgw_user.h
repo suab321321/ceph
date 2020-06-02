@@ -973,6 +973,16 @@ public:
                    bool need_stats,
                    RGWUserBuckets *buckets,
                    bool *is_truncated,
+                   const Span& parent_span,
+                   uint64_t default_max = 1000);
+
+  int list_buckets(const rgw_user& user,
+                   const string& marker,
+                   const string& end_marker,
+                   uint64_t max,
+                   bool need_stats,
+                   RGWUserBuckets *buckets,
+                   bool *is_truncated,
                    Jager_Tracer&, const Span&,
                    uint64_t default_max = 1000);
 
