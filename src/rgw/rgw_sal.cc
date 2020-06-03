@@ -250,18 +250,18 @@ int RGWRadosBucket::sync_user_stats()
 int RGWRadosBucket::update_container_stats(void)
 {
   // req_state* s = store->get_req_state();
-  req_state* s = this->get_store()->ctx()->get_req_state();
+  // req_state* s = this->get_store()->ctx()->get_req_state();
 
-  span_structure ss;
-  #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty())
-      span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", s->stack_span.top());
-    else if(s && s->root_span)
-      span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
-  #endif
+  // span_structure ss;
+  // #ifdef WITH_JAEGER
+  //   Span span;
+  //   if(s && !s->stack_span.empty())
+  //     span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", s->stack_span.top());
+  //   else if(s && s->root_span)
+  //     span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", s->root_span);
+  //   ss.set_req_state(s);
+  //   ss.set_span(span);
+  // #endif
   int ret;
   map<std::string, RGWBucketEnt> m;
 
@@ -272,6 +272,45 @@ int RGWRadosBucket::update_container_stats(void)
   if (ret < 0)
     return ret;
 
+  map<string, RGWBucketEnt>::iterator iter = m.find(ent.bucket.name);
+  if (iter == m.end())
+    return -EINVAL;
+
+  ent.count = iter->second.count;
+  ent.size = iter->second.size;
+  ent.size_rounded = iter->second.size_rounded;
+  ent.placement_rule = std::move(iter->second.placement_rule);
+
+  return 0;
+}
+
+int RGWRadosBucket::update_container_stats(const Span& parent_span)
+{
+  // req_state* s = store->get_req_state();
+  // req_state* s = this->get_store()->ctx()->get_req_state();
+
+  // span_structure ss;
+  // #ifdef WITH_JAEGER
+  //   Span span;
+  //   if(s && !s->stack_span.empty())
+  //     span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", s->stack_span.top());
+  //   else if(s && s->root_span)
+  //     span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", s->root_span);
+  //   ss.set_req_state(s);
+  //   ss.set_span(span);
+  // #endif
+  int ret;
+  Span span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", parent_span);
+  map<std::string, RGWBucketEnt> m;
+
+  m[ent.bucket.name] = ent;
+  Span span_1 = tracer_2.child_span("rgw_rados.cc RGWRados::update_containers_stats", span);
+  ret = store->getRados()->update_containers_stats(m);
+  if (!ret)
+    return -EEXIST;
+  if (ret < 0)
+    return ret;
+  span_1->Finish();
   map<string, RGWBucketEnt>::iterator iter = m.find(ent.bucket.name);
   if (iter == m.end())
     return -EINVAL;

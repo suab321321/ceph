@@ -1038,10 +1038,20 @@ public:
 			       map<string, bool> *common_prefixes,
 			       bool *is_truncated, Jager_Tracer&, const Span&,
                                optional_yield y);
+      int list_objects_ordered(int64_t max,
+			       vector<rgw_bucket_dir_entry> *result,
+			       map<string, bool> *common_prefixes,
+			       bool *is_truncated, const Span& parent_span,
+                               optional_yield y);
       int list_objects_unordered(int64_t max,
 				 vector<rgw_bucket_dir_entry> *result,
 				 map<string, bool> *common_prefixes,
 				 bool *is_truncated,
+                                 optional_yield y);
+      int list_objects_unordered(int64_t max,
+				 vector<rgw_bucket_dir_entry> *result,
+				 map<string, bool> *common_prefixes,
+				 bool *is_truncated,const Span& parent_span,
                                  optional_yield y);
       int list_objects_unordered(int64_t max,
 				 vector<rgw_bucket_dir_entry> *result,
@@ -1083,6 +1093,20 @@ public:
 	} else {
 	  return list_objects_ordered(max, result, common_prefixes,
 				      is_truncated, y);
+	}
+      }
+  
+  int list_objects(int64_t max,
+		       vector<rgw_bucket_dir_entry> *result,
+		       map<string, bool> *common_prefixes,
+		       bool *is_truncated,
+                       optional_yield y, const Span& parent_span) {
+	if (params.allow_unordered) {
+	  return list_objects_unordered(max, result, common_prefixes,
+					is_truncated, parent_span, y);
+	} else {
+	  return list_objects_ordered(max, result, common_prefixes,
+				      is_truncated, parent_span, y);
 	}
       }
   
@@ -1468,6 +1492,20 @@ public:
 			      rgw_obj_index_key *last_entry,
                               optional_yield y,
 			      check_filter_t force_check_filter = nullptr);
+  int cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
+			      const int shard_id,
+			      const rgw_obj_index_key& start_after,
+			      const string& prefix,
+			      const string& delimiter,
+			      const uint32_t num_entries,
+			      const bool list_versions,
+			      const uint16_t exp_factor, // 0 means ignore
+			      ent_map_t& m,
+			      bool* is_truncated,
+			      bool* cls_filtered,
+			      rgw_obj_index_key *last_entry,
+                              optional_yield y,const Span& parent_span,
+			      check_filter_t force_check_filter = nullptr);
 
   int cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
 			      const int shard_id,
@@ -1495,6 +1533,17 @@ public:
 				bool *is_truncated,
 				rgw_obj_index_key *last_entry,
                                 optional_yield y,
+				check_filter_t = nullptr);
+  int cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
+				int shard_id,
+				const rgw_obj_index_key& start_after,
+				const string& prefix,
+				uint32_t num_entries,
+				bool list_versions,
+				vector<rgw_bucket_dir_entry>& ent_list,
+				bool *is_truncated,
+				rgw_obj_index_key *last_entry,
+                                optional_yield y,const Span& parent_span,
 				check_filter_t = nullptr);
   int cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
 				int shard_id,

@@ -1042,8 +1042,10 @@ int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* 
     RGWBucketInfo source_info;
 
     if (s->bucket_instance_id.empty()) {
+      Span span1 = tracer_2.child_span("RGWRados:: get_bucket_info", s->stack_span.top());
       ret = store->getRados()->get_bucket_info(store->svc(), s->src_tenant_name, s->src_bucket_name, source_info, NULL, s->yield);
     } else {
+      Span span1 = tracer_2.child_span("RGWRados:: get_bucket_instance_info", s->stack_span.top());
       ret = store->getRados()->get_bucket_instance_info(obj_ctx, s->bucket_instance_id, source_info, NULL, NULL, s->yield);
     }
     if (ret == 0) {
@@ -1230,6 +1232,16 @@ int rgw_build_object_policies(rgw::sal::RGWRadosStore *store, struct req_state *
 {
   int ret = 0;
 
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc rgw_build_bucket_policies", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc rgw_build_bucket_policies",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif  
   if (!s->object.empty()) {
     if (!s->bucket_exists) {
       return -ERR_NO_SUCH_BUCKET;
@@ -4082,8 +4094,8 @@ void RGWListBucket::execute()
   list_op.params.end_marker = end_marker;
   list_op.params.list_versions = list_versions;
   list_op.params.allow_unordered = allow_unordered;
-
-  op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
+  // op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
+  op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield,s->stack_span.top());
   if (op_ret >= 0) {
     next_marker = list_op.get_next_marker();
   }
