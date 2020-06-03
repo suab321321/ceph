@@ -37,6 +37,7 @@
 #include "cls/user/cls_user_types.h"
 #include "cls/rgw/cls_rgw_types.h"
 #include "include/rados/librados.hpp"
+#include "include/tracer.h"
 #include "rgw_public_access.h"
 
 namespace ceph {
@@ -288,6 +289,14 @@ struct rgw_err {
   int ret;
   std::string err_code;
   std::string message;
+};
+
+/** span_structure to manage spans of a req_state */
+struct span_structure{
+  req_state* s = nullptr;
+  void set_req_state(req_state* s);
+	void set_span(Span& span);
+	~span_structure();
 };
 
 /* Helper class used for RGWHTTPArgs parsing */
@@ -1632,6 +1641,10 @@ struct req_state : DoutPrefixProvider {
   int bucket_instance_shard_id{-1};
   string redirect_zone_endpoint;
 
+  std::stack<Span> stack_span;
+  span_structure ss;
+  Span root_span;
+
   string redirect;
 
   RGWBucketInfo bucket_info;
@@ -2351,6 +2364,9 @@ extern bool match_policy(std::string_view pattern, std::string_view input,
 
 extern string camelcase_dash_http_attr(const string& orig);
 extern string lowercase_dash_http_attr(const string& orig);
+
+extern Jager_Tracer tracer_2;
+extern std::unordered_map<int, const char*> RGWOpTypeMapper;
 
 void rgw_setup_saved_curl_handles();
 void rgw_release_all_curl_handles();

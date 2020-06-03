@@ -47,6 +47,8 @@ auto make_stack_allocator() {
   return boost::context::protected_fixedsize_stack{512*1024};
 }
 
+std::once_flag tracerInit;
+
 template <typename Stream>
 class StreamIO : public rgw::asio::ClientIO {
   CephContext* const cct;
@@ -138,6 +140,10 @@ void handle_connection(boost::asio::io_context& context,
                        boost::system::error_code& ec,
                        spawn::yield_context yield)
 {
+
+  std::call_once(tracerInit,[](){
+    tracer_2.init_tracer("RGW_Client_Process","/home/abhinav/GSOC/ceph/src/tracerConfig.yaml");
+  });
   // limit header to 4k, since we read it all into a single flat_buffer
   static constexpr size_t header_limit = 4096;
   // don't impose a limit on the body, since we read it in pieces
