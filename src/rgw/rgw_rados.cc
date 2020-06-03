@@ -2875,17 +2875,17 @@ int RGWRados::create_pool(const rgw_pool& pool)
 void RGWRados::create_bucket_id(string *bucket_id)
 {
   // req_state* s = this->get_store()->get_req_state();
-  req_state* s = this->ctx()->get_req_state();
-  span_structure ss;
-  #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty())
-      span = tracer_2.child_span("rgw_rados.cc RGWRados::create_bucket_id", s->stack_span.top());
-    else if(s && s->root_span)
-      span = tracer_2.child_span("RGWRados::create_bucket_id", s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
-  #endif
+  // req_state* s = this->ctx()->get_req_state();
+  // span_structure ss;
+  // #ifdef WITH_JAEGER
+  //   Span span;
+  //   if(s && !s->stack_span.empty())
+  //     span = tracer_2.child_span("rgw_rados.cc RGWRados::create_bucket_id", s->stack_span.top());
+  //   else if(s && s->root_span)
+  //     span = tracer_2.child_span("RGWRados::create_bucket_id", s->root_span);
+  //   ss.set_req_state(s);
+  //   ss.set_span(span);
+  // #endif
   uint64_t iid = instance_id();
   uint64_t bid = next_bucket_id();
   char buf[svc.zone->get_zone_params().get_id().size() + 48];
@@ -2986,6 +2986,125 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
     }
 
     ret = put_linked_bucket_info(info, exclusive, ceph::real_time(), pep_objv, &attrs, true);
+    if (ret == -ECANCELED) {
+      ret = -EEXIST;
+    }
+    if (ret == -EEXIST) {
+       /* we need to reread the info and return it, caller will have a use for it */
+      RGWBucketInfo orig_info;
+      r = get_bucket_info(&svc, bucket.tenant, bucket.name, orig_info, NULL, null_yield, NULL);
+      if (r < 0) {
+        if (r == -ENOENT) {
+          continue;
+        }
+        ldout(cct, 0) << "get_bucket_info returned " << r << dendl;
+        return r;
+      }
+
+      /* only remove it if it's a different bucket instance */
+      if (orig_info.bucket.bucket_id != bucket.bucket_id) {
+	int r = svc.bi->clean_index(info);
+        if (r < 0) {
+	  ldout(cct, 0) << "WARNING: could not remove bucket index (r=" << r << ")" << dendl;
+	}
+        r = ctl.bucket->remove_bucket_instance_info(info.bucket, info, null_yield);
+        if (r < 0) {
+          ldout(cct, 0) << "WARNING: " << __func__ << "(): failed to remove bucket instance info: bucket instance=" << info.bucket.get_key() << ": r=" << r << dendl;
+          /* continue anyway */
+        }
+      }
+
+      info = std::move(orig_info);
+      /* ret == -EEXIST here */
+    }
+    return ret;
+  }
+
+  /* this is highly unlikely */
+  ldout(cct, 0) << "ERROR: could not create bucket, continuously raced with bucket creation and removal" << dendl;
+  return -ENOENT;
+}
+
+int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
+                            const string& zonegroup_id,
+                            const rgw_placement_rule& placement_rule,
+                            const string& swift_ver_location,
+                            const RGWQuotaInfo * pquota_info,
+			    map<std::string, bufferlist>& attrs,
+                            RGWBucketInfo& info,
+                            obj_version *pobjv,
+                            obj_version *pep_objv,
+                            real_time creation_time,
+                            rgw_bucket *pmaster_bucket,
+                            uint32_t *pmaster_num_shards,
+                            const Span& parent_span,
+			    bool exclusive)
+{
+Span span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::create_bucket", parent_span);
+#define MAX_CREATE_RETRIES 20 /* need to bound retries */
+  rgw_placement_rule selected_placement_rule;
+  RGWZonePlacementInfo rule_info;
+
+  for (int i = 0; i < MAX_CREATE_RETRIES; i++) {
+    int ret = 0;
+    // ret = svc.zone->select_bucket_placement(owner, zonegroup_id, placement_rule,
+    //                                         &selected_placement_rule, &rule_info, s);
+    Span span_2 = tracer_2.child_span("svc_zone.cc : RGWSI_Zone::select_bucket_placement", span_1);
+    ret = svc.zone->select_bucket_placement(owner, zonegroup_id, placement_rule,
+                                            &selected_placement_rule, &rule_info);
+    span_2->Finish();
+    if (ret < 0)
+      return ret;
+
+    if (!pmaster_bucket) {
+      Span span_3 = tracer_2.child_span("rgw_rados.cc RGWRados::create_bucket_id", span_1);
+      create_bucket_id(&bucket.marker);
+      bucket.bucket_id = bucket.marker;
+    } else {
+      bucket.marker = pmaster_bucket->marker;
+      bucket.bucket_id = pmaster_bucket->bucket_id;
+    }
+
+    RGWObjVersionTracker& objv_tracker = info.objv_tracker;
+
+    objv_tracker.read_version.clear();
+
+    if (pobjv) {
+      objv_tracker.write_version = *pobjv;
+    } else {
+      objv_tracker.generate_new_write_ver(cct);
+    }
+
+    info.bucket = bucket;
+    info.owner = owner.user_id;
+    info.zonegroup = zonegroup_id;
+    info.placement_rule = selected_placement_rule;
+    info.index_type = rule_info.index_type;
+    info.swift_ver_location = swift_ver_location;
+    info.swift_versioning = (!swift_ver_location.empty());
+    if (pmaster_num_shards) {
+      info.num_shards = *pmaster_num_shards;
+    } else {
+      info.num_shards = bucket_index_max_shards;
+    }
+    info.bucket_index_shard_hash_type = RGWBucketInfo::MOD;
+    info.requester_pays = false;
+    if (real_clock::is_zero(creation_time)) {
+      info.creation_time = ceph::real_clock::now();
+    } else {
+      info.creation_time = creation_time;
+    }
+    if (pquota_info) {
+      info.quota = *pquota_info;
+    }
+    Span span_4 = tracer_2.child_span("svc._bi_rados.cc : RGWSI_BucketIndex_RADOS::init_index", span_1);
+    int r = svc.bi->init_index(info);
+    span_4->Finish();
+    if (r < 0) {
+      return r;
+    }
+
+    ret = put_linked_bucket_info(info, exclusive, ceph::real_time(), pep_objv, &attrs, true, span_1);
     if (ret == -ECANCELED) {
       ret = -EEXIST;
     }
@@ -9256,6 +9375,18 @@ int RGWRados::put_bucket_instance_info(RGWBucketInfo& info, bool exclusive,
 						.set_attrs(pattrs));
 }
 
+int RGWRados::put_bucket_instance_info(RGWBucketInfo& info, bool exclusive,
+                              real_time mtime, map<string, bufferlist> *pattrs, const Span& parent_span)
+{
+  Span span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::put_bucket_instance_info", parent_span);
+  Span span_2 = tracer_2.child_span("rgw_rados.cc : rgw_bucket.cc : store_bucket_instance_info", span_1);
+  return ctl.bucket->store_bucket_instance_info(info.bucket, info, null_yield,
+						RGWBucketCtl::BucketInstance::PutParams()
+						.set_exclusive(exclusive)
+						.set_mtime(mtime)
+						.set_attrs(pattrs));
+}
+
 int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_time mtime, obj_version *pep_objv,
                                      map<string, bufferlist> *pattrs, bool create_entry_point)
 {
@@ -9301,6 +9432,48 @@ int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_t
 						                          .set_exclusive(exclusive)
 									  .set_objv_tracker(&ot)
 									  .set_mtime(mtime));
+  if (ret < 0)
+    return ret;
+
+  return 0;
+}
+
+int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_time mtime, obj_version *pep_objv,
+                                     map<string, bufferlist> *pattrs, bool create_entry_point, const Span& parent_span)
+{
+
+  //(working when changed to new_span in else if) this particular thing fails when runninh, but when trying to debug with gdb it is working fine and after I close the gdb then also it continues to work fine
+  Span span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::put_linked_bucket_info", parent_span);
+  bool create_head = !info.has_instance_obj || create_entry_point;
+
+  int ret = put_bucket_instance_info(info, exclusive, mtime, pattrs, span_1);
+  if (ret < 0) {
+    return ret;
+  }
+
+  if (!create_head)
+    return 0; /* done! */
+
+  RGWBucketEntryPoint entry_point;
+  entry_point.bucket = info.bucket;
+  entry_point.owner = info.owner;
+  entry_point.creation_time = info.creation_time;
+  entry_point.linked = true;
+  RGWObjVersionTracker ot;
+  if (pep_objv && !pep_objv->tag.empty()) {
+    ot.write_version = *pep_objv;
+  } else {
+    ot.generate_new_write_ver(cct);
+    if (pep_objv) {
+      *pep_objv = ot.write_version;
+    }
+  }
+  Span span_2 = tracer_2.child_span("rgw_bucket.cc : RGWBucketCtl::store_bucket_entrypoint_info", span_1);
+  ret = ctl.bucket->store_bucket_entrypoint_info(info.bucket, entry_point, null_yield, RGWBucketCtl::Bucket::PutParams()
+						                          .set_exclusive(exclusive)
+									  .set_objv_tracker(&ot)
+									  .set_mtime(mtime));
+  span_2->Finish();
   if (ret < 0)
     return ret;
 

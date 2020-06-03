@@ -232,6 +232,14 @@ extern int rgw_read_user_buckets(rgw::sal::RGWRadosStore *store,
                                  const string& marker,
                                  const string& end_marker,
                                  uint64_t max,
+                                 const Span& parent_span,
+                                 bool need_stats);
+extern int rgw_read_user_buckets(rgw::sal::RGWRadosStore *store,
+                                 const rgw_user& user_id,
+                                 rgw::sal::RGWBucketList& buckets,
+                                 const string& marker,
+                                 const string& end_marker,
+                                 uint64_t max,
                                  Jager_Tracer&,const Span&,
                                  bool need_stats);
 

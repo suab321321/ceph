@@ -266,17 +266,17 @@ static int get_obj_policy_from_attr(CephContext *cct,
 				    rgw_obj& obj,
                                     optional_yield y)
 {
-  req_state* s = cct->get_req_state();
-  span_structure ss;
-  #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty())
-      span = tracer_2.child_span("rgw_op.cc get_obj_policy_from_attr", s->stack_span.top());
-    else if(s && s->root_span)
-      span = tracer_2.child_span("rgw_op.cc get_obj_policy_from_attr",s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
-  #endif
+  // req_state* s = cct->get_req_state();
+  // span_structure ss;
+  // #ifdef WITH_JAEGER
+  //   Span span;
+  //   if(s && !s->stack_span.empty())
+  //     span = tracer_2.child_span("rgw_op.cc get_obj_policy_from_attr", s->stack_span.top());
+  //   else if(s && s->root_span)
+  //     span = tracer_2.child_span("rgw_op.cc get_obj_policy_from_attr",s->root_span);
+  //   ss.set_req_state(s);
+  //   ss.set_span(span);
+  // #endif
   bufferlist bl;
   int ret = 0;
 
@@ -673,8 +673,10 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
 
   RGWObjectCtx *obj_ctx = static_cast<RGWObjectCtx *>(s->obj_ctx);
   s->cct->get_req_state();
+  Span span_1 = tracer_2.child_span("rgw_op.cc : get_obj_policy_from_attr", s->stack_span.top());
   int ret = get_obj_policy_from_attr(s->cct, store, *obj_ctx,
                                      bucket_info, bucket_attrs, acl, storage_class, obj, s->yield);
+  span_1->Finish();
   if (ret == -ENOENT) {
     /* object does not exist checking the bucket's ACL to make sure
        that we send a proper error code */
@@ -4192,7 +4194,7 @@ int RGWCreateBucket::verify_permission()
     rgw::sal::RGWBucketList buckets;
     string marker;
     op_ret = rgw_read_user_buckets(store, s->user->get_id(), buckets,
-				   marker, string(), s->user->get_max_buckets(),
+				   marker, string(), s->user->get_max_buckets(), s->stack_span.top(),
 				   false);
     if (op_ret < 0) {
       return op_ret;
@@ -4539,7 +4541,9 @@ void RGWCreateBucket::execute()
   s->bucket.tenant = s->bucket_tenant;
   s->bucket.name = s->bucket_name;
   rgw::sal::RGWBucket* bucket = NULL;
+  Span span_1 = tracer_2.child_span("rgw_sal.cc : RGWRadosStore::get_bucket", s->stack_span.top());
   op_ret = store->get_bucket(*s->user, s->bucket, &bucket);
+  span_1->Finish();
   if (op_ret < 0 && op_ret != -ENOENT)
     return;
   s->bucket_exists = (op_ret != -ENOENT);
@@ -4550,10 +4554,10 @@ void RGWCreateBucket::execute()
     s->bucket_info = bucket->get_info();
     s->bucket_attrs = bucket->get_attrs();
     delete bucket;
-    Span span1 = tracer_2.child_span("rgw_op_get_bucket_policy_from_attr", s->stack_span.top());
+    Span span_2 = tracer_2.child_span("rgw_op.cc : rgw_op_get_bucket_policy_from_attr", s->stack_span.top());
     int r = rgw_op_get_bucket_policy_from_attr(s->cct, store, s->bucket_info,
                                                s->bucket_attrs, &old_policy);
-    span1->Finish();
+    span_2->Finish();
     if (r >= 0)  {
       if (old_policy.get_owner().get_id().compare(s->user->get_id()) != 0) {
         op_ret = -EEXIST;
@@ -4605,10 +4609,12 @@ void RGWCreateBucket::execute()
     rgw_bucket bucket;
     bucket.tenant = s->bucket_tenant;
     bucket.name = s->bucket_name;
+    Span span_3 = tracer_2.child_span("svc_zone.cc : RGWSI_Zone::select_bucket_placement", s->stack_span.top());
     op_ret = store->svc()->zone->select_bucket_placement(s->user->get_info(),
 					    zonegroup_id,
 					    placement_rule,
 					    &selected_placement_rule, nullptr);
+    span_3->Finish();
     if (selected_placement_rule != s->bucket_info.placement_rule) {
       op_ret = -EEXIST;
       return;
@@ -4667,7 +4673,7 @@ void RGWCreateBucket::execute()
                                 placement_rule, s->bucket_info.swift_ver_location,
                                 pquota_info, attrs,
                                 info, pobjv, &ep_objv, creation_time,
-                                pmaster_bucket, pmaster_num_shards, true);
+                                pmaster_bucket, pmaster_num_shards, s->stack_span.top(),true);
   /* continue if EEXIST and create_bucket will fail below.  this way we can
    * recover from a partial create by retrying it. */
   ldpp_dout(this, 20) << "rgw_create_bucket returned ret=" << op_ret << " bucket=" << s->bucket << dendl;
@@ -4690,9 +4696,10 @@ void RGWCreateBucket::execute()
     }
     s->bucket = info.bucket;
   }
-
+  Span span_4 = tracer_2.child_span("rgw_bucket.cc : RGWBucketCtl::link_bucket", s->stack_span.top());
   op_ret = store->ctl()->bucket->link_bucket(s->user->get_id(), s->bucket,
                                           info.creation_time, s->yield, false);
+  span_4->Finish();
   if (op_ret && !existed && op_ret != -EEXIST) {
     /* if it exists (or previously existed), don't remove it! */
     op_ret = store->ctl()->bucket->unlink_bucket(s->user->get_id(), s->bucket, s->yield);

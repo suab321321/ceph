@@ -692,6 +692,19 @@ public:
                             obj_version *pep_objv,
                             ceph::real_time creation_time,
                             rgw_bucket *master_bucket,
+                            uint32_t *master_num_shards,const Span& parent_span,
+                            bool exclusive = true);
+  int create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
+                            const string& zonegroup_id,
+                            const rgw_placement_rule& placement_rule,
+                            const string& swift_ver_location,
+                            const RGWQuotaInfo * pquota_info,
+                            map<std::string,bufferlist>& attrs,
+                            RGWBucketInfo& bucket_info,
+                            obj_version *pobjv,
+                            obj_version *pep_objv,
+                            ceph::real_time creation_time,
+                            rgw_bucket *master_bucket,
                             uint32_t *master_num_shards,
                             Jager_Tracer&, const Span&,
                             bool exclusive = true);
@@ -1439,6 +1452,7 @@ public:
   int get_bucket_stats_async(RGWBucketInfo& bucket_info, int shard_id, RGWGetBucketStats_CB *cb);
 
   int put_bucket_instance_info(RGWBucketInfo& info, bool exclusive, ceph::real_time mtime, map<string, bufferlist> *pattrs);
+  int put_bucket_instance_info(RGWBucketInfo& info, bool exclusive, ceph::real_time mtime, map<string, bufferlist> *pattrs, const Span& parent_span);
   /* xxx dang obj_ctx -> svc */
   int get_bucket_instance_info(RGWSysObjectCtx& obj_ctx, const string& meta_key, RGWBucketInfo& info, ceph::real_time *pmtime, map<string, bufferlist> *pattrs, optional_yield y);
   int get_bucket_instance_info(RGWSysObjectCtx& obj_ctx, const rgw_bucket& bucket, RGWBucketInfo& info, ceph::real_time *pmtime, map<string, bufferlist> *pattrs, optional_yield y);
@@ -1460,6 +1474,8 @@ public:
 
   int put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, ceph::real_time mtime, obj_version *pep_objv,
 			     map<string, bufferlist> *pattrs, bool create_entry_point);
+  int put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, ceph::real_time mtime, obj_version *pep_objv,
+			     map<string, bufferlist> *pattrs, bool create_entry_point, const Span& parent_span);
   int put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, ceph::real_time mtime, obj_version *pep_objv,
 			     map<string, bufferlist> *pattrs, bool create_entry_point, Jager_Tracer&, const Span&);
 
