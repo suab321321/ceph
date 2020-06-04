@@ -225,6 +225,36 @@ int RGWRadosBucket::update_container_stats(void)
   return 0;
 }
 
+int RGWRadosBucket::update_container_stats(const Span& parent_span)
+{
+  Span span_1 = tracer_2.child_span("rgw_bucket.cc : RGWRadosBucket::update_container_stats", parent_span);
+  int ret;
+  map<std::string, RGWBucketEnt> m;
+
+  m[ent.bucket.name] = ent;
+  #ifdef WITH_JAEGER
+    Span span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::update_containers_stats", span_1);
+    ret = store->getRados()->update_containers_stats(m);
+  #else
+    ret = store->getRados()->update_containers_stats(m);
+  #endif
+  if (!ret)
+    return -EEXIST;
+  if (ret < 0)
+    return ret;
+
+  map<string, RGWBucketEnt>::iterator iter = m.find(ent.bucket.name);
+  if (iter == m.end())
+    return -EINVAL;
+
+  ent.count = iter->second.count;
+  ent.size = iter->second.size;
+  ent.size_rounded = iter->second.size_rounded;
+  ent.placement_rule = std::move(iter->second.placement_rule);
+
+  return 0;
+}
+
 int RGWRadosBucket::check_bucket_shards(void)
 {
       return store->getRados()->check_bucket_shards(info, ent.bucket, get_count());
