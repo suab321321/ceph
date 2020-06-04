@@ -1735,6 +1735,23 @@ int RGWRados::Bucket::List::list_objects_ordered(
   bool *is_truncated,
   optional_yield y)
 {
+  req_state* s = target->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Bucket::List::list_objects_ordered", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Bucket::List::list_objects_ordered",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+
+  #endif
+
   RGWRados *store = target->get_store();
   CephContext *cct = store->ctx();
   int shard_id = target->get_shard_id();
@@ -1797,21 +1814,41 @@ int RGWRados::Bucket::List::list_objects_ordered(
 
     ent_map_t ent_map;
     ent_map.reserve(read_ahead);
-    int r = store->cls_bucket_list_ordered(target->get_bucket_info(),
-					   shard_id,
-					   cur_marker,
-					   cur_prefix,
-					   params.delim,
-					   read_ahead + 1 - count,
-					   params.list_versions,
-					   attempt,
-					   ent_map,
-					   &truncated,
-					   &cls_filtered,
-					   &cur_marker,
-                                           y);
-    if (r < 0) {
-      return r;
+    int r;
+    #ifdef WITH_JAEGER
+      Span span_1;
+      if(s && !s->stack_span.empty())
+         span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::cls_bucket_list_ordered", s->stack_span.top());
+      r = store->cls_bucket_list_ordered(target->get_bucket_info(),
+              shard_id,
+              cur_marker,
+              cur_prefix,
+              params.delim,
+              read_ahead + 1 - count,
+              params.list_versions,
+              attempt,
+              ent_map,
+              &truncated,
+              &cls_filtered,
+              &cur_marker,
+                                            y);
+      #else
+        r = store->cls_bucket_list_ordered(target->get_bucket_info(),
+              shard_id,
+              cur_marker,
+              cur_prefix,
+              params.delim,
+              read_ahead + 1 - count,
+              params.list_versions,
+              attempt,
+              ent_map,
+              &truncated,
+              &cls_filtered,
+              &cur_marker,
+                                            y);
+      #endif
+      if (r < 0) {
+        return r;
     }
 
     for (auto eiter = ent_map.begin(); eiter != ent_map.end(); ++eiter) {
@@ -2015,6 +2052,22 @@ int RGWRados::Bucket::List::list_objects_unordered(int64_t max_p,
 						   bool *is_truncated,
                                                    optional_yield y)
 {
+  req_state* s = target->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Bucket::List::list_objects_ordered", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Bucket::List::list_objects_ordered",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
+
   RGWRados *store = target->get_store();
   CephContext *cct = store->ctx();
   int shard_id = target->get_shard_id();
@@ -2055,17 +2108,33 @@ int RGWRados::Bucket::List::list_objects_unordered(int64_t max_p,
   while (truncated && count <= max) {
     std::vector<rgw_bucket_dir_entry> ent_list;
     ent_list.reserve(read_ahead);
-
-    int r = store->cls_bucket_list_unordered(target->get_bucket_info(),
-					     shard_id,
-					     cur_marker,
-					     cur_prefix,
-					     read_ahead,
-					     params.list_versions,
-					     ent_list,
-					     &truncated,
-					     &cur_marker,
-                                             y);
+    int r;
+    #ifdef WITH_JAEGER
+      Span span_1;
+      if(s && !s->stack_span.empty())
+        span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::cls_bucket_list_unordered", s->stack_span.top());
+      r = store->cls_bucket_list_unordered(target->get_bucket_info(),
+                shard_id,
+                cur_marker,
+                cur_prefix,
+                read_ahead,
+                params.list_versions,
+                ent_list,
+                &truncated,
+                &cur_marker,
+                                              y);
+    #else
+      r = store->cls_bucket_list_unordered(target->get_bucket_info(),
+                shard_id,
+                cur_marker,
+                cur_prefix,
+                read_ahead,
+                params.list_versions,
+                ent_list,
+                &truncated,
+                &cur_marker,
+                                              y);
+    #endif
     if (r < 0)
       return r;
 

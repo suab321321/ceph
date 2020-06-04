@@ -2183,10 +2183,10 @@ void span_structure::set_span(Span& span){
 }
 void span_structure::set_req_state(req_state* s){
   this->s = s;
-  // mut1.unlock();
+  this->is_inserted = true;
 }
 span_structure::~span_structure(){
-  if(this->s!=nullptr && !this->s->stack_span.empty())
+  if(this->s!=nullptr && !this->s->stack_span.empty() && this->is_inserted)
 			this->s->stack_span.pop();
 }
 

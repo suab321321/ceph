@@ -1443,12 +1443,17 @@ int RGWOp::init_quota()
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(s && !s->stack_span.empty())
+    if(s && !s->stack_span.empty()){
       span = tracer_2.child_span("rgw_op.cc RGWOp::init_quota", s->stack_span.top());
-    else if(s && s->root_span)
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
       span = tracer_2.child_span("rgw_op.cc RGWOp::init_quota",s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    
   #endif
   /* no quota enforcement for system requests */
   if (s->system_request)
@@ -1466,6 +1471,9 @@ int RGWOp::init_quota()
 
   rgw::sal::RGWRadosUser owner_user(store);
   rgw::sal::RGWUser *user;
+  #ifdef WITH_JAEGER
+    user->set_req_state(s);
+  #endif
 
   if (s->user->get_id() == s->bucket_owner.get_id()) {
     user = s->user;
@@ -2534,10 +2542,9 @@ void RGWListBuckets::execute()
 
     rgw::sal::RGWRadosUser user(store, s->user->get_id());
     #ifdef WITH_JAEGER
-      op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets, s->stack_span.top());
-    #else
-      op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
+      user.set_req_state(s);
     #endif
+    op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
 
     if (op_ret < 0) {
       /* hmm.. something wrong here.. the user was authenticated, so it
@@ -3039,17 +3046,16 @@ void RGWListBucket::execute()
   }
 
   if (need_container_stats()) {
-    #ifdef WITH_JAEGER
-      op_ret = bucket->update_container_stats(s->stack_span.top());
-    #else
       op_ret = bucket->update_container_stats();
-    #endif
   }
 
   RGWRados::Bucket target(store->getRados(), s->bucket_info);
   if (shard_id >= 0) {
     target.set_shard_id(shard_id);
   }
+  #ifdef WITH_JAEGER
+    target.set_req_state(s);
+  #endif
   RGWRados::Bucket::List list_op(&target);
 
   list_op.params.prefix = prefix;
@@ -3058,16 +3064,8 @@ void RGWListBucket::execute()
   list_op.params.end_marker = end_marker;
   list_op.params.list_versions = list_versions;
   list_op.params.allow_unordered = allow_unordered;
-  #ifdef WITH_JAEGER
-    Span span_1;
-    if(allow_unordered)
-      span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Bucket::List::list_objects_unordered", s->stack_span.top());
-    else
-      span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Bucket::List::list_objects_ordered", s->stack_span.top());
-    op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
-  #else
-    op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
-  #endif
+
+  op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
   if (op_ret >= 0) {
     next_marker = list_op.get_next_marker();
   }
