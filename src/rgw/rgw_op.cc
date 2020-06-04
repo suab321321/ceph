@@ -561,6 +561,16 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
  */
 int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc rgw_build_bucket_policies", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc rgw_build_bucket_policies",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   int ret = 0;
   rgw_obj_key obj;
   auto obj_ctx = store->svc()->sysobj->init_obj_ctx();
@@ -593,9 +603,19 @@ int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* 
     RGWBucketInfo source_info;
 
     if (s->bucket_instance_id.empty()) {
-      ret = store->getRados()->get_bucket_info(store->svc(), s->src_tenant_name, s->src_bucket_name, source_info, NULL, s->yield);
+      #ifdef WITH_JAEGER
+        Span span1 = tracer_2.child_span("rgw_rados.cc : RGWRados:: get_bucket_info", s->stack_span.top());
+        ret = store->getRados()->get_bucket_info(store->svc(), s->src_tenant_name, s->src_bucket_name, source_info, NULL, s->yield);
+      #else
+        ret = store->getRados()->get_bucket_info(store->svc(), s->src_tenant_name, s->src_bucket_name, source_info, NULL, s->yield);
+      #endif
     } else {
-      ret = store->getRados()->get_bucket_instance_info(obj_ctx, s->bucket_instance_id, source_info, NULL, NULL, s->yield);
+      #ifdef WITH_JAEGER
+        Span span1 = tracer_2.child_span("rgw_rados.cc : RGWRados:: get_bucket_instance_info", s->stack_span.top());
+        ret = store->getRados()->get_bucket_instance_info(obj_ctx, s->bucket_instance_id, source_info, NULL, NULL, s->yield);
+      #else
+        ret = store->getRados()->get_bucket_instance_info(obj_ctx, s->bucket_instance_id, source_info, NULL, NULL, s->yield);
+      #endif
     }
     if (ret == 0) {
       string& zonegroup = source_info.zonegroup;
@@ -775,6 +795,16 @@ int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* 
 int rgw_build_object_policies(rgw::sal::RGWRadosStore *store, struct req_state *s,
 			      bool prefetch_data)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc rgw_build_object_policies", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc rgw_build_object_policies",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif  
   int ret = 0;
 
   if (!s->object.empty()) {
@@ -1017,6 +1047,16 @@ void populate_metadata_in_request(req_state* s, std::map<std::string, bufferlist
 
 int RGWOp::verify_op_mask()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWOp::verify_op_mask", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWOp::verify_op_mask", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   uint32_t required_mask = op_mask();
 
   ldpp_dout(this, 20) << "required_mask= " << required_mask
@@ -1385,6 +1425,16 @@ int RGWOp::do_aws4_auth_completion()
 
 int RGWOp::init_quota()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWOp::init_quota", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWOp::init_quota",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   /* no quota enforcement for system requests */
   if (s->system_request)
     return 0;
@@ -2398,6 +2448,16 @@ int RGWGetObj::init_common()
 
 int RGWListBuckets::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWListBuckets::verify_permission", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWListBuckets::verify_permission",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   rgw::Partition partition = rgw::Partition::aws;
   rgw::Service service = rgw::Service::s3;
 
@@ -2419,6 +2479,16 @@ int RGWGetUsage::verify_permission()
 
 void RGWListBuckets::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWListBuckets::execute", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWListBuckets::execute", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   bool done;
   bool started = false;
   uint64_t total_count = 0;
@@ -2448,8 +2518,11 @@ void RGWListBuckets::execute()
     }
 
     rgw::sal::RGWRadosUser user(store, s->user->get_id());
-
-    op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
+    #ifdef WITH_JAEGER
+      op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets, s->stack_span.top());
+    #else
+      op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
+    #endif
 
     if (op_ret < 0) {
       /* hmm.. something wrong here.. the user was authenticated, so it
