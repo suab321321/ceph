@@ -40,6 +40,18 @@
 
 int RGWListBuckets_ObjStore_SWIFT::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway", "swift");
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::get_params", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::get_params",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   prefix = s->info.args.get("prefix");
   marker = s->info.args.get("marker");
   end_marker = s->info.args.get("end_marker");
@@ -162,6 +174,16 @@ static void dump_account_metadata(struct req_state * const s,
 
 void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_begin", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_begin",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (op_ret) {
     set_req_state_err(s, op_ret);
   } else if (!has_buckets && s->format == RGW_FORMAT_PLAIN) {
@@ -193,6 +215,16 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets)
 
 void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList&& buckets)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (wants_reversed) {
     /* Just store in the reversal buffer. Its content will be handled later,
      * in send_response_end(). */
@@ -204,6 +236,18 @@ void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList
 
 void RGWListBuckets_ObjStore_SWIFT::send_response_data(rgw::sal::RGWBucketList& buckets)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_data", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_data",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (! sent_data) {
     return;
   }

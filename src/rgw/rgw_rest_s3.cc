@@ -1244,6 +1244,18 @@ void RGWDeleteBucketReplication_ObjStore_S3::send_response()
 
 void RGWListBuckets_ObjStore_S3::send_response_begin(bool has_buckets)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway","s3");
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response_begin", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response_begin",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -1262,6 +1274,18 @@ void RGWListBuckets_ObjStore_S3::send_response_begin(bool has_buckets)
 
 void RGWListBuckets_ObjStore_S3::send_response_data(rgw::sal::RGWBucketList& buckets)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success",true);
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response_data", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response_data",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (!sent_data)
     return;
 

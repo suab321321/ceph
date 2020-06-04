@@ -1122,6 +1122,16 @@ bool verify_user_permission(const DoutPrefixProvider* dpp,
                             const rgw::ARN& res,
                             const uint64_t op)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_common.cc verify_user_permission", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_common.cc verify_user_permission",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   perm_state_from_req_state ps(s);
   return verify_user_permission(dpp, &ps, s->user_acl.get(), s->iam_user_policies, res, op);
 }
