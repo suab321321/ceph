@@ -153,6 +153,16 @@ public:
   int get_ret() const { return op_ret; }
 
   virtual int init_processing() {
+    span_structure ss;
+    #ifdef WITH_JAEGER
+      Span span;
+      if(s && !s->stack_span.empty())
+        span = tracer_2.child_span("rgw_op.h init_processing", s->stack_span.top());
+      else
+        span = tracer_2.child_span("rgw_op.h init_processing", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    #endif
     if (dialect_handler->supports_quota()) {
       op_ret = init_quota();
       if (op_ret < 0)
