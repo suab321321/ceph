@@ -338,6 +338,18 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_end()
 
 int RGWListBucket_ObjStore_SWIFT::get_params()
 {
+  span_structure ss;
+    #ifdef WITH_JAEGER
+      if(s && s->root_span)
+        s->root_span->SetTag("gatway", "swift");
+      Span span;
+      if(s && !s->stack_span.empty())
+        span = tracer_2.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::get_params", s->stack_span.top());
+      else
+        span = tracer_2.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::get_params", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    #endif
   prefix = s->info.args.get("prefix");
   marker = s->info.args.get("marker");
   end_marker = s->info.args.get("end_marker");
@@ -389,6 +401,18 @@ static void dump_container_metadata(struct req_state *,
 
 void RGWListBucket_ObjStore_SWIFT::send_response()
 {
+  span_structure ss;
+    #ifdef WITH_JAEGER
+      if(s && s->root_span)
+        s->root_span->SetTag("success", true);
+      Span span;
+      if(s && !s->stack_span.empty())
+        span = tracer_2.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::send_response", s->stack_span.top());
+      else
+        span = tracer_2.child_span("rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::send_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    #endif
   vector<rgw_bucket_dir_entry>::iterator iter = objs.begin();
   map<string, bool>::iterator pref_iter = common_prefixes.begin();
 
