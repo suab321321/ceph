@@ -471,6 +471,16 @@ static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
                               RGWAccessControlPolicy *policy,
                               rgw_bucket& bucket)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc read_bucket_policy", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc read_bucket_policy",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (!s->system_request && bucket_info.flags & BUCKET_SUSPENDED) {
     ldpp_dout(s, 0) << "NOTICE: bucket " << bucket_info.bucket.name
         << " is suspended" << dendl;
@@ -480,8 +490,13 @@ static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
   if (bucket.name.empty()) {
     return 0;
   }
-
-  int ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, policy);
+  int ret;
+  #ifdef WITH_JAEGER
+    Span span_1 = tracer_2.child_span("rgw_op_get_bucket_policy_from_attr", s->stack_span.top());
+    ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, policy);
+  #else
+    ret = rgw_op_get_bucket_policy_from_attr(s->cct, store, bucket_info, bucket_attrs, policy);
+  #endif
   if (ret == -ENOENT) {
       ret = -ERR_NO_SUCH_BUCKET;
   }
@@ -2950,6 +2965,16 @@ void RGWStatBucket::execute()
 
 int RGWListBucket::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWListBucket::verify_permission", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWListBucket::verify_permission",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   op_ret = get_params();
   if (op_ret < 0) {
     return op_ret;
@@ -2991,6 +3016,16 @@ void RGWListBucket::pre_exec()
 
 void RGWListBucket::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_op.cc RGWListBucket::execute", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_op.cc RGWListBucket::execute",s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
     return;
@@ -3004,7 +3039,11 @@ void RGWListBucket::execute()
   }
 
   if (need_container_stats()) {
-    op_ret = bucket->update_container_stats();
+    #ifdef WITH_JAEGER
+      op_ret = bucket->update_container_stats(s->stack_span.top());
+    #else
+      op_ret = bucket->update_container_stats();
+    #endif
   }
 
   RGWRados::Bucket target(store->getRados(), s->bucket_info);
@@ -3019,8 +3058,16 @@ void RGWListBucket::execute()
   list_op.params.end_marker = end_marker;
   list_op.params.list_versions = list_versions;
   list_op.params.allow_unordered = allow_unordered;
-
-  op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
+  #ifdef WITH_JAEGER
+    Span span_1;
+    if(allow_unordered)
+      span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Bucket::List::list_objects_unordered", s->stack_span.top());
+    else
+      span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Bucket::List::list_objects_ordered", s->stack_span.top());
+    op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
+  #else
+    op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
+  #endif
   if (op_ret >= 0) {
     next_marker = list_op.get_next_marker();
   }
