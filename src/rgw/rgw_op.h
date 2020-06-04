@@ -868,6 +868,9 @@ public:
   void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *h) override {
     RGWOp::init(store, s, h);
     bucket = new rgw::sal::RGWRadosBucket(store, *s->user, s->bucket);
+    #ifdef WITH_JAEGER
+      bucket->set_req_state(s);
+    #endif
   }
   virtual int get_params() = 0;
   void send_response() override = 0;

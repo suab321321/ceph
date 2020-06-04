@@ -32,33 +32,35 @@ namespace rgw::sal {
 int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
 			       uint64_t max, bool need_stats, RGWBucketList &buckets)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_sal.cc RGWRadosUser::list_buckets", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_sal.cc RGWRadosUser::list_buckets",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   RGWUserBuckets ulist;
   bool is_truncated = false;
   int ret;
 
-  ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
-					 need_stats, &ulist, &is_truncated);
-  if (ret < 0)
-    return ret;
+  #ifdef WITH_JAEGER
+    Span span_1;
+    if(s && !s->stack_span.empty())
+      span_1 = tracer_2.child_span("rgw_user.cc : RGWUserCtl::list_buckets", s->stack_span.top());
+    ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
+            need_stats, &ulist, &is_truncated);
+    #else
+       ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
+            need_stats, &ulist, &is_truncated);
+  #endif
 
-  buckets.set_truncated(is_truncated);
-  for (const auto& ent : ulist.get_buckets()) {
-    RGWRadosBucket *rb = new RGWRadosBucket(this->store, *this, ent.second);
-    buckets.add(rb);
-  }
-
-  return 0;
-}
-
-int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
-			       uint64_t max, bool need_stats, RGWBucketList &buckets, const Span& parent_span)
-{
-  Span span_1 = tracer_2.child_span("rgw_sal.cc RGWRadosUser::list_buckets", parent_span);
-  RGWUserBuckets ulist;
-  bool is_truncated = false;
-  int ret;
-  ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
-					 need_stats, &ulist, &is_truncated, span_1);
   if (ret < 0)
     return ret;
 
@@ -203,37 +205,28 @@ int RGWRadosBucket::sync_user_stats()
 
 int RGWRadosBucket::update_container_stats(void)
 {
-  int ret;
-  map<std::string, RGWBucketEnt> m;
-
-  m[ent.bucket.name] = ent;
-  ret = store->getRados()->update_containers_stats(m);
-  if (!ret)
-    return -EEXIST;
-  if (ret < 0)
-    return ret;
-
-  map<string, RGWBucketEnt>::iterator iter = m.find(ent.bucket.name);
-  if (iter == m.end())
-    return -EINVAL;
-
-  ent.count = iter->second.count;
-  ent.size = iter->second.size;
-  ent.size_rounded = iter->second.size_rounded;
-  ent.placement_rule = std::move(iter->second.placement_rule);
-
-  return 0;
-}
-
-int RGWRadosBucket::update_container_stats(const Span& parent_span)
-{
-  Span span_1 = tracer_2.child_span("rgw_bucket.cc : RGWRadosBucket::update_container_stats", parent_span);
-  int ret;
-  map<std::string, RGWBucketEnt> m;
-
-  m[ent.bucket.name] = ent;
+  span_structure ss;
   #ifdef WITH_JAEGER
-    Span span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::update_containers_stats", span_1);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
+  int ret;
+  map<std::string, RGWBucketEnt> m;
+
+  m[ent.bucket.name] = ent;
+   #ifdef WITH_JAEGER
+    Span span_2;
+   if(s && !s->stack_span.top())
+      span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::update_containers_stats", s->stack_span.top());
     ret = store->getRados()->update_containers_stats(m);
   #else
     ret = store->getRados()->update_containers_stats(m);

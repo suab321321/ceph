@@ -47,6 +47,7 @@ class RGWStore {
 class RGWUser {
   protected:
     RGWUserInfo info;
+    req_state* s = nullptr;
 
   public:
     RGWUser() : info() {}
@@ -65,7 +66,8 @@ class RGWUser {
     uint32_t get_type() const { return info.type; }
     int32_t get_max_buckets() const { return info.max_buckets; }
     const RGWUserCaps& get_caps() const { return info.caps; }
-
+    void set_req_state(req_state* _s) { this->s = _s; }
+    req_state* get_req_state()const { return this->s; }
 
     /* xxx dang temporary; will be removed when User is complete */
     rgw_user& get_user() { return info.user_id; }
@@ -78,7 +80,7 @@ class RGWBucket {
     RGWBucketInfo info;
     RGWUser *owner;
     RGWAttrs attrs;
-
+    req_state* s = nullptr;
   public:
     RGWBucket() : ent(), owner(nullptr), attrs() {}
     RGWBucket(const rgw_bucket& _b) : ent(), attrs() { ent.bucket = _b; }
@@ -102,7 +104,6 @@ class RGWBucket {
     virtual int read_bucket_stats(optional_yield y) = 0;
     virtual int sync_user_stats() = 0;
     virtual int update_container_stats(void) = 0;
-    virtual int update_container_stats(const Span& parent_span) = 0;
     virtual int check_bucket_shards(void) = 0;
     virtual int link(RGWUser* new_user, optional_yield y) = 0;
     virtual int unlink(RGWUser* new_user, optional_yield y) = 0;
@@ -118,7 +119,8 @@ class RGWBucket {
     uint64_t get_count() const { return ent.count; }
     rgw_placement_rule get_placement_rule() const { return ent.placement_rule; }
     ceph::real_time& get_creation_time() { return ent.creation_time; };
-
+    void set_req_state(req_state* _s) { this->s = _s; }
+    req_state* get_req_state(req_state* _s)const {return this->s; }
     void convert(cls_user_bucket_entry *b) const {
       ent.convert(b);
     }
@@ -191,8 +193,7 @@ class RGWRadosUser : public RGWUser {
 
     int list_buckets(const string& marker, const string& end_marker,
 				uint64_t max, bool need_stats, RGWBucketList& buckets);
-    int list_buckets(const string& marker, const string& end_marker,
-				uint64_t max, bool need_stats, RGWBucketList& buckets, const Span& parent_span);
+
     RGWBucket* add_bucket(rgw_bucket& bucket, ceph::real_time creation_time);
 
     /* Placeholders */
@@ -277,7 +278,6 @@ class RGWRadosBucket : public RGWBucket {
     virtual int read_bucket_stats(optional_yield y) override;
     virtual int sync_user_stats() override;
     virtual int update_container_stats(void) override;
-    virtual int update_container_stats(const Span& parent_span) override;
     virtual int check_bucket_shards(void) override;
     virtual int link(RGWUser* new_user, optional_yield y) override;
     virtual int unlink(RGWUser* new_user, optional_yield y) override;
