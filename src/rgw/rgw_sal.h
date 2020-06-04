@@ -190,6 +190,8 @@ class RGWRadosUser : public RGWUser {
 
     int list_buckets(const string& marker, const string& end_marker,
 				uint64_t max, bool need_stats, RGWBucketList& buckets);
+    int list_buckets(const string& marker, const string& end_marker,
+				uint64_t max, bool need_stats, RGWBucketList& buckets, const Span& parent_span);
     RGWBucket* add_bucket(rgw_bucket& bucket, ceph::real_time creation_time);
 
     /* Placeholders */
