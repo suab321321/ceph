@@ -22,6 +22,7 @@
 
 #include "common/ceph_crypto.h"
 #include "common/random_string.h"
+#include "common/tracer.h"
 #include "rgw_acl.h"
 #include "rgw_bucket_layout.h"
 #include "rgw_cors.h"
@@ -37,7 +38,6 @@
 #include "cls/user/cls_user_types.h"
 #include "cls/rgw/cls_rgw_types.h"
 #include "include/rados/librados.hpp"
-#include "include/tracer.h"
 #include "rgw_public_access.h"
 
 namespace ceph {
@@ -294,6 +294,7 @@ struct rgw_err {
 /** span_structure to manage spans of a req_state */
 struct span_structure{
   req_state* s = nullptr;
+  bool is_inserted = false;
   void set_req_state(req_state* s);
 	void set_span(Span& span);
 	~span_structure();
