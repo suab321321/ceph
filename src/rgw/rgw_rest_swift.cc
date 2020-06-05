@@ -765,6 +765,18 @@ static int get_swift_versioning_settings(
 
 int RGWCreateBucket_ObjStore_SWIFT::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway","swift");
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::get_params", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::get_params", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   bool has_policy;
   uint32_t policy_rw_mask = 0;
 
@@ -809,6 +821,18 @@ static inline int handle_metadata_errors(req_state* const s, const int op_ret)
 
 void RGWCreateBucket_ObjStore_SWIFT::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::send_response", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::send_response", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   const auto meta_ret = handle_metadata_errors(s, op_ret);
   if (meta_ret != op_ret) {
     op_ret = meta_ret;
