@@ -151,15 +151,32 @@ void rgw_parse_url_bucket(const string &bucket, const string& auth_tenant,
  * Get all the buckets owned by a user and fill up an RGWUserBuckets with them.
  * Returns: 0 on success, -ERR# on failure.
  */
-int rgw_read_user_buckets(rgw::sal::RGWRadosStore * store,
-                          const rgw_user& user_id,
-                          rgw::sal::RGWBucketList& buckets,
-                          const string& marker,
-                          const string& end_marker,
-                          uint64_t max,
-                          bool need_stats)
+
+int rgw_read_user_buckets(rgw::sal::RGWRadosStore *store,
+                                 const rgw_user& user_id,
+                                 rgw::sal::RGWBucketList& buckets,
+                                 const string& marker,
+                                 const string& end_marker,
+                                 uint64_t max,
+                                 bool need_stats)
 {
+  req_state* s = buckets.get_req_state();
   rgw::sal::RGWRadosUser user(store, user_id);
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    user.set_req_state(s);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_bucket.cc rgw_read_user_buckets", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_bucket.cc rgw_read_user_buckets",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   return user.list_buckets(marker, end_marker, max, need_stats, buckets);
 }
 

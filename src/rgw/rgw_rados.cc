@@ -2238,19 +2238,50 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
                             uint32_t *pmaster_num_shards,
 			    bool exclusive)
 {
+req_state* s = info.s;
+span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::create_bucket", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::create_bucket", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
+
 #define MAX_CREATE_RETRIES 20 /* need to bound retries */
   rgw_placement_rule selected_placement_rule;
   RGWZonePlacementInfo rule_info;
 
   for (int i = 0; i < MAX_CREATE_RETRIES; i++) {
     int ret = 0;
-    ret = svc.zone->select_bucket_placement(owner, zonegroup_id, placement_rule,
-                                            &selected_placement_rule, &rule_info);
+    #ifdef WITH_JAEGER
+      Span span_1;
+      if(s && !s->stack_span.empty())
+        span_1 = tracer_2.child_span("svc_zone.cc : RGWSI_Zone::select_bucket_placement", s->stack_span.top());
+      ret = svc.zone->select_bucket_placement(owner, zonegroup_id, placement_rule,
+                                              &selected_placement_rule, &rule_info);
+    #else
+      ret = svc.zone->select_bucket_placement(owner, zonegroup_id, placement_rule,
+                                              &selected_placement_rule, &rule_info);
+    #endif
     if (ret < 0)
       return ret;
 
     if (!pmaster_bucket) {
-      create_bucket_id(&bucket.marker);
+      #ifdef WITH_JAEGER
+        Span span_2;
+        if(s && !s->stack_span.empty())
+          span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::create_bucket_id", s->stack_span.top());
+        create_bucket_id(&bucket.marker);
+      #else
+        create_bucket_id(&bucket.marker);
+      #endif
       bucket.bucket_id = bucket.marker;
     } else {
       bucket.marker = pmaster_bucket->marker;
@@ -2289,8 +2320,15 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
     if (pquota_info) {
       info.quota = *pquota_info;
     }
-
-    int r = svc.bi->init_index(info);
+    int r;
+    #ifdef WITH_JAEGER
+      Span span_2;
+      if(s && !s->stack_span.empty())
+        span_2 = tracer_2.child_span("svc_bi_rados.cc : RGWSI_BucketIndex_RADOS::init_index", s->stack_span.top());
+      r = svc.bi->init_index(info);
+    #else
+      r = svc.bi->init_index(info);
+    #endif
     if (r < 0) {
       return r;
     }
@@ -7781,9 +7819,31 @@ int RGWRados::put_bucket_instance_info(RGWBucketInfo& info, bool exclusive,
 int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_time mtime, obj_version *pep_objv,
                                      map<string, bufferlist> *pattrs, bool create_entry_point)
 {
+req_state* s = info.s;
+span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::put_linked_bucket_info", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::put_linked_bucket_info", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   bool create_head = !info.has_instance_obj || create_entry_point;
-
-  int ret = put_bucket_instance_info(info, exclusive, mtime, pattrs);
+  int ret;
+  #ifdef WITH_JAEGER
+  Span span_1;
+    if(s && !s->stack_span.empty())
+      span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::put_bucket_instance_info", s->stack_span.top());
+    ret = put_bucket_instance_info(info, exclusive, mtime, pattrs);
+  #else
+    ret = put_bucket_instance_info(info, exclusive, mtime, pattrs);
+  #endif
   if (ret < 0) {
     return ret;
   }
@@ -7805,10 +7865,20 @@ int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_t
       *pep_objv = ot.write_version;
     }
   }
-  ret = ctl.bucket->store_bucket_entrypoint_info(info.bucket, entry_point, null_yield, RGWBucketCtl::Bucket::PutParams()
-						                          .set_exclusive(exclusive)
-									  .set_objv_tracker(&ot)
-									  .set_mtime(mtime));
+  #ifdef WITH_JAEGER
+    Span span_2;
+    if(s && !s->stack_span.empty())
+      span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::store_bucket_entrypoint_info", s->stack_span.top());
+    ret = ctl.bucket->store_bucket_entrypoint_info(info.bucket, entry_point, null_yield, RGWBucketCtl::Bucket::PutParams()
+                                        .set_exclusive(exclusive)
+                      .set_objv_tracker(&ot)
+                      .set_mtime(mtime));
+  #else
+    ret = ctl.bucket->store_bucket_entrypoint_info(info.bucket, entry_point, null_yield, RGWBucketCtl::Bucket::PutParams()
+                                        .set_exclusive(exclusive)
+                      .set_objv_tracker(&ot)
+                      .set_mtime(mtime));
+  #endif
   if (ret < 0)
     return ret;
 

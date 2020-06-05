@@ -2258,6 +2258,18 @@ public:
 
 int RGWCreateBucket_ObjStore_S3::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gaetway", "s3");
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCreateBucket_ObjStore_S3::get_params", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCreateBucket_ObjStore_S3::get_params", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   RGWAccessControlPolicy_S3 s3policy(s->cct);
   bool relaxed_names = s->cct->_conf->rgw_relaxed_s3_bucket_names;
 
@@ -2332,6 +2344,18 @@ int RGWCreateBucket_ObjStore_S3::get_params()
 
 void RGWCreateBucket_ObjStore_S3::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCreateBucket_ObjStore_S3::send_response", s->stack_span.top());
+    else if(s && s->root_span)
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCreateBucket_ObjStore_S3::send_response", s->root_span);
+    ss.set_req_state(s);
+    ss.set_span(span);
+  #endif
   if (op_ret == -ERR_BUCKET_EXISTS)
     op_ret = 0;
   if (op_ret)
