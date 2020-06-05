@@ -143,6 +143,7 @@ class RGWBucket {
 class RGWBucketList {
   std::map<std::string, RGWBucket*> buckets;
   bool truncated;
+  req_state* s = nullptr;
 
 public:
   RGWBucketList() : buckets(), truncated(false) {}
@@ -157,7 +158,8 @@ public:
     buckets[bucket->ent.bucket.name] = bucket;
   }
   size_t count() const { return buckets.size(); }
-
+  void set_req_state(req_state* _s) { this->s = _s; }
+  req_state* get_req_state()const { return this->s; }
 };
 
 class RGWObject {

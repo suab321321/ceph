@@ -1133,6 +1133,7 @@ struct RGWBucketInfo {
   bool has_instance_obj{false};
   RGWObjVersionTracker objv_tracker; /* we don't need to serialize this, for runtime tracking */
   RGWQuotaInfo quota;
+  req_state* s = nullptr;
 
   // Represents the number of bucket index object shards:
   //   - value of 0 indicates there is no sharding (this is by default
