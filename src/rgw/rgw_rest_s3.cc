@@ -156,9 +156,9 @@ int RGWGetObj_ObjStore_S3::get_params()
       s->root_span->SetTag("gateway", "s3");
     Span span;
     if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::get_params", s->stack_span.top());
       ss.set_req_state(s);
       ss.set_span(span);
-      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::get_params", s->stack_span.top());
     }
     else if(s && s->root_span){
       span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::get_params",s->root_span);
@@ -187,9 +187,9 @@ int RGWGetObj_ObjStore_S3::send_response_data_error()
       s->root_span->SetTag("success", true);
     Span span;
     if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data_error", s->stack_span.top());
       ss.set_req_state(s);
       ss.set_span(span);
-      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data_error", s->stack_span.top());
     }
     else if(s && s->root_span){
       span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data_error",s->root_span);
@@ -241,9 +241,9 @@ int RGWGetObj_ObjStore_S3::send_response_data(bufferlist& bl, off_t bl_ofs,
       s->root_span->SetTag("success", true);
     Span span;
     if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data", s->stack_span.top());
       ss.set_req_state(s);
       ss.set_span(span);
-      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data", s->stack_span.top());
     }
     else if(s && s->root_span){
       span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data",s->root_span);
@@ -475,6 +475,20 @@ send_data:
 
 int RGWGetObj_ObjStore_S3::get_decrypt_filter(std::unique_ptr<RGWGetObj_Filter> *filter, RGWGetObj_Filter* cb, bufferlist* manifest_bl)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data_error", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data_error",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (skip_decrypt) { // bypass decryption for multisite sync requests
     return 0;
   }
@@ -3345,6 +3359,22 @@ int RGWPostObj_ObjStore_S3::get_encrypt_filter(
 
 int RGWDeleteObj_ObjStore_S3::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway", "s3");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWDeleteObj_ObjStore_S3::get_params", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWDeleteObj_ObjStore_S3::get_params", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   const char *if_unmod = s->info.env->get("HTTP_X_AMZ_DELETE_IF_UNMODIFIED_SINCE");
 
   if (s->system_request) {
@@ -3373,6 +3403,22 @@ int RGWDeleteObj_ObjStore_S3::get_params()
 
 void RGWDeleteObj_ObjStore_S3::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWDeleteObj_ObjStore_S3::send_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWDeleteObj_ObjStore_S3::send_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   int r = op_ret;
   if (r == -ENOENT)
     r = 0;
