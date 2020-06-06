@@ -1882,12 +1882,16 @@ int RGWHandler_REST::read_permissions(RGWOp* op_obj)
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
-    if(s && !s->stack_span.empty())
+    if(s && !s->stack_span.empty()){
       span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::read_permissions", s->stack_span.top());
-    else if(s && s->root_span)
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
       span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::read_permissions", s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
   #endif
   bool only_bucket = false;
 
