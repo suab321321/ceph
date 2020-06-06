@@ -1336,6 +1336,20 @@ static void bulkdelete_respond(const unsigned num_deleted,
 
 int RGWDeleteObj_ObjStore_SWIFT::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   op_ret = RGWDeleteObj_ObjStore::verify_permission();
 
   /* We have to differentiate error codes depending on whether user is
@@ -1350,6 +1364,22 @@ int RGWDeleteObj_ObjStore_SWIFT::verify_permission()
 
 int RGWDeleteObj_ObjStore_SWIFT::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway", "swift");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::get_params", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::get_params", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   const string& mm = s->info.args.get("multipart-manifest");
   multipart_delete = (mm.compare("delete") == 0);
 
@@ -1358,6 +1388,22 @@ int RGWDeleteObj_ObjStore_SWIFT::get_params()
 
 void RGWDeleteObj_ObjStore_SWIFT::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::send_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::send_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   int r = op_ret;
 
   if (multipart_delete) {
@@ -1561,6 +1607,20 @@ void RGWCopyObj_ObjStore_SWIFT::send_response()
 
 int RGWGetObj_ObjStore_SWIFT::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::verify_permission",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   op_ret = RGWGetObj_ObjStore::verify_permission();
 
   /* We have to differentiate error codes depending on whether user is

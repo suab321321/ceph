@@ -343,9 +343,25 @@ vector<Policy> get_iam_user_policy_from_attr(CephContext* cct,
 
 static int get_obj_attrs(rgw::sal::RGWRadosStore *store, struct req_state *s, const rgw_obj& obj, map<string, bufferlist>& attrs, rgw_obj *target_obj = nullptr)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc get_obj_attrs", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc.cc get_obj_attrs",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   RGWRados::Object op_target(store->getRados(), s->bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), obj);
   RGWRados::Object::Read read_op(&op_target);
-
+  #ifdef WITH_JAEGER
+    op_target.set_req_state(s);
+  #endif
   read_op.params.attrs = &attrs;
   read_op.params.target_obj = target_obj;
 
@@ -1073,9 +1089,9 @@ int RGWGetObj::verify_permission()
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::verify_permission", s->stack_span.top());
       ss.set_req_state(s);
       ss.set_span(span);
-      span = tracer_2.child_span("rgw_op.cc RGWGetObj::verify_permission", s->stack_span.top());
     }
     else if(s && s->root_span){
       span = tracer_2.child_span("rgw_op.cc RGWGetObj::verify_permission",s->root_span);
@@ -2399,9 +2415,9 @@ void RGWGetObj::pre_exec()
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::pre_exec", s->stack_span.top());
       ss.set_req_state(s);
       ss.set_span(span);
-      span = tracer_2.child_span("rgw_op.cc RGWGetObj::pre_exec", s->stack_span.top());
     }
     else if(s && s->root_span){
       span = tracer_2.child_span("rgw_op.cc RGWGetObj::pre_exec",s->root_span);
@@ -2453,9 +2469,9 @@ void RGWGetObj::execute()
   #ifdef WITH_JAEGER
     Span span;
     if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWGetObj::execute", s->stack_span.top());
       ss.set_req_state(s);
       ss.set_span(span);
-      span = tracer_2.child_span("rgw_op.cc RGWGetObj::execute", s->stack_span.top());
     }
     else if(s && s->root_span){
       span = tracer_2.child_span("rgw_op.cc RGWGetObj::execute",s->root_span);
@@ -5145,6 +5161,20 @@ void RGWPutMetadataObject::execute()
 
 int RGWDeleteObj::handle_slo_manifest(bufferlist& bl)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::handle_slo_manifest", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::handle_slo_manifest",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   RGWSLOInfo slo_info;
   auto bliter = bl.cbegin();
   try {
@@ -5194,6 +5224,20 @@ int RGWDeleteObj::handle_slo_manifest(bufferlist& bl)
 
 int RGWDeleteObj::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::verify_permission",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   int op_ret = get_params();
   if (op_ret) {
     return op_ret;
@@ -5254,11 +5298,39 @@ int RGWDeleteObj::verify_permission()
 
 void RGWDeleteObj::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::pre_exec", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::pre_exec",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
 void RGWDeleteObj::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::execute", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteObj::execute",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
     return;
@@ -5348,8 +5420,16 @@ void RGWDeleteObj::execute()
     obj_ctx->set_atomic(obj);
 
     bool ver_restored = false;
-    op_ret = store->getRados()->swift_versioning_restore(*obj_ctx, s->bucket_owner.get_id(),
-                                             s->bucket_info, obj, ver_restored, this);
+    #ifdef WITH_JAEGER
+      Span span_1;
+      if(s && !s->stack_span.empty())
+        span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::swift_versoning_restore", s->stack_span.top());
+      op_ret = store->getRados()->swift_versioning_restore(*obj_ctx, s->bucket_owner.get_id(),
+                                              s->bucket_info, obj, ver_restored, this);
+    #else
+      op_ret = store->getRados()->swift_versioning_restore(*obj_ctx, s->bucket_owner.get_id(),
+                                              s->bucket_info, obj, ver_restored, this);
+    #endif
     if (op_ret < 0) {
       return;
     }
@@ -5360,7 +5440,9 @@ void RGWDeleteObj::execute()
        * with the regular delete path. */
       RGWRados::Object del_target(store->getRados(), s->bucket_info, *obj_ctx, obj);
       RGWRados::Object::Delete del_op(&del_target);
-
+      #ifdef WITH_JAEGER
+        del_target.set_req_state(s);
+      #endif
       op_ret = get_system_versioning_params(s, &del_op.params.olh_epoch,
                                             &del_op.params.marker_version_id);
       if (op_ret < 0) {
