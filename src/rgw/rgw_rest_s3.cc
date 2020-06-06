@@ -150,6 +150,22 @@ int RGWGetObj_ObjStore_S3Website::send_response_data_error()
 
 int RGWGetObj_ObjStore_S3::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway", "s3");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      ss.set_req_state(s);
+      ss.set_span(span);
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::get_params", s->stack_span.top());
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::get_params",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   // for multisite sync requests, only read the slo manifest itself, rather than
   // all of the data from its parts. the parts will sync as separate objects
   skip_manifest = s->info.args.exists(RGW_SYS_PARAM_PREFIX "sync-manifest");
@@ -165,6 +181,22 @@ int RGWGetObj_ObjStore_S3::get_params()
 
 int RGWGetObj_ObjStore_S3::send_response_data_error()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      ss.set_req_state(s);
+      ss.set_span(span);
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data_error", s->stack_span.top());
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data_error",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   bufferlist bl;
   return send_response_data(bl, 0 , 0);
 }
@@ -203,6 +235,22 @@ inline bool str_has_cntrl(const char* s) {
 int RGWGetObj_ObjStore_S3::send_response_data(bufferlist& bl, off_t bl_ofs,
 					      off_t bl_len)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      ss.set_req_state(s);
+      ss.set_span(span);
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data", s->stack_span.top());
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWGetObj_ObjStore_S3::send_response_data",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   const char *content_type = NULL;
   string content_type_str;
   map<string, string> response_attrs;
@@ -1249,12 +1297,16 @@ void RGWListBuckets_ObjStore_S3::send_response_begin(bool has_buckets)
     if(s && s->root_span)
       s->root_span->SetTag("gateway","s3");
     Span span;
-    if(s && !s->stack_span.empty())
+    if(s && !s->stack_span.empty()){
       span = tracer_2.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response_begin", s->stack_span.top());
-    else if(s && s->root_span)
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
       span = tracer_2.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response_begin",s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
+      ss.set_req_state(s);
+    }
+      ss.set_span(span);
   #endif
   if (op_ret)
     set_req_state_err(s, op_ret);
@@ -1279,12 +1331,16 @@ void RGWListBuckets_ObjStore_S3::send_response_data(rgw::sal::RGWBucketList& buc
     if(s && s->root_span)
       s->root_span->SetTag("success",true);
     Span span;
-    if(s && !s->stack_span.empty())
+    if(s && !s->stack_span.empty()){
       span = tracer_2.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response_data", s->stack_span.top());
-    else if(s && s->root_span)
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
       span = tracer_2.child_span("rgw_rest_s3.cc RGWListBuckets_ObjStore_S3::send_response_data",s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
   #endif
   if (!sent_data)
     return;
@@ -1488,12 +1544,16 @@ int RGWListBucket_ObjStore_S3::get_params()
       if(s && s->root_span)
         s->root_span->SetTag("gateway", "s3");
       Span span;
-      if(s && !s->stack_span.empty())
+      if(s && !s->stack_span.empty()){
         span = tracer_2.child_span("rgw_rest_s3.cc RGWListBucket_ObjStore_S3::get_params", s->stack_span.top());
-      else
+        ss.set_req_state(s);
+        ss.set_span(span);
+      }
+      else{
         span = tracer_2.child_span("rgw_rest_s3.cc RGWListBucket_ObjStore_S3::get_params", s->root_span);
-      ss.set_req_state(s);
-      ss.set_span(span);
+        ss.set_req_state(s);
+        ss.set_span(span);
+      }
     #endif
   int ret = get_common_params();
   if (ret < 0) {

@@ -1575,6 +1575,22 @@ int RGWGetObj_ObjStore_SWIFT::verify_permission()
 
 int RGWGetObj_ObjStore_SWIFT::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway","swift");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::get_params", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::get_params",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   const string& mm = s->info.args.get("multipart-manifest");
   skip_manifest = (mm.compare("get") == 0);
 
@@ -1583,6 +1599,22 @@ int RGWGetObj_ObjStore_SWIFT::get_params()
 
 int RGWGetObj_ObjStore_SWIFT::send_response_data_error()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::send_response_data_error", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::send_response_data_error",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   std::string error_content;
   op_ret = error_handler(op_ret, &error_content);
   if (! op_ret) {
@@ -1599,6 +1631,22 @@ int RGWGetObj_ObjStore_SWIFT::send_response_data(bufferlist& bl,
                                                  const off_t bl_ofs,
                                                  const off_t bl_len)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::send_response_data", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::send_response_data",s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   string content_type;
 
   if (sent_header) {
