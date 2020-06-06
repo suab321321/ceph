@@ -39,6 +39,8 @@ class Jager_Tracer{
         std::static_pointer_cast<opentracing::Tracer>(tracer));
     }
     inline void finish_tracer(){
+      if(this->tracer == NULL)
+	return;
       if(!this->isTracerClosed){
 	 this->isTracerClosed=true;
 	 this->tracer->Close();
