@@ -659,7 +659,6 @@ public:
 
   bool get_obj_data_pool(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_pool *pool);
   bool obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_raw_obj *raw_obj);
-  bool obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_raw_obj *raw_obj, const Span& parent_span);
 
   int create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
                             const string& zonegroup_id,
@@ -695,7 +694,6 @@ public:
     RGWBucketInfo bucket_info;
     RGWObjectCtx& ctx;
     rgw_obj obj;
-    req_state* s = nullptr;
     BucketShard bs;
 
     RGWObjState *state;
@@ -723,8 +721,6 @@ public:
     RGWObjectCtx& get_ctx() { return ctx; }
     RGWBucketInfo& get_bucket_info() { return bucket_info; }
     int get_manifest(RGWObjManifest **pmanifest, optional_yield y);
-    void set_req_state(req_state* _s) { this->s = _s; }
-    req_state* get_req_state()const { return this->s; }
     int get_bucket_shard(BucketShard **pbs) {
       if (!bs_initialized) {
         int r =
@@ -904,7 +900,6 @@ public:
     RGWBucketInfo bucket_info;
     rgw_bucket& bucket;
     int shard_id;
-    req_state* s = NULL;
   public:
     Bucket(RGWRados *_store, const RGWBucketInfo& _bucket_info) : store(_store), bucket_info(_bucket_info), bucket(bucket_info.bucket),
                                                             shard_id(RGW_NO_SHARD) {}
@@ -913,8 +908,6 @@ public:
     RGWBucketInfo& get_bucket_info() { return bucket_info; }
 
     int update_bucket_id(const string& new_bucket_id);
-    void set_req_state(req_state* _s) { this->s = _s; }
-    req_state* get_req_state()const { return this->s; }
     int get_shard_id() { return shard_id; }
     void set_shard_id(int id) {
       shard_id = id;

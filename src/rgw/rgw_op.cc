@@ -359,9 +359,9 @@ static int get_obj_attrs(rgw::sal::RGWRadosStore *store, struct req_state *s, co
   #endif
   RGWRados::Object op_target(store->getRados(), s->bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), obj);
   RGWRados::Object::Read read_op(&op_target);
-  #ifdef WITH_JAEGER
-    op_target.set_req_state(s);
-  #endif
+  // #ifdef WITH_JAEGER
+  //   op_target.set_req_state(s);
+  // #endif
   read_op.params.attrs = &attrs;
   read_op.params.target_obj = target_obj;
 
@@ -1809,9 +1809,9 @@ int RGWGetObj::read_user_manifest_part(rgw_bucket& bucket,
 
   RGWRados::Object op_target(store->getRados(), s->bucket_info, obj_ctx, part);
   RGWRados::Object::Read read_op(&op_target);
-  #ifdef WITH_JAEGER
-    op_target.set_req_state(s);
-  #endif
+  // #ifdef WITH_JAEGER
+  //   op_target.set_req_state(s);
+  // #endif
 
   if (!swift_slo) {
     /* SLO etag is optional */
@@ -2507,9 +2507,9 @@ void RGWGetObj::execute()
 
   RGWRados::Object op_target(store->getRados(), s->bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), obj);
   RGWRados::Object::Read read_op(&op_target);
-  #ifdef WITH_JAEGER
-    op_target.set_req_state(s);
-  #endif
+  // #ifdef WITH_JAEGER
+  //   op_target.set_req_state(s);
+  // #endif
   op_ret = get_params();
   if (op_ret < 0)
     goto done_err;
@@ -3285,9 +3285,9 @@ void RGWListBucket::execute()
   if (shard_id >= 0) {
     target.set_shard_id(shard_id);
   }
-  #ifdef WITH_JAEGER
-    target.set_req_state(s);
-  #endif
+  // #ifdef WITH_JAEGER
+  //   target.set_req_state(s);
+  // #endif
   RGWRados::Bucket::List list_op(&target);
 
   list_op.params.prefix = prefix;
@@ -5469,9 +5469,9 @@ void RGWDeleteObj::execute()
        * with the regular delete path. */
       RGWRados::Object del_target(store->getRados(), s->bucket_info, *obj_ctx, obj);
       RGWRados::Object::Delete del_op(&del_target);
-      #ifdef WITH_JAEGER
-        del_target.set_req_state(s);
-      #endif
+      // #ifdef WITH_JAEGER
+      //   del_target.set_req_state(s);
+      // #endif
       op_ret = get_system_versioning_params(s, &del_op.params.olh_epoch,
                                             &del_op.params.marker_version_id);
       if (op_ret < 0) {
