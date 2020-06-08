@@ -4619,6 +4619,21 @@ int RGWRados::transition_obj(RGWObjectCtx& obj_ctx,
 
 int RGWRados::check_bucket_empty(RGWBucketInfo& bucket_info, optional_yield y)
 {
+  req_state* s = this->get_store();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::check_bucket_empty", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::check_bucket_empty", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   constexpr uint NUM_ENTRIES = 1000u;
 
   rgw_obj_index_key marker;

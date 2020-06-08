@@ -177,6 +177,9 @@ public:
   }
 
   virtual void init(rgw::sal::RGWRadosStore *store, struct req_state *s, RGWHandler *dialect_handler) {
+    #ifdef WITH_JAEGER
+      store->set_req_state(s);
+    #endif
     this->store = store;
     this->s = s;
     this->dialect_handler = dialect_handler;

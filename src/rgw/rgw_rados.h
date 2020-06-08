@@ -558,6 +558,8 @@ public:
     return ++max_req_id;
   }
 
+  rgw::sal::RGWRadosStore* get_store()const { return this->store; }
+
   librados::IoCtx* get_lc_pool_ctx() {
     return &lc_pool_ctx;
   }

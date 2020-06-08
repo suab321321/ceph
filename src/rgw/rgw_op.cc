@@ -682,7 +682,7 @@ int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* 
   /* check if copy source is within the current domain */
   if (!s->src_bucket_name.empty()) {
     RGWBucketInfo source_info;
-
+      
     if (s->bucket_instance_id.empty()) {
       #ifdef WITH_JAEGER
         Span span_1;
@@ -3901,6 +3901,20 @@ void RGWCreateBucket::execute()
 
 int RGWDeleteBucket::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (!verify_bucket_permission(this, s, rgw::IAM::s3DeleteBucket)) {
     return -EACCES;
   }
@@ -3910,11 +3924,39 @@ int RGWDeleteBucket::verify_permission()
 
 void RGWDeleteBucket::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::pre_exec", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::pre_exec", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
 void RGWDeleteBucket::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::execute", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::execute", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (s->bucket_name.empty()) {
     op_ret = -EINVAL;
     return;
