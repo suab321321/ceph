@@ -202,33 +202,82 @@ int AtomicObjectProcessor::process_first_chunk(bufferlist&& data,
 
 int AtomicObjectProcessor::prepare(optional_yield y)
 {
+  req_state* s = bucket_info.s;
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_putobj_processor.cc AtomicObjectProcessor::prepare", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_putobj_processor.cc AtomicObjectProcessor::prepare", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   uint64_t max_head_chunk_size;
   uint64_t head_max_size;
   uint64_t chunk_size = 0;
   uint64_t alignment;
   rgw_pool head_pool;
 
-  if (!store->getRados()->get_obj_data_pool(bucket_info.placement_rule, head_obj, &head_pool)) {
+  #ifdef WITH_JAEGER
+    Span span_1;
+    if(s && !s->stack_span.empty())
+      span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_obj_data_pool", s->stack_span.top());
+    if (!store->getRados()->get_obj_data_pool(bucket_info.placement_rule, head_obj, &head_pool)) {
+      return -EIO;
+    }
+  #else
+    if (!store->getRados()->get_obj_data_pool(bucket_info.placement_rule, head_obj, &head_pool)) {
     return -EIO;
   }
+  #endif
 
-  int r = store->getRados()->get_max_chunk_size(head_pool, &max_head_chunk_size, &alignment);
+  int r;
+  #ifdef WITH_JAEGER
+    Span span_2;
+    if(s && !s->stack_span.empty())
+      span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_max_chunk_size", s->stack_span.top());
+    r = store->getRados()->get_max_chunk_size(head_pool, &max_head_chunk_size, &alignment);
+  #else
+    r = store->getRados()->get_max_chunk_size(head_pool, &max_head_chunk_size, &alignment);
+  #endif
+
   if (r < 0) {
     return r;
   }
 
   bool same_pool = true;
-
+  
   if (bucket_info.placement_rule != tail_placement_rule) {
     rgw_pool tail_pool;
-    if (!store->getRados()->get_obj_data_pool(tail_placement_rule, head_obj, &tail_pool)) {
+    #ifdef WITH_JAEGER
+      Span span_3;
+      if(s && !s->stack_span.empty())
+        span_3 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_obj_data_pool", s->stack_span.top());
+        if (!store->getRados()->get_obj_data_pool(tail_placement_rule, head_obj, &tail_pool)) {
+          return -EIO;
+        }
+    #else
+      if (!store->getRados()->get_obj_data_pool(tail_placement_rule, head_obj, &tail_pool)) {
       return -EIO;
     }
+    #endif
 
     if (tail_pool != head_pool) {
       same_pool = false;
+      #ifdef WITH_JAEGER
+        Span span_4;
+        if(s && !s->stack_span.empty())
+          span_4 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_max_chunk_size", s->stack_span.top());
+        r = store->getRados()->get_max_chunk_size(tail_pool, &chunk_size);
+      #else
+        r = store->getRados()->get_max_chunk_size(tail_pool, &chunk_size);
+      #endif
 
-      r = store->getRados()->get_max_chunk_size(tail_pool, &chunk_size);
       if (r < 0) {
         return r;
       }
@@ -244,15 +293,30 @@ int AtomicObjectProcessor::prepare(optional_yield y)
 
   uint64_t stripe_size;
   const uint64_t default_stripe_size = store->ctx()->_conf->rgw_obj_stripe_size;
-
-  store->getRados()->get_max_aligned_size(default_stripe_size, alignment, &stripe_size);
+  #ifdef WITH_JAEGER
+    Span span_5;
+    if(s && !s->stack_span.empty())
+      span_5 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_max_aligned_size", s->stack_span.top());
+    store->getRados()->get_max_aligned_size(default_stripe_size, alignment, &stripe_size);
+  #else
+    store->getRados()->get_max_aligned_size(default_stripe_size, alignment, &stripe_size);
+  #endif
 
   manifest.set_trivial_rule(head_max_size, stripe_size);
-
-  r = manifest_gen.create_begin(store->ctx(), &manifest,
+  #ifdef WITH_JAEGER
+    Span span_6;
+    if(s && !s->stack_span.empty())
+      span_6 = tracer_2.child_span("rgw_obj_manifest.cc : RGWObjManifest::generator::create_begin", s->stack_span.top());
+    r = manifest_gen.create_begin(store->ctx(), &manifest,
+                                  bucket_info.placement_rule,
+                                  &tail_placement_rule,
+                                  head_obj.bucket, head_obj);
+  #else
+    r = manifest_gen.create_begin(store->ctx(), &manifest,
                                 bucket_info.placement_rule,
                                 &tail_placement_rule,
                                 head_obj.bucket, head_obj);
+  #endif
   if (r < 0) {
     return r;
   }
@@ -283,6 +347,21 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
                                     rgw_zone_set *zones_trace,
                                     bool *pcanceled, optional_yield y)
 {
+  req_state* s = bucket_info.s;
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_putobj_processor.cc AtomicObjectProcessor::complete", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_putobj_processor.cc AtomicObjectProcessor::complete", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   int r = writer.drain();
   if (r < 0) {
     return r;
@@ -296,6 +375,9 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
   obj_ctx.set_atomic(head_obj);
 
   RGWRados::Object op_target(store->getRados(), bucket_info, obj_ctx, head_obj);
+  #ifdef WITH_JAEGER
+    op_target.set_req_state(s);
+  #endif
 
   /* some object types shouldn't be versioned, e.g., multipart parts */
   op_target.set_versioning_disabled(!bucket_info.versioning_enabled());
@@ -317,7 +399,11 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
   obj_op.meta.zones_trace = zones_trace;
   obj_op.meta.modify_tail = true;
 
-  r = obj_op.write_meta(actual_size, accounted_size, attrs, y);
+  #ifdef WITH_JAEGER
+    r = obj_op.write_meta(actual_size, accounted_size, attrs, y, s);
+  #else
+    r = obj_op.write_meta(actual_size, accounted_size, attrs, y);
+  #endif
   if (r < 0) {
     return r;
   }

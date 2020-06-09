@@ -922,6 +922,20 @@ static int get_delete_at_param(req_state *s, boost::optional<real_time> &delete_
 
 int RGWPutObj_ObjStore_SWIFT::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   op_ret = RGWPutObj_ObjStore::verify_permission();
 
   /* We have to differentiate error codes depending on whether user is
@@ -936,6 +950,20 @@ int RGWPutObj_ObjStore_SWIFT::verify_permission()
 
 int RGWPutObj_ObjStore_SWIFT::update_slo_segment_size(rgw_slo_entry& entry) {
 
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::update_slo_segment_size", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::update_slo_segment_size", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   int r = 0;
   const string& path = entry.path;
 
@@ -1022,6 +1050,22 @@ int RGWPutObj_ObjStore_SWIFT::update_slo_segment_size(rgw_slo_entry& entry) {
 
 int RGWPutObj_ObjStore_SWIFT::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway","swift");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::get_params", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::get_params", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (s->has_bad_meta) {
     return -EINVAL;
   }
@@ -1129,6 +1173,22 @@ int RGWPutObj_ObjStore_SWIFT::get_params()
 
 void RGWPutObj_ObjStore_SWIFT::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::send_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::send_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   const auto meta_ret = handle_metadata_errors(s, op_ret);
   if (meta_ret) {
     op_ret = meta_ret;

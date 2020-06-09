@@ -2496,6 +2496,20 @@ static inline void map_qs_metadata(struct req_state* s)
 
 int RGWPutObj_ObjStore_S3::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::get_params", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::get_params", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (!s->length)
     return -ERR_LENGTH_REQUIRED;
 
@@ -2681,6 +2695,20 @@ int RGWPutObj_ObjStore_S3::get_params()
 
 int RGWPutObj_ObjStore_S3::get_data(bufferlist& bl)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::get_data", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::get_data", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   const int ret = RGWPutObj_ObjStore::get_data(bl);
   if (ret == 0) {
     const int ret_auth = do_aws4_auth_completion();
@@ -2705,6 +2733,22 @@ static int get_success_retcode(int code)
 
 void RGWPutObj_ObjStore_S3::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::send_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::send_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (op_ret) {
     set_req_state_err(s, op_ret);
     dump_errno(s);
@@ -2788,6 +2832,20 @@ int RGWPutObj_ObjStore_S3::get_decrypt_filter(
     map<string, bufferlist>& attrs,
     bufferlist* manifest_bl)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::get_decrypt_filter", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::get_decrypt_filter", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   std::map<std::string, std::string> crypt_http_responses_unused;
 
   int res = 0;
@@ -2814,6 +2872,20 @@ int RGWPutObj_ObjStore_S3::get_encrypt_filter(
     std::unique_ptr<rgw::putobj::DataProcessor> *filter,
     rgw::putobj::DataProcessor *cb)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::get_encrypt_filter", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutObj_ObjStore_S3::get_encrypt_filter", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   int res = 0;
   if (!multipart_upload_id.empty()) {
     RGWMPObj mp(s->object.name, multipart_upload_id);

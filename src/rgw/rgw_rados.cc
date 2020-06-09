@@ -3347,6 +3347,58 @@ int RGWRados::Object::Write::write_meta(uint64_t size, uint64_t accounted_size,
   return r;
 }
 
+
+int RGWRados::Object::Write::write_meta(uint64_t size, uint64_t accounted_size,
+                                           map<string, bufferlist>& attrs, optional_yield y, req_state* s)
+{
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Object::Write::write_meta", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Object::Write::write_meta", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
+  RGWBucketInfo& bucket_info = target->get_bucket_info();
+
+  RGWRados::Bucket bop(target->get_store(), bucket_info);
+  RGWRados::Bucket::UpdateIndex index_op(&bop, target->get_obj());
+  index_op.set_zones_trace(meta.zones_trace);
+  
+  bool assume_noent = (meta.if_match == NULL && meta.if_nomatch == NULL);
+  int r;
+  if (assume_noent) {
+    #ifdef WITH_JAEGER
+      Span span_1;
+      if(s && !s->stack_span.empty())
+        span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Object::Write::_do_write_meta", s->stack_span.top());
+      r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
+    #else
+      r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
+    #endif
+    if (r == -EEXIST) {
+      assume_noent = false;
+    }
+  }
+  if (!assume_noent) {
+    #ifdef WITH_JAEGER
+      Span span_1;
+      if(s && !s->stack_span.empty())
+        span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Object::Write::_do_write_meta", s->stack_span.top());
+        r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
+    #else
+      r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
+    #endif
+  }
+  return r;
+}
+
 class RGWRadosPutObj : public RGWHTTPStreamRWRequest::ReceiveCB
 {
   CephContext* cct;
