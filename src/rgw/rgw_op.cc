@@ -467,6 +467,20 @@ static int get_multipart_info(rgw::sal::RGWRadosStore *store, struct req_state *
 			      map<string, bufferlist> *attrs,
                               multipart_upload_info *upload_info)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc get_multipart_info", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc get_multipart_info", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   map<string, bufferlist>::iterator iter;
   bufferlist header;
 
@@ -4080,6 +4094,20 @@ void RGWDeleteBucket::execute()
 
 int RGWPutObj::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWPutBucket::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWPutBucket::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (! copy_source.empty()) {
 
     RGWAccessControlPolicy cs_acl(s->cct);
@@ -4205,6 +4233,20 @@ int RGWPutObj::verify_permission()
 
 void RGWPutObj::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWPutBucket::pre_exec", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWPutBucket::pre_exec", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -4222,6 +4264,20 @@ public:
 
 int RGWPutObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWPutBucket::get_data_cb", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWPutBucket::get_data_cb", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   bufferlist bl_tmp;
   bl.begin(bl_ofs).copy(bl_len, bl_tmp);
 
@@ -4232,6 +4288,20 @@ int RGWPutObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 
 int RGWPutObj::get_data(const off_t fst, const off_t lst, bufferlist& bl)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWPutBucket::get_data", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCPutBucket::get_data", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   RGWPutObj_CB cb(this);
   RGWGetObj_Filter* filter = &cb;
   boost::optional<RGWGetObj_Decompress> decompress;
@@ -4251,6 +4321,9 @@ int RGWPutObj::get_data(const off_t fst, const off_t lst, bufferlist& bl)
   rgw_obj obj(copy_source_bucket_info.bucket, obj_key);
 
   RGWRados::Object op_target(store->getRados(), copy_source_bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), obj);
+  #ifdef WITH_JAEGER
+    op_target.set_req_state(s);
+  #endif
   RGWRados::Object::Read read_op(&op_target);
   read_op.params.obj_size = &obj_size;
   read_op.params.attrs = &attrs;
@@ -4326,6 +4399,20 @@ static CompressorRef get_compressor_plugin(const req_state *s,
 
 void RGWPutObj::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWPutBucket::execute", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCPutBucket::execute", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   char supplied_md5_bin[CEPH_CRYPTO_MD5_DIGESTSIZE + 1];
   char supplied_md5[CEPH_CRYPTO_MD5_DIGESTSIZE * 2 + 1];
   char calc_md5[CEPH_CRYPTO_MD5_DIGESTSIZE * 2 + 1];
@@ -4343,6 +4430,10 @@ void RGWPutObj::execute()
   auto put_lat = make_scope_guard([&] {
       perfcounter->tinc(l_rgw_put_lat, s->time_elapsed());
     });
+
+  #ifdef WITH_JAEGER
+      s->bucket_info.s = s;
+  #endif
 
   op_ret = -EINVAL;
   if (s->object.empty()) {
@@ -4373,15 +4464,29 @@ void RGWPutObj::execute()
       op_ret = -ERR_INVALID_DIGEST;
       return;
     }
-
-    buf_to_hex((const unsigned char *)supplied_md5_bin, CEPH_CRYPTO_MD5_DIGESTSIZE, supplied_md5);
+    #ifdef WITH_JAEGER
+      Span span_1;
+      if(s && !s->stack_span.empty())
+        span_1 = tracer_2.child_span("rgw_common.h : buf_to_hex", s->stack_span.top());
+      buf_to_hex((const unsigned char *)supplied_md5_bin, CEPH_CRYPTO_MD5_DIGESTSIZE, supplied_md5);
+    #else
+      buf_to_hex((const unsigned char *)supplied_md5_bin, CEPH_CRYPTO_MD5_DIGESTSIZE, supplied_md5);
+    #endif
     ldpp_dout(this, 15) << "supplied_md5=" << supplied_md5 << dendl;
   }
 
   if (!chunked_upload) { /* with chunked upload we don't know how big is the upload.
                             we also check sizes at the end anyway */
-    op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
+    #ifdef WITH_JAEGER
+      Span span_2;
+      if(s && !s->stack_span.empty())
+        span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::check_quota", s->stack_span.top());
+      op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
+          user_quota, bucket_quota, s->content_length);
+    #else
+      op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
 				user_quota, bucket_quota, s->content_length);
+    #endif
     if (op_ret < 0) {
       ldpp_dout(this, 20) << "check_quota() returned ret=" << op_ret << dendl;
       return;
@@ -4399,12 +4504,24 @@ void RGWPutObj::execute()
 
   /* Handle object versioning of Swift API. */
   if (! multipart) {
-    op_ret = store->getRados()->swift_versioning_copy(obj_ctx,
+    #ifdef WITH_JAEGER
+      Span span_2;
+      if(s && !s->stack_span.empty())
+        span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::swift_versioning_copy", s->stack_span.top());
+      op_ret = store->getRados()->swift_versioning_copy(obj_ctx,
+                                            s->bucket_owner.get_id(),
+                                            s->bucket_info,
+                                            obj,
+                                            this,
+                                            s->yield);
+    #else
+      op_ret = store->getRados()->swift_versioning_copy(obj_ctx,
                                           s->bucket_owner.get_id(),
                                           s->bucket_info,
                                           obj,
                                           this,
                                           s->yield);
+    #endif
     if (op_ret < 0) {
       return;
     }
@@ -4478,8 +4595,16 @@ void RGWPutObj::execute()
     rgw_obj obj(copy_source_bucket_info.bucket, obj_key.name);
 
     RGWObjState *astate;
-    op_ret = store->getRados()->get_obj_state(&obj_ctx, copy_source_bucket_info, obj,
+    #ifdef WITH_JAEGER
+      Span span_3;
+      if(s && !s->stack_span.empty())
+        span_3 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_obj_state", s->stack_span.top());
+      op_ret = store->getRados()->get_obj_state(&obj_ctx, copy_source_bucket_info, obj,
+                                    &astate, true, s->yield, false);
+    #else
+      op_ret = store->getRados()->get_obj_state(&obj_ctx, copy_source_bucket_info, obj,
                                   &astate, true, s->yield, false);
+    #endif
     if (op_ret < 0) {
       ldpp_dout(this, 0) << "ERROR: get copy source obj state returned with error" << op_ret << dendl;
       return;
@@ -4582,9 +4707,16 @@ void RGWPutObj::execute()
   if (op_ret < 0) {
     return;
   }
-
-  op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
+  #ifdef WITH_JAEGER
+    Span span_4;
+    if(s && !s->stack_span.empty())
+      span_4 = tracer_2.child_span("rgw_op.cc : RGWRados::check_quota", s->stack_span.top());
+    op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
+                                user_quota, bucket_quota, s->obj_size);
+  #else
+    op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
                               user_quota, bucket_quota, s->obj_size);
+  #endif
   if (op_ret < 0) {
     ldpp_dout(this, 20) << "second check_quota() returned op_ret=" << op_ret << dendl;
     return;
