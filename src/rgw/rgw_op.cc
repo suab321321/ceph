@@ -3912,6 +3912,20 @@ void RGWCreateBucket::execute()
 
 int RGWDeleteBucket::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (!verify_bucket_permission(this, s, rgw::IAM::s3DeleteBucket)) {
     return -EACCES;
   }
@@ -3921,11 +3935,39 @@ int RGWDeleteBucket::verify_permission()
 
 void RGWDeleteBucket::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWDeleteBucket::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
 void RGWDeleteBucket::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCreateBucket::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (s->bucket_name.empty()) {
     op_ret = -EINVAL;
     return;
@@ -3955,13 +3997,21 @@ void RGWDeleteBucket::execute()
       ot.read_version.ver = ver;
     }
   }
-
-  op_ret = store->ctl()->bucket->sync_user_stats(s->user->get_id(), s->bucket_info);
+  #ifdef WITH_JAEGER
+    Span span_1;
+    if(s && !s->stack_span.empty())
+      span_1 = tracer_2.child_span("rgw_bucket.cc : RGWBucketCtl::sync_user_stats", s->stack_span.top());
+    op_ret = store->ctl()->bucket->sync_user_stats(s->user->get_id(), s->bucket_info);
+  #else
+    op_ret = store->ctl()->bucket->sync_user_stats(s->user->get_id(), s->bucket_info);
+  #endif
   if ( op_ret < 0) {
      ldpp_dout(this, 1) << "WARNING: failed to sync user stats before bucket delete: op_ret= " << op_ret << dendl;
   }
-  
-  op_ret = store->getRados()->check_bucket_empty(s->bucket_info, s->yield);
+  #ifdef WITH_JAEGER
+    s->bucket_info.s = s;
+  #endif
+    op_ret = store->getRados()->check_bucket_empty(s->bucket_info, s->yield);
   if (op_ret < 0) {
     return;
   }
@@ -4011,8 +4061,16 @@ void RGWDeleteBucket::execute()
   }
 
   if (op_ret == 0) {
-    op_ret = store->ctl()->bucket->unlink_bucket(s->bucket_info.owner,
+    #ifdef WITH_JAEGER
+      Span span_2;
+      if(s && !s->stack_span.empty())
+        span_2 = tracer_2.child_span("rgw_bucket.cc : RGWBucketCtl::unlink_bucket", s->stack_span.top());
+      op_ret = store->ctl()->bucket->unlink_bucket(s->bucket_info.owner,
+                                                s->bucket, s->yield, false);
+    #else
+      op_ret = store->ctl()->bucket->unlink_bucket(s->bucket_info.owner,
                                               s->bucket, s->yield, false);
+    #endif
     if (op_ret < 0) {
       ldpp_dout(this, 0) << "WARNING: failed to unlink bucket: ret=" << op_ret
 		       << dendl;
