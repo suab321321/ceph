@@ -3526,6 +3526,22 @@ void RGWDeleteObj_ObjStore_S3::send_response()
 
 int RGWCopyObj_ObjStore_S3::init_dest_policy()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+  if(s && s->root_span)
+    s->root_span->SetTag("gateway", "s3");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCopyObj_ObjStore_S3::init_dest_policy", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCopyObj_ObjStore_S3::init_dest_policy", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   RGWAccessControlPolicy_S3 s3policy(s->cct);
 
   /* build a policy for the target object */
@@ -3540,6 +3556,22 @@ int RGWCopyObj_ObjStore_S3::init_dest_policy()
 
 int RGWCopyObj_ObjStore_S3::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+  if(s && s->root_span)
+    s->root_span->SetTag("gateway", "s3");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCopyObj_ObjStore_S3::get_params", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCopyObj_ObjStore_S3::get_params", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if_mod = s->info.env->get("HTTP_X_AMZ_COPY_IF_MODIFIED_SINCE");
   if_unmod = s->info.env->get("HTTP_X_AMZ_COPY_IF_UNMODIFIED_SINCE");
   if_match = s->info.env->get("HTTP_X_AMZ_COPY_IF_MATCH");
@@ -3588,6 +3620,20 @@ int RGWCopyObj_ObjStore_S3::get_params()
 
 int RGWCopyObj_ObjStore_S3::check_storage_class(const rgw_placement_rule& src_placement)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCopyObj_ObjStore_S3::check_storage_class", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCopyObj_ObjStore_S3::check_storage_class", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (src_placement == s->dest_placement) {
     /* can only copy object into itself if replacing attrs */
     s->err.message = "This copy request is illegal because it is trying to copy "
@@ -3601,6 +3647,22 @@ int RGWCopyObj_ObjStore_S3::check_storage_class(const rgw_placement_rule& src_pl
 
 void RGWCopyObj_ObjStore_S3::send_partial_response(off_t ofs)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCopyObj_ObjStore_S3::send_partial_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCopyObj_ObjStore_S3::send_partial_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (! sent_header) {
     if (op_ret)
     set_req_state_err(s, op_ret);
@@ -3625,6 +3687,22 @@ void RGWCopyObj_ObjStore_S3::send_partial_response(off_t ofs)
 
 void RGWCopyObj_ObjStore_S3::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+  if(s && s->root_span)
+    s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCopyObj_ObjStore_S3::send_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWCopyObj_ObjStore_S3::send_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (!sent_header)
     send_partial_response(0);
 

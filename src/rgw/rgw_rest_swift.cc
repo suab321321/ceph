@@ -1592,6 +1592,22 @@ static void dump_object_metadata(const DoutPrefixProvider* dpp, struct req_state
 
 int RGWCopyObj_ObjStore_SWIFT::init_dest_policy()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+  if(s && s->root_span)
+    s->root_span->SetTag("gateway", "swift");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::init_dest_policy", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::init_dest_policy", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   dest_policy.create_default(s->user->get_id(), s->user->get_display_name());
 
   return 0;
@@ -1599,6 +1615,22 @@ int RGWCopyObj_ObjStore_SWIFT::init_dest_policy()
 
 int RGWCopyObj_ObjStore_SWIFT::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+  if(s && s->root_span)
+    s->root_span->SetTag("gateway", "swift");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::get_params()", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::get_params()", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if_mod = s->info.env->get("HTTP_IF_MODIFIED_SINCE");
   if_unmod = s->info.env->get("HTTP_IF_UNMODIFIED_SINCE");
   if_match = s->info.env->get("HTTP_COPY_IF_MATCH");
@@ -1629,6 +1661,22 @@ int RGWCopyObj_ObjStore_SWIFT::get_params()
 
 void RGWCopyObj_ObjStore_SWIFT::send_partial_response(off_t ofs)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+  if(s && s->root_span)
+    s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::send_partial_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::send_partial_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (! sent_header) {
     if (! op_ret)
       op_ret = STATUS_CREATED;
@@ -1665,6 +1713,22 @@ void RGWCopyObj_ObjStore_SWIFT::dump_copy_info()
 
 void RGWCopyObj_ObjStore_SWIFT::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+  if(s && s->root_span)
+    s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::send_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::send_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (! sent_header) {
     string content_type;
     if (! op_ret)

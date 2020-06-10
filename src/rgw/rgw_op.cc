@@ -5696,6 +5696,22 @@ bool RGWCopyObj::parse_copy_location(const std::string_view& url_src,
 {
   std::string_view name_str;
   std::string_view params_str;
+  // span_structure ss;
+  // #ifdef WITH_JAEGER
+  //   Span span;
+  //   if(s && !s->stack_span.empty()){
+  //     span = tracer_2.child_span("rgw_op.cc RGWCopyObj::parse_copy_location", s->stack_span.top());
+  //     ss.set_req_state(s);
+  //     ss.set_span(span);
+  //   }
+  //   else if(s && s->root_span){
+  //     span = tracer_2.child_span("rgw_op.cc RGWCopyObj::parse_copy_location", s->root_span);
+  //     ss.set_req_state(s);
+  //     ss.set_span(span);
+  //   }
+  // #endif
+  boost::string_view name_str;
+  boost::string_view params_str;
 
   // search for ? before url-decoding so we don't accidentally match %3F
   size_t pos = url_src.find('?');
@@ -5734,6 +5750,22 @@ bool RGWCopyObj::parse_copy_location(const std::string_view& url_src,
 
 int RGWCopyObj::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    src_bucket_info.s = s;
+    dest_bucket_info.s = s;
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWCopyObj::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCopyObj::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   RGWAccessControlPolicy src_acl(s->cct);
   boost::optional<Policy> src_policy;
   op_ret = get_params();
@@ -5878,6 +5910,22 @@ int RGWCopyObj::verify_permission()
 
 int RGWCopyObj::init_common()
 {
+   span_structure ss;
+  #ifdef WITH_JAEGER
+    src_bucket_info.s = s;
+    dest_bucket_info.s = s;
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWCopyObj::init_common", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCopyObj::init_common", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (if_mod) {
     if (parse_time(if_mod, &mod_time) < 0) {
       op_ret = -EINVAL;
@@ -5915,6 +5963,22 @@ static void copy_obj_progress_cb(off_t ofs, void *param)
 
 void RGWCopyObj::progress_cb(off_t ofs)
 {
+   span_structure ss;
+  #ifdef WITH_JAEGER
+    src_bucket_info.s = s;
+    dest_bucket_info.s = s;
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWCopyObj::progress_cb", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCopyObj::progress_cb", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (!s->cct->_conf->rgw_copy_obj_progress)
     return;
 
@@ -5928,11 +5992,43 @@ void RGWCopyObj::progress_cb(off_t ofs)
 
 void RGWCopyObj::pre_exec()
 {
+   span_structure ss;
+  #ifdef WITH_JAEGER
+    src_bucket_info.s = s;
+    dest_bucket_info.s = s;
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWCopyObj::pre_execute", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCopyObj::pre_execute", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
 void RGWCopyObj::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    src_bucket_info.s = s;
+    dest_bucket_info.s = s;
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWCopyObj::execute", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCopyObj::execute", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (init_common() < 0)
     return;
 
