@@ -637,6 +637,24 @@ void RGWStatAccount_ObjStore_SWIFT::send_response()
 
 void RGWStatBucket_ObjStore_SWIFT::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span){
+      s->root_span->SetTag("gateway", "swift");
+      s->root_span->SetTag("success", true);
+    }
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWStatBucket_ObjStore_SWIFT::send_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_swift.cc RGWStatBucket_ObjStore_SWIFT::send_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (op_ret >= 0) {
     op_ret = STATUS_NO_CONTENT;
     dump_container_metadata(s, bucket, bucket_quota,

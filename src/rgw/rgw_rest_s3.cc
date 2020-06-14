@@ -2256,6 +2256,24 @@ static void dump_bucket_metadata(struct req_state *s, rgw::sal::RGWBucket* bucke
 
 void RGWStatBucket_ObjStore_S3::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span){
+      s->root_span->SetTag("gateway", "s3");
+      s->root_span->SetTag("success", true);
+    }
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWStatBucket_ObjStore_S3::send_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWStatBucket_ObjStore_S3::send_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (op_ret >= 0) {
     dump_bucket_metadata(s, bucket);
   }
