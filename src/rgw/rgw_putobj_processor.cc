@@ -384,6 +384,10 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
 
   RGWRados::Object::Write obj_op(&op_target);
 
+  #ifdef WITH_JAEGER
+    obj_op.target->set_req_state(s);
+  #endif
+
   obj_op.meta.data = &first_chunk;
   obj_op.meta.manifest = &manifest;
   obj_op.meta.ptag = &unique_tag; /* use req_id as operation tag */
@@ -399,11 +403,11 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
   obj_op.meta.zones_trace = zones_trace;
   obj_op.meta.modify_tail = true;
 
-  #ifdef WITH_JAEGER
-    r = obj_op.write_meta(actual_size, accounted_size, attrs, y, s);
-  #else
+  // #ifdef WITH_JAEGER
+  //   r = obj_op.write_meta(actual_size, accounted_size, attrs, y, s);
+  // #else
     r = obj_op.write_meta(actual_size, accounted_size, attrs, y);
-  #endif
+  // #endif
   if (r < 0) {
     return r;
   }

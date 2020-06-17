@@ -827,8 +827,6 @@ public:
                      void *index_op, optional_yield y);
       int write_meta(uint64_t size, uint64_t accounted_size,
                      map<std::string, bufferlist>& attrs, optional_yield y);
-      int write_meta(uint64_t size, uint64_t accounted_size,
-                     map<std::string, bufferlist>& attrs, optional_yield y, req_state* s);
       int write_data(const char *data, uint64_t ofs, uint64_t len, bool exclusive);
       const req_state* get_req_state() {
         return (req_state *)target->get_ctx().get_private();
@@ -987,6 +985,8 @@ public:
       const string *get_optag() { return &optag; }
 
       bool is_prepared() { return prepared; }
+      
+      RGWRados::Bucket* get_target()const { return this->target; }
     }; // class UpdateIndex
 
     class List {

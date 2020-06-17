@@ -4123,6 +4123,22 @@ void RGWSetRequestPayment_ObjStore_S3::send_response()
 
 int RGWInitMultipart_ObjStore_S3::get_params()
 {
+  span_structure ss1;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway", "s3");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWInitMultipart_ObjStore_S3::get_params", s->stack_span.top());
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWInitMultipart_ObjStore_S3::get_params", s->root_span);
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+  #endif
   RGWAccessControlPolicy_S3 s3policy(s->cct);
   op_ret = create_s3_policy(s, store, s3policy, s->owner);
   if (op_ret < 0)
@@ -4135,6 +4151,22 @@ int RGWInitMultipart_ObjStore_S3::get_params()
 
 void RGWInitMultipart_ObjStore_S3::send_response()
 {
+  span_structure ss1;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWInitMultipart_ObjStore_S3::send_response", s->stack_span.top());
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWInitMultipart_ObjStore_S3::send_response", s->root_span);
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+  #endif
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -4156,6 +4188,20 @@ void RGWInitMultipart_ObjStore_S3::send_response()
 
 int RGWInitMultipart_ObjStore_S3::prepare_encryption(map<string, bufferlist>& attrs)
 {
+  span_structure ss1;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWInitMultipart_ObjStore_S3::prepare_encryption", s->stack_span.top());
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWInitMultipart_ObjStore_S3::prepare_encryption", s->root_span);
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+  #endif
   int res = 0;
   res = rgw_s3_prepare_encrypt(s, attrs, nullptr, nullptr, crypt_http_responses);
   return res;
