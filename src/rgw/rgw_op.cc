@@ -6799,6 +6799,20 @@ void RGWSetRequestPayment::execute()
 
 int RGWInitMultipart::verify_permission()
 {
+  span_structure ss1;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWInitMultipart::verify_permission", s->stack_span.top());
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWInitMultipart::verify_permission", s->root_span);
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+  #endif
   if (s->iam_policy || ! s->iam_user_policies.empty()) {
     auto usr_policy_res = eval_user_policies(s->iam_user_policies, s->env,
                                               boost::none,
@@ -6832,11 +6846,39 @@ int RGWInitMultipart::verify_permission()
 
 void RGWInitMultipart::pre_exec()
 {
+  span_structure ss1;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWInitMultipart::pre_exec", s->stack_span.top());
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWInitMultipart::pre_exec", s->root_span);
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
 void RGWInitMultipart::execute()
 {
+  span_structure ss1;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWInitMultipart::execute", s->stack_span.top());
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWInitMultipart::execute", s->root_span);
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+  #endif
   bufferlist aclbl;
   map<string, bufferlist> attrs;
   rgw_obj obj;
@@ -6846,8 +6888,14 @@ void RGWInitMultipart::execute()
 
   if (s->object.empty())
     return;
-
-  policy.encode(aclbl);
+  #ifdef WITH_JAEGER
+    Span span_1;
+    if(s && !s->stack_span.empty())
+      span_1 = tracer_2.child_span("rgw_acl.h : RGWAccessControlPolicy::encode", s->stack_span.top());
+    policy.encode(aclbl);
+  #else
+    policy.encode(aclbl);
+  #endif
   attrs[RGW_ATTR_ACL] = aclbl;
 
   populate_with_generic_attrs(s, attrs);
@@ -6881,6 +6929,9 @@ void RGWInitMultipart::execute()
     op_target.set_versioning_disabled(true); /* no versioning for multipart meta */
 
     RGWRados::Object::Write obj_op(&op_target);
+    #ifdef WITH_JAEGER
+      obj_op.target->set_req_state(s);
+    #endif
 
     obj_op.meta.owner = s->owner.get_id();
     obj_op.meta.category = RGWObjCategory::MultiMeta;
@@ -6890,7 +6941,14 @@ void RGWInitMultipart::execute()
     upload_info.dest_placement = s->dest_placement;
 
     bufferlist bl;
-    encode(upload_info, bl);
+    #ifdef WITH_JAEGER
+      Span span_2;
+      if(s && !s->stack_span.empty())
+        span_2 = tracer_2.child_span("rgw_op.cc : encode", s->stack_span.top());
+      encode(upload_info, bl);
+    #else
+      encode(upload_info, bl);
+    #endif
     obj_op.meta.data = &bl;
 
     op_ret = obj_op.write_meta(bl.length(), 0, attrs, s->yield);

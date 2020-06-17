@@ -2186,7 +2186,7 @@ void span_structure::set_req_state(req_state* s){
   this->is_inserted = true;
 }
 span_structure::~span_structure(){
-  if(this->s!=nullptr && !this->s->stack_span.empty() && this->is_inserted)
+  if(this->s && !this->s->stack_span.empty() && this->is_inserted)
 			this->s->stack_span.pop();
 }
 

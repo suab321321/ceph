@@ -3061,18 +3061,35 @@ int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_si
                                            bool assume_noent, bool modify_tail,
                                            void *_index_op, optional_yield y)
 {
+  req_state* s = target->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Object::Write::_do_write_meta", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Object::Write::_do_write_meta", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   RGWRados::Bucket::UpdateIndex *index_op = static_cast<RGWRados::Bucket::UpdateIndex *>(_index_op);
   RGWRados *store = target->get_store();
-
+  #ifdef WITH_JAEGER
+    index_op->get_target()->set_req_state(s);
+  #endif
   ObjectWriteOperation op;
 #ifdef WITH_LTTNG
-  const struct req_state* s =  get_req_state();
+  const struct req_state* s_1 =  get_req_state();
   string req_id;
-  if (!s) {
+  if (!s_1) {
     // fake req_id
     req_id = store->svc.zone_utils->unique_id(store->get_new_req_id());
   } else {
-    req_id = s->req_id;
+    req_id = s_1->req_id;
   }
 #endif
 
@@ -3101,7 +3118,14 @@ int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_si
   if (!ptag && !index_op->get_optag()->empty()) {
     ptag = index_op->get_optag();
   }
-  r = target->prepare_atomic_modification(op, reset_obj, ptag, meta.if_match, meta.if_nomatch, false, modify_tail, y);
+  #ifdef WITH_JAEGER
+    Span span_1;
+    if(s && !s->stack_span.empty())
+      span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Object::prepare_atomic_modification", s->stack_span.top());
+    r = target->prepare_atomic_modification(op, reset_obj, ptag, meta.if_match, meta.if_nomatch, false, modify_tail, y);
+  #else
+    r = target->prepare_atomic_modification(op, reset_obj, ptag, meta.if_match, meta.if_nomatch, false, modify_tail, y);
+  #endif
   if (r < 0)
     return r;
 
@@ -3131,7 +3155,14 @@ int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_si
   if (meta.data) {
     /* if we want to overwrite the data, we also want to overwrite the
        xattrs, so just remove the object */
-    op.write_full(*meta.data);
+    #ifdef WITH_JAEGER
+      Span span_2;
+      if(s && !s->stack_span.empty())
+        span_2 = tracer_2.child_span("librados.hpp : ObjectWriteOperation::write_full", s->stack_span.top());
+      op.write_full(*meta.data);
+    #else
+      op.write_full(*meta.data);
+    #endif
   }
 
   string etag;
@@ -3229,7 +3260,14 @@ int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_si
   auto& ioctx = ref.pool.ioctx();
 
   tracepoint(rgw_rados, operate_enter, req_id.c_str());
-  r = rgw_rados_operate(ref.pool.ioctx(), ref.obj.oid, &op, null_yield);
+  #ifdef WITH_JAEGER
+    Span span_3;
+    if(s && !s->stack_span.empty())
+      span_3 = tracer_2.child_span("rgw_tools.cc : rgw_rados_operate", s->stack_span.top());
+    r = rgw_rados_operate(ref.pool.ioctx(), ref.obj.oid, &op, null_yield);
+  #else
+    r = rgw_rados_operate(ref.pool.ioctx(), ref.obj.oid, &op, null_yield);
+  #endif
   tracepoint(rgw_rados, operate_exit, req_id.c_str());
   if (r < 0) { /* we can expect to get -ECANCELED if object was replaced under,
                 or -ENOENT if was removed, or -EEXIST if it did not exist
@@ -3243,8 +3281,16 @@ int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_si
 
   epoch = ioctx.get_last_version();
   poolid = ioctx.get_id();
-
-  r = target->complete_atomic_modification();
+  {
+    #ifdef WITH_JAEGER
+      Span span_4;
+      if(s && !s->stack_span.empty())
+        span_4 = tracer_2.child_span("rgw_rados.cc : RGWRados::Object::complete_atomic_modification", s->stack_span.top());
+      r = target->complete_atomic_modification();
+    #else
+      r = target->complete_atomic_modification();
+    #endif
+  }
   if (r < 0) {
     ldout(store->ctx(), 0) << "ERROR: complete_atomic_modification returned r=" << r << dendl;
   }
@@ -3288,12 +3334,28 @@ int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_si
 
   /* update quota cache */
   if (meta.completeMultipart){
-  	store->quota_handler->update_stats(meta.owner, obj.bucket, (orig_exists ? 0 : 1),
-                                     0, orig_size);
+    #ifdef WITH_JAEGER
+      Span span_5;
+      if(s && !s->stack_span.empty())
+        span_5 = tracer_2.child_span("rgw_quota.cc : update_stats", s->stack_span.top());
+      store->quota_handler->update_stats(meta.owner, obj.bucket, (orig_exists ? 0 : 1),
+                                      0, orig_size);
+    #else
+      store->quota_handler->update_stats(meta.owner, obj.bucket, (orig_exists ? 0 : 1),
+                                      0, orig_size);
+    #endif
   }
   else {
-    store->quota_handler->update_stats(meta.owner, obj.bucket, (orig_exists ? 0 : 1),
-                                     accounted_size, orig_size);  
+    #ifdef WITH_JAEGER
+      Span span_5;
+      if(s && !s->stack_span.empty())
+        span_5 = tracer_2.child_span("rgw_quota.cc : update_stats", s->stack_span.top());
+      store->quota_handler->update_stats(meta.owner, obj.bucket, (orig_exists ? 0 : 1),
+                                      accounted_size, orig_size);
+    #else
+      store->quota_handler->update_stats(meta.owner, obj.bucket, (orig_exists ? 0 : 1),
+                                      accounted_size, orig_size);
+    #endif 
   }
   return 0;
 
@@ -3345,30 +3407,8 @@ done_cancel:
 int RGWRados::Object::Write::write_meta(uint64_t size, uint64_t accounted_size,
                                            map<string, bufferlist>& attrs, optional_yield y)
 {
-  RGWBucketInfo& bucket_info = target->get_bucket_info();
+  req_state* s = target->get_req_state();
 
-  RGWRados::Bucket bop(target->get_store(), bucket_info);
-  RGWRados::Bucket::UpdateIndex index_op(&bop, target->get_obj());
-  index_op.set_zones_trace(meta.zones_trace);
-  
-  bool assume_noent = (meta.if_match == NULL && meta.if_nomatch == NULL);
-  int r;
-  if (assume_noent) {
-    r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
-    if (r == -EEXIST) {
-      assume_noent = false;
-    }
-  }
-  if (!assume_noent) {
-    r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
-  }
-  return r;
-}
-
-
-int RGWRados::Object::Write::write_meta(uint64_t size, uint64_t accounted_size,
-                                           map<string, bufferlist>& attrs, optional_yield y, req_state* s)
-{
   span_structure ss;
   #ifdef WITH_JAEGER
     Span span;
@@ -3392,27 +3432,27 @@ int RGWRados::Object::Write::write_meta(uint64_t size, uint64_t accounted_size,
   bool assume_noent = (meta.if_match == NULL && meta.if_nomatch == NULL);
   int r;
   if (assume_noent) {
-    #ifdef WITH_JAEGER
-      Span span_1;
-      if(s && !s->stack_span.empty())
-        span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Object::Write::_do_write_meta", s->stack_span.top());
+    // #ifdef WITH_JAEGER
+    //   Span span_1;
+    //   if(s && !s->stack_span.empty())
+    //     span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Object::Write::_do_write_meta", s->stack_span.top());
+    //   r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
+    // #else
       r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
-    #else
-      r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
-    #endif
+    // #endif
     if (r == -EEXIST) {
       assume_noent = false;
     }
   }
   if (!assume_noent) {
-    #ifdef WITH_JAEGER
-      Span span_1;
-      if(s && !s->stack_span.empty())
-        span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Object::Write::_do_write_meta", s->stack_span.top());
-        r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
-    #else
+    // #ifdef WITH_JAEGER
+    //   Span span_1;
+    //   if(s && !s->stack_span.empty())
+    //     span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::Object::Write::_do_write_meta", s->stack_span.top());
+    //     r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
+    // #else
       r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
-    #endif
+    // #endif
   }
   return r;
 }
@@ -6543,6 +6583,21 @@ int RGWRados::Bucket::UpdateIndex::complete(int64_t poolid, uint64_t epoch,
                                             list<rgw_obj_index_key> *remove_objs, const string *user_data,
                                             bool appendable)
 {
+  req_state* s = target->get_req_state();
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Bucket::UpdateIndex::complete", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::Bucket::UpdateIndex::complete", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (blind) {
     return 0;
   }
@@ -6576,10 +6631,23 @@ int RGWRados::Bucket::UpdateIndex::complete(int64_t poolid, uint64_t epoch,
   ent.meta.owner_display_name = owner.get_display_name();
   ent.meta.content_type = content_type;
   ent.meta.appendable = appendable;
-
-  ret = store->cls_obj_complete_add(*bs, obj, optag, poolid, epoch, ent, category, remove_objs, bilog_flags, zones_trace);
-
-  int r = store->svc.datalog_rados->add_entry(target->bucket_info, bs->shard_id);
+  #ifdef WITH_JAEGER
+    Span span_1;
+    if(s && !s->stack_span.empty())
+      span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::cls_obj_complete_add", s->stack_span.top());
+    ret = store->cls_obj_complete_add(*bs, obj, optag, poolid, epoch, ent, category, remove_objs, bilog_flags, zones_trace);
+  #else
+    ret = store->cls_obj_complete_add(*bs, obj, optag, poolid, epoch, ent, category, remove_objs, bilog_flags, zones_trace);
+  #endif
+  int r;
+  #ifdef WITH_JAEGER
+    Span span_2;
+    if(s && !s->stack_span.empty())
+      span_2 = tracer_2.child_span("svc_datalog_rados.cc : RGWSI_DataLog_RADOS::add_entry", s->stack_span.top());
+    r = store->svc.datalog_rados->add_entry(target->bucket_info, bs->shard_id);
+  #else
+    r = store->svc.datalog_rados->add_entry(target->bucket_info, bs->shard_id);
+  #endif
   if (r < 0) {
     lderr(store->ctx()) << "ERROR: failed writing data log" << dendl;
   }
