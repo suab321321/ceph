@@ -477,6 +477,20 @@ int RGWAccessControlPolicy_S3::create_from_headers(RGWUserCtl *user_ctl, const R
 int RGWAccessControlPolicy_S3::rebuild(RGWUserCtl *user_ctl, ACLOwner *owner, RGWAccessControlPolicy& dest,
                                        std::string &err_msg)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_acl_s3.cc RGWAccessControlPolicy_S3::rebuild", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_acl_s3.cc RGWAccessControlPolicy_S3::rebuild", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (!owner)
     return -EINVAL;
 

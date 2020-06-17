@@ -6214,6 +6214,20 @@ void RGWGetACLs::execute()
 
 int RGWPutACLs::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWPutACLs::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWPutACLs::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   bool perm;
 
   rgw_add_to_iam_environment(s->env, "s3:x-amz-acl", s->canned_acl);
@@ -6265,6 +6279,20 @@ int RGWDeleteLC::verify_permission()
 
 void RGWPutACLs::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWPutACLs::pre_exec", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWPutACLs::pre_exec", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -6285,11 +6313,28 @@ void RGWDeleteLC::pre_exec()
 
 void RGWPutACLs::execute()
 {
+  span_structure ss1;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWPutACLs::execute", s->stack_span.top());
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWPutACLs::execute", s->root_span);
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+  #endif
   bufferlist bl;
 
   RGWAccessControlPolicy_S3 *policy = NULL;
   RGWACLXMLParser_S3 parser(s->cct);
   RGWAccessControlPolicy_S3 new_policy(s->cct);
+  #ifdef WITH_JAEGER
+    new_policy.set_req_state(s);
+  #endif
   stringstream ss;
   rgw_obj obj;
 
@@ -6341,6 +6386,9 @@ void RGWPutACLs::execute()
     return;
   }
   policy = static_cast<RGWAccessControlPolicy_S3 *>(parser.find_first("AccessControlPolicy"));
+  #ifdef WITH_JAEGER
+    policy->set_req_state(s);
+  #endif
   if (!policy) {
     op_ret = -EINVAL;
     return;
@@ -6401,18 +6449,41 @@ void RGWPutACLs::execute()
     op_ret = -EACCES;
     return;
   }
-  new_policy.encode(bl);
+  #ifdef WITH_JAEGER
+    Span span_1;
+    if(s && !s->stack_span.empty())
+      span_1 = tracer_2.child_span("rgw_acl.h : RGWAccessControlPolicy::encode", s->stack_span.top());
+    new_policy.encode(bl);
+  #else
+    new_policy.encode(bl);
+  #endif
   if (!s->object.empty()) {
     obj = rgw_obj(s->bucket, s->object);
-    store->getRados()->set_atomic(s->obj_ctx, obj);
+    #ifdef WITH_JAEGER
+      Span span_2;
+      if(s && !s->stack_span.empty())
+        span_2 = tracer_2.child_span("rgw_rados.h : RGWRados::set_atomic", s->stack_span.top());
+      store->getRados()->set_atomic(s->obj_ctx, obj);
+    #else
+      store->getRados()->set_atomic(s->obj_ctx, obj);
+    #endif
     //if instance is empty, we should modify the latest object
     op_ret = modify_obj_attr(store, s, obj, RGW_ATTR_ACL, bl);
   } else {
     map<string,bufferlist> attrs = s->bucket_attrs;
     attrs[RGW_ATTR_ACL] = bl;
-    op_ret = store->ctl()->bucket->set_bucket_instance_attrs(s->bucket_info, attrs,
-							  &s->bucket_info.objv_tracker,
-							  s->yield);
+    #ifdef WITH_JAEGER
+      Span span_3;
+      if(s && !s->stack_span.empty())
+        span_3 = tracer_2.child_span("rgw_bucket.cc : RGWBucketCtl::set_bucket_instance_attrs", s->stack_span.top());
+      op_ret = store->ctl()->bucket->set_bucket_instance_attrs(s->bucket_info, attrs,
+                  &s->bucket_info.objv_tracker,
+                  s->yield);
+    #else
+      op_ret = store->ctl()->bucket->set_bucket_instance_attrs(s->bucket_info, attrs,
+                  &s->bucket_info.objv_tracker,
+                  s->yield);
+    #endif
   }
   if (op_ret == -ECANCELED) {
     op_ret = 0; /* lost a race, but it's ok because acls are immutable */

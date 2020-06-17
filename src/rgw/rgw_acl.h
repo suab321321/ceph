@@ -30,6 +30,8 @@
 
 static constexpr char RGW_REFERER_WILDCARD[] = "*";
 
+struct req_state;
+
 enum ACLGranteeTypeEnum {
 /* numbers are encoded, should not change */
   ACL_TYPE_CANON_USER = 0,
@@ -405,6 +407,7 @@ protected:
   CephContext *cct;
   RGWAccessControlList acl;
   ACLOwner owner;
+  req_state* s = nullptr;
 
 public:
   explicit RGWAccessControlPolicy(CephContext *_cct) : cct(_cct), acl(_cct) {}
@@ -464,6 +467,7 @@ public:
   const RGWAccessControlList& get_acl() const {
     return acl;
   }
+  void set_req_state(req_state* _s) { this->s = _s; }
 
   virtual bool compare_group_name(string& id, ACLGroupTypeEnum group) { return false; }
   bool is_public() const;

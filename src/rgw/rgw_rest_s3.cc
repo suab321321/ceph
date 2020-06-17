@@ -3747,6 +3747,22 @@ void RGWGetACLs_ObjStore_S3::send_response()
 
 int RGWPutACLs_ObjStore_S3::get_params()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway", "s3");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutACLs_ObjStore_S3::get_params", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutACLs_ObjStore_S3::get_params", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   int ret =  RGWPutACLs_ObjStore::get_params();
   if (ret >= 0) {
     const int ret_auth = do_aws4_auth_completion();
@@ -3770,6 +3786,22 @@ int RGWPutACLs_ObjStore_S3::get_policy_from_state(rgw::sal::RGWRadosStore *store
 						  struct req_state *s,
 						  stringstream& ss)
 {
+  span_structure ss1;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway", "s3");
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutACLs_ObjStore_S3::get_policy_from_state", s->stack_span.top());
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutACLs_ObjStore_S3::get_policy_from_state", s->root_span);
+      ss1.set_req_state(s);
+      ss1.set_span(span);
+    }
+  #endif
   RGWAccessControlPolicy_S3 s3policy(s->cct);
 
   // bucket-* canned acls do not apply to bucket
@@ -3789,6 +3821,22 @@ int RGWPutACLs_ObjStore_S3::get_policy_from_state(rgw::sal::RGWRadosStore *store
 
 void RGWPutACLs_ObjStore_S3::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutACLs_ObjStore_S3::send_response", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rest_s3.cc RGWPutACLs_ObjStore_S3::send_response", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
