@@ -194,6 +194,20 @@ int list_multipart_parts(rgw::sal::RGWRadosStore *store, struct req_state *s,
 			 int *next_marker, bool *truncated,
 			 bool assume_unsorted)
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_multi.cc list_multipart_parts", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_multi.cc list_multipart_parts", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   return list_multipart_parts(store, s->bucket_info, s->cct, upload_id,
 			      meta_oid, num_parts, marker, parts,
 			      next_marker, truncated, assume_unsorted);
