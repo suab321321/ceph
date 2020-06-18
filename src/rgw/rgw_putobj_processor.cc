@@ -223,29 +223,17 @@ int AtomicObjectProcessor::prepare(optional_yield y)
   uint64_t alignment;
   rgw_pool head_pool;
 
-  #ifdef WITH_JAEGER
-    Span span_1;
-    if(s && !s->stack_span.empty())
-      span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_obj_data_pool", s->stack_span.top());
-    if (!store->getRados()->get_obj_data_pool(bucket_info.placement_rule, head_obj, &head_pool)) {
-      return -EIO;
-    }
-  #else
-    if (!store->getRados()->get_obj_data_pool(bucket_info.placement_rule, head_obj, &head_pool)) {
+  Span span_1;
+  start_trace(span_1, s, "rgw_rados.cc : RGWRados::get_obj_data_pool");
+  if (!store->getRados()->get_obj_data_pool(bucket_info.placement_rule, head_obj, &head_pool)) {
     return -EIO;
   }
-  #endif
-
+  finish_trace(span_1);
   int r;
-  #ifdef WITH_JAEGER
-    Span span_2;
-    if(s && !s->stack_span.empty())
-      span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_max_chunk_size", s->stack_span.top());
-    r = store->getRados()->get_max_chunk_size(head_pool, &max_head_chunk_size, &alignment);
-  #else
-    r = store->getRados()->get_max_chunk_size(head_pool, &max_head_chunk_size, &alignment);
-  #endif
-
+  Span span_2;
+  start_trace(span_2, s, "rgw_rados.cc : RGWRados::get_max_chunk_size");
+  r = store->getRados()->get_max_chunk_size(head_pool, &max_head_chunk_size, &alignment);
+  finish_trace(span_2);
   if (r < 0) {
     return r;
   }
@@ -254,30 +242,18 @@ int AtomicObjectProcessor::prepare(optional_yield y)
   
   if (bucket_info.placement_rule != tail_placement_rule) {
     rgw_pool tail_pool;
-    #ifdef WITH_JAEGER
-      Span span_3;
-      if(s && !s->stack_span.empty())
-        span_3 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_obj_data_pool", s->stack_span.top());
-        if (!store->getRados()->get_obj_data_pool(tail_placement_rule, head_obj, &tail_pool)) {
-          return -EIO;
-        }
-    #else
-      if (!store->getRados()->get_obj_data_pool(tail_placement_rule, head_obj, &tail_pool)) {
+    Span span_3;
+    start_trace(span_3, s, "rgw_rados.cc : RGWRados::get_obj_data_pool");
+    if (!store->getRados()->get_obj_data_pool(tail_placement_rule, head_obj, &tail_pool)) {
       return -EIO;
     }
-    #endif
-
+    finish_trace(span_3);
     if (tail_pool != head_pool) {
       same_pool = false;
-      #ifdef WITH_JAEGER
-        Span span_4;
-        if(s && !s->stack_span.empty())
-          span_4 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_max_chunk_size", s->stack_span.top());
-        r = store->getRados()->get_max_chunk_size(tail_pool, &chunk_size);
-      #else
-        r = store->getRados()->get_max_chunk_size(tail_pool, &chunk_size);
-      #endif
-
+      Span span_4;
+      start_trace(span_4, s, "rgw_rados.cc : RGWRados::get_max_chunk_size");
+      r = store->getRados()->get_max_chunk_size(tail_pool, &chunk_size);
+      finish_trace(span_4);
       if (r < 0) {
         return r;
       }
@@ -293,30 +269,19 @@ int AtomicObjectProcessor::prepare(optional_yield y)
 
   uint64_t stripe_size;
   const uint64_t default_stripe_size = store->ctx()->_conf->rgw_obj_stripe_size;
-  #ifdef WITH_JAEGER
-    Span span_5;
-    if(s && !s->stack_span.empty())
-      span_5 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_max_aligned_size", s->stack_span.top());
-    store->getRados()->get_max_aligned_size(default_stripe_size, alignment, &stripe_size);
-  #else
-    store->getRados()->get_max_aligned_size(default_stripe_size, alignment, &stripe_size);
-  #endif
+  Span span_5;
+  start_trace(span_5, s, "rgw_rados.cc : RGWRados::get_max_aligned_size");
+  store->getRados()->get_max_aligned_size(default_stripe_size, alignment, &stripe_size);
+  finish_trace(span_5);
 
   manifest.set_trivial_rule(head_max_size, stripe_size);
-  #ifdef WITH_JAEGER
-    Span span_6;
-    if(s && !s->stack_span.empty())
-      span_6 = tracer_2.child_span("rgw_obj_manifest.cc : RGWObjManifest::generator::create_begin", s->stack_span.top());
-    r = manifest_gen.create_begin(store->ctx(), &manifest,
-                                  bucket_info.placement_rule,
-                                  &tail_placement_rule,
-                                  head_obj.bucket, head_obj);
-  #else
-    r = manifest_gen.create_begin(store->ctx(), &manifest,
+  Span span_6;
+  start_trace(span_6, s, "rgw_obj_manifest.cc : RGWObjManifest::generator::create_begin");
+  r = manifest_gen.create_begin(store->ctx(), &manifest,
                                 bucket_info.placement_rule,
                                 &tail_placement_rule,
                                 head_obj.bucket, head_obj);
-  #endif
+  finish_trace(span_6);
   if (r < 0) {
     return r;
   }
@@ -403,11 +368,7 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
   obj_op.meta.zones_trace = zones_trace;
   obj_op.meta.modify_tail = true;
 
-  // #ifdef WITH_JAEGER
-  //   r = obj_op.write_meta(actual_size, accounted_size, attrs, y, s);
-  // #else
-    r = obj_op.write_meta(actual_size, accounted_size, attrs, y);
-  // #endif
+  r = obj_op.write_meta(actual_size, accounted_size, attrs, y);
   if (r < 0) {
     return r;
   }

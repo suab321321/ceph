@@ -50,17 +50,11 @@ int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
   bool is_truncated = false;
   int ret;
 
-  #ifdef WITH_JAEGER
-    Span span_1;
-    if(s && !s->stack_span.empty())
-      span_1 = tracer_2.child_span("rgw_user.cc : RGWUserCtl::list_buckets", s->stack_span.top());
-    ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
-            need_stats, &ulist, &is_truncated);
-    #else
-       ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
-            need_stats, &ulist, &is_truncated);
-  #endif
-
+  Span span_1;
+  start_trace(span_1, s, "rgw_user.cc : RGWUserCtl::list_buckets");
+  ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
+          need_stats, &ulist, &is_truncated);
+  finish_trace(span_1);
   if (ret < 0)
     return ret;
 
@@ -223,14 +217,10 @@ int RGWRadosBucket::update_container_stats(void)
   map<std::string, RGWBucketEnt> m;
 
   m[ent.bucket.name] = ent;
-   #ifdef WITH_JAEGER
-    Span span_2;
-   if(s && !s->stack_span.top())
-      span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::update_containers_stats", s->stack_span.top());
-    ret = store->getRados()->update_containers_stats(m);
-  #else
-    ret = store->getRados()->update_containers_stats(m);
-  #endif
+  Span span_2;
+  start_trace(span_2, s, "rgw_rados.cc : RGWRados::update_containers_stats");
+  ret = store->getRados()->update_containers_stats(m);
+  finish_trace(span_2);
   if (!ret)
     return -EEXIST;
   if (ret < 0)
