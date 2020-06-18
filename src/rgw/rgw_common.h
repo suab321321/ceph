@@ -2444,4 +2444,20 @@ int decode_bl(bufferlist& bl, T& t)
   return 0;
 }
 
+static inline void start_trace(Span& span, req_state* s, const char* name)
+{
+  #ifdef WITH_JAEGER
+    if(s && !s->stack_span.empty())
+      span = tracer_2.child_span(name, s->stack_span.top());
+  #endif
+}
+
+static inline void finish_trace(Span& span)
+{
+  #ifdef WITH_JAEGER
+    if(span)
+      span->Finish();
+  #endif
+}
+
 #endif

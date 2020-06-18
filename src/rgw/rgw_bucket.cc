@@ -3293,6 +3293,21 @@ int RGWBucketCtl::read_bucket_info(const rgw_bucket& bucket,
                                    const BucketInstance::GetParams& params,
                                    RGWObjVersionTracker *ep_objv_tracker)
 {
+  req_state* s = info->s;
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::read_bucket_info", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::read_bucket_info", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   const rgw_bucket *b = &bucket;
 
   std::optional<RGWBucketEntryPoint> ep;
