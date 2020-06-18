@@ -5646,9 +5646,26 @@ int RGWRados::delete_obj(RGWObjectCtx& obj_ctx,
                          const real_time& expiration_time,
                          rgw_zone_set *zones_trace)
 {
+  req_state * s = bucket_info.s;
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::delete_obj", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_rados.cc RGWRados::delete_obj", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   RGWRados::Object del_target(this, bucket_info, obj_ctx, obj);
   RGWRados::Object::Delete del_op(&del_target);
-
+  #ifdef WITH_JAEGER
+    del_op.target->set_req_state(s);
+  #endif
   del_op.params.bucket_owner = bucket_info.owner;
   del_op.params.versioning_status = versioning_status;
   del_op.params.bilog_flags = bilog_flags;

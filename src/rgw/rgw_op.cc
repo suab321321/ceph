@@ -6965,6 +6965,20 @@ void RGWInitMultipart::execute()
 
 int RGWCompleteMultipart::verify_permission()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWCompleteMultipart::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCompleteMultipart::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (s->iam_policy || ! s->iam_user_policies.empty()) {
     auto usr_policy_res = eval_user_policies(s->iam_user_policies, s->env,
                                               boost::none,
@@ -6998,11 +7012,39 @@ int RGWCompleteMultipart::verify_permission()
 
 void RGWCompleteMultipart::pre_exec()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWCompleteMultipart::pre_exec", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCompleteMultipart::pre_exec", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
 void RGWCompleteMultipart::execute()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWCompleteMultipart::execute", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCompleteMultipart::execute", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   RGWMultiCompleteUpload *parts;
   map<int, string>::iterator iter;
   RGWMultiXMLParser parser;
@@ -7088,10 +7130,25 @@ void RGWCompleteMultipart::execute()
     s->cct->_conf.get_val<int64_t>("rgw_mp_lock_max_time");
   utime_t dur(max_lock_secs_mp, 0);
 
-  store->getRados()->obj_to_raw((s->bucket_info).placement_rule, meta_obj, &raw_obj);
+  #ifdef WITH_JAEGER
+    if(s && !s->stack_span.empty())
+      store->getRados()->obj_to_raw((s->bucket_info).placement_rule, meta_obj, &raw_obj, s->stack_span.top());
+    else
+      store->getRados()->obj_to_raw((s->bucket_info).placement_rule, meta_obj, &raw_obj);
+  #else
+    store->getRados()->obj_to_raw((s->bucket_info).placement_rule, meta_obj, &raw_obj);
+  #endif
+
   store->getRados()->get_obj_data_pool((s->bucket_info).placement_rule,
 			   meta_obj,&meta_pool);
-  store->getRados()->open_pool_ctx(meta_pool, serializer.ioctx, true);
+  #ifdef WITH_JAEGER
+    Span span_1;
+    if(s && !s->stack_span.empty())
+      span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::open_pool_ctx", s->stack_span.top());
+    store->getRados()->open_pool_ctx(meta_pool, serializer.ioctx, true);
+  #else
+    store->getRados()->open_pool_ctx(meta_pool, serializer.ioctx, true);
+  #endif
 
   op_ret = serializer.try_lock(raw_obj.oid, dur);
   if (op_ret < 0) {
@@ -7149,9 +7206,18 @@ void RGWCompleteMultipart::execute()
         op_ret = -ERR_INVALID_PART;
         return;
       }
-
-      hex_to_buf(obj_iter->second.etag.c_str(), petag,
-		CEPH_CRYPTO_MD5_DIGESTSIZE);
+      #ifdef WITH_JAEGER
+        Span span_2;
+        if(s && !s->stack_span.empty())
+          span_2 = tracer_2.child_span("rgw_common.h : hex_to_buf", s->stack_span.top());
+          hex_to_buf(obj_iter->second.etag.c_str(), petag,
+        CEPH_CRYPTO_MD5_DIGESTSIZE);
+        if(s && !s->stack_span.empty())
+          span_2->Finish();
+      #else
+          hex_to_buf(obj_iter->second.etag.c_str(), petag,
+        CEPH_CRYPTO_MD5_DIGESTSIZE);
+      #endif
       hash.Update((const unsigned char *)petag, sizeof(petag));
 
       RGWUploadPartInfo& obj_part = obj_iter->second;
@@ -7210,8 +7276,16 @@ void RGWCompleteMultipart::execute()
     }
   } while (truncated);
   hash.Final((unsigned char *)final_etag);
-
-  buf_to_hex((unsigned char *)final_etag, sizeof(final_etag), final_etag_str);
+  #ifdef WITh_JAEGER
+    Span span_3;
+    if(s && !s->stack_span.empty())
+      span_3 = tracer_2.child_span("rgw_op.cc : buf_to_hex", s->stack_span.top());
+    buf_to_hex((unsigned char *)final_etag, sizeof(final_etag), final_etag_str);
+    if(s && !s->stack_span.empty())
+      span_3->Finish();
+  #else
+    buf_to_hex((unsigned char *)final_etag, sizeof(final_etag), final_etag_str);
+  #endif
   snprintf(&final_etag_str[CEPH_CRYPTO_MD5_DIGESTSIZE * 2],  sizeof(final_etag_str) - CEPH_CRYPTO_MD5_DIGESTSIZE * 2,
            "-%lld", (long long)parts->parts.size());
   etag = final_etag_str;
@@ -7244,7 +7318,10 @@ void RGWCompleteMultipart::execute()
 
   RGWRados::Object op_target(store->getRados(), s->bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), target_obj);
   RGWRados::Object::Write obj_op(&op_target);
-
+  #ifdef WITH_JAEGER
+    obj_op.target->set_req_state(s);
+    s->bucket_info.s = s;
+  #endif
   obj_op.meta.manifest = &manifest;
   obj_op.meta.remove_objs = &remove_objs;
 
@@ -7295,6 +7372,20 @@ int RGWCompleteMultipart::MPSerializer::try_lock(
 
 void RGWCompleteMultipart::complete()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWCompleteMultipart::complete", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWCompleteMultipart::complete", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   /* release exclusive lock iff not already */
   if (unlikely(serializer.locked)) {
     int r = serializer.unlock();
