@@ -348,7 +348,25 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
 			   vector<rgw_bucket_dir_entry> *objs,
 			   map<string, bool> *common_prefixes, bool *is_truncated)
 {
+  req_state* s = bucket_info.s;
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_multi.cc list_bucket_multiparts", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_multi.cc list_bucket_multiparts", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   RGWRados::Bucket target(store->getRados(), bucket_info);
+  #ifdef WITH_JAEGER
+    target.set_req_state(s);
+  #endif;
   RGWRados::Bucket::List list_op(&target);
   MultipartMetaFilter mp_filter;
 
