@@ -4367,6 +4367,24 @@ void RGWListMultipart_ObjStore_S3::send_response()
 
 void RGWListBucketMultiparts_ObjStore_S3::send_response()
 {
+  span_structure ss;
+  #ifdef WITH_JAEGER
+    if(s && s->root_span){
+      s->root_span->SetTag("success", true);
+      s->root_span->SetTag("gateway", "s3");
+    }
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer_2.child_span("rgw_op.cc RGWListBucketMultiparts::verify_permission", s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+    else if(s && s->root_span){
+      span = tracer_2.child_span("rgw_op.cc RGWListBucketMultiparts::verify_permission", s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
+    }
+  #endif
   if (op_ret < 0)
     set_req_state_err(s, op_ret);
   dump_errno(s);

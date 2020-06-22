@@ -9010,6 +9010,8 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
   } // while we haven't provided requested # of result entries
 
   // suggest updates if there are any
+  Span span_2;
+  start_trace(span_2, s, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate");
   for (auto& miter : updates) {
     if (miter.second.length()) {
       ObjectWriteOperation o;
@@ -9021,7 +9023,7 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
       c->release();
     }
   } // updates loop
-
+  finish_trace(span_2);
   // determine truncation by checking if all the returned entries are
   // consumed or not
   *is_truncated = false;
@@ -9217,6 +9219,8 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
 check_updates:
 
   // suggest updates if there is any
+  Span span_4;
+  start_trace(span_4, s, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate");
   map<string, bufferlist>::iterator miter = updates.begin();
   for (; miter != updates.end(); ++miter) {
     if (miter->second.length()) {
@@ -9228,7 +9232,7 @@ check_updates:
       c->release();
     }
   }
-
+  finish_trace(span_4);
   if (last_entry && !ent_list.empty()) {
     *last_entry = last_added_entry;
   }
