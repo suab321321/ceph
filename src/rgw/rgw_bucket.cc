@@ -162,20 +162,9 @@ int rgw_read_user_buckets(rgw::sal::RGWRadosStore *store,
 {
   req_state* s = buckets.get_req_state();
   rgw::sal::RGWRadosUser user(store, user_id);
-  span_structure ss;
   #ifdef WITH_JAEGER
-    user.set_req_state(s);
-    Span span;
-    if(s && !s->stack_span.empty()){
-      span = tracer_2.child_span("rgw_bucket.cc rgw_read_user_buckets", s->stack_span.top());
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
-    else if(s && s->root_span){
-      span = tracer_2.child_span("rgw_bucket.cc rgw_read_user_buckets",s->root_span);
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
+    span_structure ss;
+    start_trace(std::move(ss), {}, s, "rgw_bucket.cc rgw_read_user_buckets", true);
   #endif
   return user.list_buckets(marker, end_marker, max, need_stats, buckets);
 }
@@ -3294,19 +3283,9 @@ int RGWBucketCtl::read_bucket_info(const rgw_bucket& bucket,
                                    RGWObjVersionTracker *ep_objv_tracker)
 {
   req_state* s = info->s;
-  span_structure ss;
   #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty()){
-      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::read_bucket_info", s->stack_span.top());
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
-    else if(s && s->root_span){
-      span = tracer_2.child_span("rgw_bucket.cc RGWBucketCtl::read_bucket_info", s->root_span);
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
+    span_structure ss;
+    start_trace(std::move(ss), {}, s, "rgw_bucket.cc RGWBucketCtl::read_bucket_info", true);
   #endif
   const rgw_bucket *b = &bucket;
 

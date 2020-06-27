@@ -1844,15 +1844,9 @@ static http_op op_from_method(const char *method)
 
 int RGWHandler_REST::init_permissions(RGWOp* op)
 {
-  span_structure ss;
   #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty())
-      span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::init_permissions", s->stack_span.top());
-    else if(s && s->root_span)
-      span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::init_permissions", s->root_span);
-    ss.set_req_state(s);
-    ss.set_span(span);
+    span_structure ss;
+    start_trace(std::move(ss), {}, s, "rgw_rest.cc RGWHandler_REST::init_permissions", true);
   #endif
   if (op->get_type() == RGW_OP_CREATE_BUCKET) {
     // We don't need user policies in case of STS token returned by AssumeRole, hence the check for user type
@@ -1879,19 +1873,9 @@ int RGWHandler_REST::init_permissions(RGWOp* op)
 
 int RGWHandler_REST::read_permissions(RGWOp* op_obj)
 {
-  span_structure ss;
   #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty()){
-      span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::read_permissions", s->stack_span.top());
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
-    else if(s && s->root_span){
-      span = tracer_2.child_span("rgw_rest.cc RGWHandler_REST::read_permissions", s->root_span);
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
+    span_structure ss;
+    start_trace(std::move(ss), {}, s, "rgw_rest.cc RGWHandler_REST::read_permissions", true);
   #endif
   bool only_bucket = false;
 

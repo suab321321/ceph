@@ -32,26 +32,16 @@ namespace rgw::sal {
 int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
 			       uint64_t max, bool need_stats, RGWBucketList &buckets)
 {
-  span_structure ss;
   #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty()){
-      span = tracer_2.child_span("rgw_sal.cc RGWRadosUser::list_buckets", s->stack_span.top());
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
-    else if(s && s->root_span){
-      span = tracer_2.child_span("rgw_sal.cc RGWRadosUser::list_buckets",s->root_span);
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
+    span_structure ss;
+    start_trace(std::move(ss), {}, s, "rgw_sal.cc RGWRadosUser::list_buckets", true);
   #endif
   RGWUserBuckets ulist;
   bool is_truncated = false;
   int ret;
 
   Span span_1;
-  start_trace(span_1, s, "rgw_user.cc : RGWUserCtl::list_buckets");
+  start_trace({}, std::move(span_1), s, "rgw_user.cc : RGWUserCtl::list_buckets", false);
   ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
           need_stats, &ulist, &is_truncated);
   finish_trace(span_1);
@@ -199,26 +189,16 @@ int RGWRadosBucket::sync_user_stats()
 
 int RGWRadosBucket::update_container_stats(void)
 {
-  span_structure ss;
   #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty()){
-      span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats", s->stack_span.top());
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
-    else if(s && s->root_span){
-      span = tracer_2.child_span("rgw_sal.cc RGWRadosBucket::update_container_stats",s->root_span);
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
+    span_structure ss;
+    start_trace(std::move(ss), {}, s, "rgw_sal.cc RGWRadosBucket::update_container_stats", true);
   #endif
   int ret;
   map<std::string, RGWBucketEnt> m;
 
   m[ent.bucket.name] = ent;
   Span span_2;
-  start_trace(span_2, s, "rgw_rados.cc : RGWRados::update_containers_stats");
+  start_trace({}, std::move(span_2), s, "rgw_rados.cc : RGWRados::update_containers_stats", false);
   ret = store->getRados()->update_containers_stats(m);
   finish_trace(span_2);
   if (!ret)
