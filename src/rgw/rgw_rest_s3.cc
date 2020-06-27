@@ -2407,6 +2407,8 @@ static inline void map_qs_metadata(struct req_state* s)
 int RGWPutObj_ObjStore_S3::get_params()
 {
   #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway", "s3");
     span_structure ss;
     start_trace(std::move(ss), {}, s, "rgw_rest_s3.cc RGWPutObj_ObjStore_S3::get_params", true);
   #endif
@@ -2624,6 +2626,8 @@ static int get_success_retcode(int code)
 void RGWPutObj_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
     span_structure ss;
     start_trace(std::move(ss), {}, s, "rgw_rest_s3.cc RGWPutObj_ObjStore_S3::send_response", true);
     if(s && s->root_span)
