@@ -2444,11 +2444,28 @@ int decode_bl(bufferlist& bl, T& t)
   return 0;
 }
 
-static inline void start_trace(Span& span, req_state* s, const char* name)
+static inline void start_trace(span_structure&& ss, Span&& span, req_state* const s, const char* name, bool should_store)
 {
   #ifdef WITH_JAEGER
-    if(s && !s->stack_span.empty())
-      span = tracer_2.child_span(name, s->stack_span.top());
+    if(should_store)
+    {
+      Span span;
+      if(s && !s->stack_span.empty()){
+        span = tracer_2.child_span(name, s->stack_span.top());
+        ss.set_req_state(s);
+        ss.set_span(span);
+      }
+      else if(s && s->root_span){
+        span = tracer_2.child_span(name, s->root_span);
+        ss.set_req_state(s);
+        ss.set_span(span);
+      }
+    }
+    else
+    {
+      if(s && !s->stack_span.empty())
+        span = tracer_2.child_span(name, s->stack_span.top());
+    }
   #endif
 }
 

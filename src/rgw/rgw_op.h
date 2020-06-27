@@ -153,19 +153,9 @@ public:
   int get_ret() const { return op_ret; }
 
   virtual int init_processing() {
-    span_structure ss;
     #ifdef WITH_JAEGER
-      Span span;
-      if(s && !s->stack_span.empty()){
-        span = tracer_2.child_span("rgw_op.h init_processing", s->stack_span.top());
-        ss.set_req_state(s);
-        ss.set_span(span);
-      }
-      else if(s && s->root_span){
-        span = tracer_2.child_span("rgw_op.h init_processing", s->root_span);
-        ss.set_req_state(s);
-        ss.set_span(span);
-      }
+      span_structure ss;
+      start_trace(std::move(ss), {}, s, "rgw_op.h init_processing", true);
     #endif
     if (dialect_handler->supports_quota()) {
       op_ret = init_quota();

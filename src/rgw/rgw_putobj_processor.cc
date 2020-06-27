@@ -203,19 +203,9 @@ int AtomicObjectProcessor::process_first_chunk(bufferlist&& data,
 int AtomicObjectProcessor::prepare(optional_yield y)
 {
   req_state* s = bucket_info.s;
-  span_structure ss;
   #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty()){
-      span = tracer_2.child_span("rgw_putobj_processor.cc AtomicObjectProcessor::prepare", s->stack_span.top());
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
-    else if(s && s->root_span){
-      span = tracer_2.child_span("rgw_putobj_processor.cc AtomicObjectProcessor::prepare", s->root_span);
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
+    span_structure ss;
+    start_trace(std::move(ss), {}, s, "rgw_putobj_processor.cc AtomicObjectProcessor::prepare", true);
   #endif
   uint64_t max_head_chunk_size;
   uint64_t head_max_size;
@@ -224,14 +214,14 @@ int AtomicObjectProcessor::prepare(optional_yield y)
   rgw_pool head_pool;
 
   Span span_1;
-  start_trace(span_1, s, "rgw_rados.cc : RGWRados::get_obj_data_pool");
+  start_trace({}, std::move(span_1), s, "rgw_rados.cc : RGWRados::get_obj_data_pool", false);
   if (!store->getRados()->get_obj_data_pool(bucket_info.placement_rule, head_obj, &head_pool)) {
     return -EIO;
   }
   finish_trace(span_1);
   int r;
   Span span_2;
-  start_trace(span_2, s, "rgw_rados.cc : RGWRados::get_max_chunk_size");
+  start_trace({}, std::move(span_2), s, "rgw_rados.cc : RGWRados::get_max_chunk_size", false);
   r = store->getRados()->get_max_chunk_size(head_pool, &max_head_chunk_size, &alignment);
   finish_trace(span_2);
   if (r < 0) {
@@ -243,7 +233,7 @@ int AtomicObjectProcessor::prepare(optional_yield y)
   if (bucket_info.placement_rule != tail_placement_rule) {
     rgw_pool tail_pool;
     Span span_3;
-    start_trace(span_3, s, "rgw_rados.cc : RGWRados::get_obj_data_pool");
+    start_trace({}, std::move(span_3), s, "rgw_rados.cc : RGWRados::get_obj_data_pool", false);
     if (!store->getRados()->get_obj_data_pool(tail_placement_rule, head_obj, &tail_pool)) {
       return -EIO;
     }
@@ -251,7 +241,7 @@ int AtomicObjectProcessor::prepare(optional_yield y)
     if (tail_pool != head_pool) {
       same_pool = false;
       Span span_4;
-      start_trace(span_4, s, "rgw_rados.cc : RGWRados::get_max_chunk_size");
+      start_trace({}, std::move(span_4), s, "rgw_rados.cc : RGWRados::get_max_chunk_size", false);
       r = store->getRados()->get_max_chunk_size(tail_pool, &chunk_size);
       finish_trace(span_4);
       if (r < 0) {
@@ -270,13 +260,13 @@ int AtomicObjectProcessor::prepare(optional_yield y)
   uint64_t stripe_size;
   const uint64_t default_stripe_size = store->ctx()->_conf->rgw_obj_stripe_size;
   Span span_5;
-  start_trace(span_5, s, "rgw_rados.cc : RGWRados::get_max_aligned_size");
+  start_trace({}, std::move(span_5), s, "rgw_rados.cc : RGWRados::get_max_aligned_size", false);
   store->getRados()->get_max_aligned_size(default_stripe_size, alignment, &stripe_size);
   finish_trace(span_5);
 
   manifest.set_trivial_rule(head_max_size, stripe_size);
   Span span_6;
-  start_trace(span_6, s, "rgw_obj_manifest.cc : RGWObjManifest::generator::create_begin");
+  start_trace({}, std::move(span_6), s, "rgw_obj_manifest.cc : RGWObjManifest::generator::create_begin", false);
   r = manifest_gen.create_begin(store->ctx(), &manifest,
                                 bucket_info.placement_rule,
                                 &tail_placement_rule,
@@ -313,19 +303,9 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
                                     bool *pcanceled, optional_yield y)
 {
   req_state* s = bucket_info.s;
-  span_structure ss;
   #ifdef WITH_JAEGER
-    Span span;
-    if(s && !s->stack_span.empty()){
-      span = tracer_2.child_span("rgw_putobj_processor.cc AtomicObjectProcessor::complete", s->stack_span.top());
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
-    else if(s && s->root_span){
-      span = tracer_2.child_span("rgw_putobj_processor.cc AtomicObjectProcessor::complete", s->root_span);
-      ss.set_req_state(s);
-      ss.set_span(span);
-    }
+    span_structure ss;
+    start_trace(std::move(ss), {}, s, "rgw_putobj_processor.cc AtomicObjectProcessor::complete", true);
   #endif
   int r = writer.drain();
   if (r < 0) {
