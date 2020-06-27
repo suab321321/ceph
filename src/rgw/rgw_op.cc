@@ -1957,12 +1957,10 @@ static int get_obj_user_manifest_iterate_cb(rgw_bucket& bucket,
 int RGWGetObj::handle_user_manifest(const char *prefix)
 {
   const std::string_view prefix_view(prefix);
-  span_structure ss;
   #ifdef WITH_JAEGER
     span_structure ss;
     start_trace(std::move(ss), {}, s, "rgw_op.cc RGWGetObj::handle_user_manifest", true);
   #endif
-  const boost::string_view prefix_view(prefix);
   ldpp_dout(this, 2) << "RGWGetObj::handle_user_manifest() prefix="
                    << prefix_view << dendl;
 
@@ -5251,23 +5249,6 @@ bool RGWCopyObj::parse_copy_location(const std::string_view& url_src,
 {
   std::string_view name_str;
   std::string_view params_str;
-  // span_structure ss;
-  // #ifdef WITH_JAEGER
-  //   Span span;
-  //   if(s && !s->stack_span.empty()){
-  //     span = tracer_2.child_span("rgw_op.cc RGWCopyObj::parse_copy_location", s->stack_span.top());
-  //     ss.set_req_state(s);
-  //     ss.set_span(span);
-  //   }
-  //   else if(s && s->root_span){
-  //     span = tracer_2.child_span("rgw_op.cc RGWCopyObj::parse_copy_location", s->root_span);
-  //     ss.set_req_state(s);
-  //     ss.set_span(span);
-  //   }
-  // #endif
-  boost::string_view name_str;
-  boost::string_view params_str;
-
   // search for ? before url-decoding so we don't accidentally match %3F
   size_t pos = url_src.find('?');
   if (pos == string::npos) {
@@ -6170,9 +6151,6 @@ void RGWOptionsCORS::execute()
     origin = req_meth = NULL;
     return;
   }};
-
-  return;
-}
 
 int RGWGetRequestPayment::verify_permission()
 {
