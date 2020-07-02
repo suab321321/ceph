@@ -13,7 +13,7 @@
   #define WITH_JAEGER
 #endif
 
-typedef std::unique_ptr<opentracing::Span> Span;
+typedef std::shared_ptr<opentracing::Span> Span;
 
 class Jager_Tracer{
   public:
