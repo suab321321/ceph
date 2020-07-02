@@ -1739,7 +1739,9 @@ int RGWRados::Bucket::List::list_objects_ordered(
   req_state* s = target->get_req_state();
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::Bucket::List::list_objects_ordered", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
 
   RGWRados *store = target->get_store();
@@ -2028,7 +2030,9 @@ int RGWRados::Bucket::List::list_objects_unordered(int64_t max_p,
   req_state* s = target->get_req_state();
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::Bucket::List::list_objects_unordered", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
 
   RGWRados *store = target->get_store();
@@ -2190,7 +2194,9 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
 req_state* s = info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::create_bucket", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
 
 #define MAX_CREATE_RETRIES 20 /* need to bound retries */
@@ -2250,11 +2256,7 @@ req_state* s = info.s;
     if (pquota_info) {
       info.quota = *pquota_info;
     }
-    int r;
-    Span span_2;
-    start_trace({}, std::move(span_2), s, "svc_bi_rados.cc : RGWSI_BucketIndex_RADOS::init_index", false);
-    r = svc.bi->init_index(info);
-    finish_trace(span_2);
+    int r = svc.bi->init_index(info);
     if (r < 0) {
       return r;
     }
@@ -2313,9 +2315,13 @@ bool RGWRados::obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_ob
 
 bool RGWRados::obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_obj& obj, rgw_raw_obj *raw_obj, const Span& parent_span)
 {
-  Span span_1 = tracer_2.child_span("rgw_rados.cc : RGWRados::obj_to_raw", parent_span);
+  #ifdef WITH_JAEGER
+    Span span_1 = tracer.child_span("rgw_rados.cc : RGWRados::obj_to_raw", parent_span);
+  #endif
   get_obj_bucket_and_oid_loc(obj, raw_obj->oid, raw_obj->loc);
-  Span span_2 = tracer_2.child_span("rgw_rados.cc : RGWRados::get_obj_data_pool", span_1);
+  #ifdef WITH_JAEGER
+    Span span_2 = tracer.child_span("rgw_rados.cc : RGWRados::get_obj_data_pool", span_1);
+  #endif
   return get_obj_data_pool(placement_rule, obj, &raw_obj->pool);
 }
 
@@ -2324,7 +2330,9 @@ int RGWRados::get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::get_obj_head_ioctx", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   string oid, key;
   get_obj_bucket_and_oid_loc(obj, oid, key);
@@ -2786,7 +2794,9 @@ int RGWRados::swift_versioning_copy(RGWObjectCtx& obj_ctx,
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::swift_versioning_copy", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   if (! swift_versioning_enabled(bucket_info)) {
     return 0;
@@ -2994,7 +3004,9 @@ int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_si
   req_state* s = target->get_req_state();
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::Object::Write::_do_write_meta", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   RGWRados::Bucket::UpdateIndex *index_op = static_cast<RGWRados::Bucket::UpdateIndex *>(_index_op);
   RGWRados *store = target->get_store();
@@ -3305,7 +3317,9 @@ int RGWRados::Object::Write::write_meta(uint64_t size, uint64_t accounted_size,
 
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::Object::Write::write_meta", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   RGWBucketInfo& bucket_info = target->get_bucket_info();
 
@@ -3870,7 +3884,9 @@ int RGWRados::fetch_remote_obj(RGWObjectCtx& obj_ctx,
   req_state* s = dest_bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::fetch_remote_obj", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
 
   RGWRESTStreamRWRequest *in_stream_req;
@@ -4186,7 +4202,9 @@ int RGWRados::copy_obj_to_remote_dest(RGWObjState *astate,
   req_state* s = read_op.source->get_req_state();
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::fetch_remote_obj", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   string etag;
 
@@ -4265,7 +4283,9 @@ int RGWRados::copy_obj(RGWObjectCtx& obj_ctx,
   req_state* s = src_bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::copy_obj", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     src_bucket_info.s = s;
     dest_bucket_info.s = s;
   #endif
@@ -4564,7 +4584,9 @@ int RGWRados::copy_obj_data(RGWObjectCtx& obj_ctx,
   req_state* s = dest_bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::copy_obj_data", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   string tag;
   append_rand_alpha(cct, tag, tag, 32);
@@ -4696,7 +4718,9 @@ int RGWRados::check_bucket_empty(RGWBucketInfo& bucket_info, optional_yield y)
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::check_bucket_empty", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   constexpr uint NUM_ENTRIES = 1000u;
 
@@ -4745,16 +4769,14 @@ int RGWRados::delete_bucket(RGWBucketInfo& bucket_info, RGWObjVersionTracker& ob
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::delete_bucket", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   const rgw_bucket& bucket = bucket_info.bucket;
   RGWSI_RADOS::Pool index_pool;
   map<int, string> bucket_objs;
-  int r;
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "svc_bi_rados.cc : RGWSI_BucketIndex_RADOS::open_bucket_index", false);
-  r = svc.bi_rados->open_bucket_index(bucket_info, std::nullopt, &index_pool, &bucket_objs, nullptr);
-  finish_trace(span_1);
+  int r = svc.bi_rados->open_bucket_index(bucket_info, std::nullopt, &index_pool, &bucket_objs, nullptr);
   if (r < 0)
     return r;
   
@@ -5129,7 +5151,9 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y)
   req_state* s = target->get_req_state();
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::Object::Delete::delete_obj", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   RGWRados *store = target->get_store();
   rgw_obj& src_obj = target->get_obj();
@@ -5367,7 +5391,9 @@ int RGWRados::delete_obj(RGWObjectCtx& obj_ctx,
   req_state * s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::Object::Delete::delete_obj", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   RGWRados::Object del_target(this, bucket_info, obj_ctx, obj);
   RGWRados::Object::Delete del_op(&del_target);
@@ -6071,7 +6097,9 @@ int RGWRados::Object::Read::prepare(optional_yield y)
   req_state* s = source->get_req_state();
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::Object::Read::prepare", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   RGWRados *store = source->get_store();
   CephContext *cct = store->ctx();
@@ -6252,7 +6280,9 @@ int RGWRados::Bucket::UpdateIndex::prepare(RGWModifyOp op, const string *write_t
   req_state* s = target->get_req_state();
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::Bucket::UpdateIndex::prepare", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   if (blind) {
     return 0;
@@ -6291,7 +6321,9 @@ int RGWRados::Bucket::UpdateIndex::complete(int64_t poolid, uint64_t epoch,
   req_state* s = target->get_req_state();
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::Bucket::UpdateIndex::complete", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   if (blind) {
     return 0;
@@ -6630,7 +6662,9 @@ int RGWRados::Object::Read::iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb,
   req_state* s = source->get_req_state();
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::Object::Read::iterate", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   RGWRados *store = source->get_store();
   CephContext *cct = store->ctx();
@@ -7463,7 +7497,9 @@ int RGWRados::set_olh(RGWObjectCtx& obj_ctx, const RGWBucketInfo& bucket_info, c
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::set_olh", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   string op_tag;
 
@@ -7888,7 +7924,9 @@ int RGWRados::get_bucket_instance_info(RGWSysObjectCtx& obj_ctx,
   req_state* s = info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::get_bucket_instance_info", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   rgw_bucket bucket;
   rgw_bucket_parse_bucket_key(cct, meta_key, &bucket, nullptr);
@@ -7917,7 +7955,9 @@ int RGWRados::get_bucket_info(RGWServices *svc,
   req_state* s = info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::get_bucket_info", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
 
   auto obj_ctx = svc->sysobj->init_obj_ctx();
@@ -7964,7 +8004,9 @@ int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_t
 req_state* s = info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::put_linked_bucket_info", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   bool create_head = !info.has_instance_obj || create_entry_point;
   int ret;
@@ -8562,7 +8604,9 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::cls_bucket_list_ordered", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   ldout(cct, 10) << "RGWRados::" << __func__ << ": " << bucket_info.bucket <<
     " start_after=\"" << start_after.name <<
@@ -8579,13 +8623,9 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
   // value - list result for the corresponding oid (shard), it is filled by
   //         the AIO callback
   map<int, string> shard_oids;
-  int r;
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "svc_bi_rados.cc : RGWSI_BucketIndex_RADOS::open_bucket_index", false);
-  r = svc.bi_rados->open_bucket_index(bucket_info, shard_id,
+  int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id,
 					&index_pool, &shard_oids,
 					nullptr);
-  finish_trace(span_1);
   if (r < 0) {
     return r;
   }
@@ -8834,7 +8874,9 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rados.cc RGWRados::cls_bucket_list_unordered", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   ent_list.clear();
   static MultipartMetaFilter multipart_meta_filter;
@@ -8843,11 +8885,7 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
   RGWSI_RADOS::Pool index_pool;
 
   map<int, string> oids;
-  int r;
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "svc_bi_rados.cc : RGWSI_BucketIndex_RADOS::open_bucket_index", false);
-  r = svc.bi_rados->open_bucket_index(bucket_info, shard_id, &index_pool, &oids, nullptr);
-  finish_trace(span_1);
+  int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id, &index_pool, &oids, nullptr);
   if (r < 0)
     return r;
 

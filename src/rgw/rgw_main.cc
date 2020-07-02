@@ -11,6 +11,7 @@
 #include "common/TracepointProvider.h"
 #include "common/openssl_opts_handler.h"
 #include "common/numa.h"
+#include "common/tracer.h"
 #include "include/compat.h"
 #include "include/str_list.h"
 #include "include/stringify.h"

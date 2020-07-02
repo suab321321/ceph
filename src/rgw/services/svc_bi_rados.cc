@@ -41,9 +41,19 @@ int RGWSI_BucketIndex_RADOS::open_pool(const rgw_pool& pool,
 int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_info,
                                                     RGWSI_RADOS::Pool *index_pool)
 {
+  #ifdef WITH_JAEGER
+    span_structure ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, bucket_info.s, span_name.c_str(), true);
+  #endif
+
   const rgw_pool& explicit_pool = bucket_info.bucket.explicit_placement.index_pool;
 
   if (!explicit_pool.empty()) {
+    Span span_1;
+    start_trace({}, std::move(span_1), bucket_info.s, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index_pool", false);
+    finish_trace(span_1);
     return open_pool(explicit_pool, index_pool, false);
   }
 
@@ -59,8 +69,10 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_
     ldout(cct, 0) << "could not find placement rule " << *rule << " within zonegroup " << dendl;
     return -EINVAL;
   }
-
+  Span span_2;
+  start_trace({}, std::move(span_2), bucket_info.s, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index_pool", false);
   int r = open_pool(iter->second.index_pool, index_pool, true);
+  finish_trace(span_2);
   if (r < 0)
     return r;
 
@@ -170,6 +182,12 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
 {
   int shard_id = _shard_id.value_or(-1);
   string bucket_oid_base;
+  #ifdef WITH_JAEGER
+    span_structure ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, bucket_info.s, span_name.c_str(), true);
+  #endif
   int ret = open_bucket_index_base(bucket_info, index_pool, &bucket_oid_base);
   if (ret < 0) {
     ldout(cct, 20) << __func__ << ": open_bucket_index_pool() returned "
@@ -321,7 +339,12 @@ int RGWSI_BucketIndex_RADOS::cls_bucket_head(const RGWBucketInfo& bucket_info,
 int RGWSI_BucketIndex_RADOS::init_index(RGWBucketInfo& bucket_info)
 {
   RGWSI_RADOS::Pool index_pool;
-
+  #ifdef WITH_JAEGER
+    span_structure ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, bucket_info.s, span_name.c_str(), true);
+  #endif
   string dir_oid = dir_oid_prefix;
   int r = open_bucket_index_pool(bucket_info, &index_pool);
   if (r < 0) {

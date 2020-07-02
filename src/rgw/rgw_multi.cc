@@ -88,7 +88,9 @@ int list_multipart_parts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket_i
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_multi.cc list_multipart_parts", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   map<string, bufferlist> parts_map;
   map<string, bufferlist>::iterator iter;
@@ -204,18 +206,9 @@ int list_multipart_parts(rgw::sal::RGWRadosStore *store, struct req_state *s,
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_multi.cc list_multipart_parts", true);
-    // Span span;
-    // if(s && !s->stack_span.empty()){
-    //   span = tracer_2.child_span("rgw_multi.cc list_multipart_parts", s->stack_span.top());
-    //   ss.set_req_state(s);
-    //   ss.set_span(span);
-    // }
-    // else if(s && s->root_span){
-    //   span = tracer_2.child_span("rgw_multi.cc list_multipart_parts", s->root_span);
-    //   ss.set_req_state(s);
-    //   ss.set_span(span);
-    // }
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   return list_multipart_parts(store, s->bucket_info, s->cct, upload_id,
 			      meta_oid, num_parts, marker, parts,
@@ -229,7 +222,9 @@ int abort_multipart_upload(rgw::sal::RGWRadosStore *store, CephContext *cct,
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_multi.cc abort_multipart_upload", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   rgw_obj meta_obj;
   meta_obj.init_ns(bucket_info.bucket, mp_obj.get_meta(), RGW_OBJ_NS_MULTIPART);
@@ -332,7 +327,9 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_multi.cc list_bucket_multiparts", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   RGWRados::Bucket target(store->getRados(), bucket_info);
   #ifdef WITH_JAEGER
@@ -356,7 +353,9 @@ int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RG
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_multi.cc list_bucket_multiparts", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   constexpr int max = 1000;
   int ret, num_deleted = 0;

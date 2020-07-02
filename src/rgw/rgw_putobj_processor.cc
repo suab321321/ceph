@@ -205,7 +205,9 @@ int AtomicObjectProcessor::prepare(optional_yield y)
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_putobj_processor.cc AtomicObjectProcessor::prepare", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   uint64_t max_head_chunk_size;
   uint64_t head_max_size;
@@ -305,7 +307,9 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
   req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_putobj_processor.cc AtomicObjectProcessor::complete", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   int r = writer.drain();
   if (r < 0) {

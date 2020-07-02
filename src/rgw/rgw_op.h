@@ -155,7 +155,9 @@ public:
   virtual int init_processing() {
     #ifdef WITH_JAEGER
       span_structure ss;
-      start_trace(std::move(ss), {}, s, "rgw_op.h init_processing", true);
+      string span_name = "";
+      span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+      start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     #endif
     if (dialect_handler->supports_quota()) {
       op_ret = init_quota();
