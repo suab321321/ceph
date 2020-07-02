@@ -19,6 +19,7 @@
 
 #include <array>
 #include <string_view>
+#include<cstring>
 
 #include "common/ceph_crypto.h"
 #include "common/random_string.h"
@@ -39,6 +40,10 @@
 #include "cls/rgw/cls_rgw_types.h"
 #include "include/rados/librados.hpp"
 #include "rgw_public_access.h"
+
+#ifdef WITH_JAEGER
+  #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#endif
 
 namespace ceph {
   class Formatter;
@@ -1642,10 +1647,10 @@ struct req_state : DoutPrefixProvider {
   string bucket_instance_id;
   int bucket_instance_shard_id{-1};
   string redirect_zone_endpoint;
-
-  std::stack<Span> stack_span;
-  span_structure ss;
-  Span root_span;
+  #ifdef WITH_JAEGER
+    std::stack<Span> stack_span;
+    Span root_span;
+  #endif
 
   string redirect;
 
@@ -2367,7 +2372,7 @@ extern bool match_policy(std::string_view pattern, std::string_view input,
 extern string camelcase_dash_http_attr(const string& orig);
 extern string lowercase_dash_http_attr(const string& orig);
 
-extern Jager_Tracer tracer_2;
+extern Jager_Tracer tracer;
 extern std::unordered_map<int, const char*> RGWOpTypeMapper;
 
 void rgw_setup_saved_curl_handles();
@@ -2451,12 +2456,12 @@ static inline void start_trace(span_structure&& ss, Span&& span, req_state* cons
     {
       Span span;
       if(s && !s->stack_span.empty()){
-        span = tracer_2.child_span(name, s->stack_span.top());
+        span = tracer.child_span(name, s->stack_span.top());
         ss.set_req_state(s);
         ss.set_span(span);
       }
       else if(s && s->root_span){
-        span = tracer_2.child_span(name, s->root_span);
+        span = tracer.child_span(name, s->root_span);
         ss.set_req_state(s);
         ss.set_span(span);
       }
@@ -2464,7 +2469,7 @@ static inline void start_trace(span_structure&& ss, Span&& span, req_state* cons
     else
     {
       if(s && !s->stack_span.empty())
-        span = tracer_2.child_span(name, s->stack_span.top());
+        span = tracer.child_span(name, s->stack_span.top());
     }
   #endif
 }

@@ -477,10 +477,6 @@ int RGWAccessControlPolicy_S3::create_from_headers(RGWUserCtl *user_ctl, const R
 int RGWAccessControlPolicy_S3::rebuild(RGWUserCtl *user_ctl, ACLOwner *owner, RGWAccessControlPolicy& dest,
                                        std::string &err_msg)
 {
-  #ifdef WITH_JAEGER
-    span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_acl_s3.cc RGWAccessControlPolicy_S3::rebuild", true);
-  #endif
   if (!owner)
     return -EINVAL;
 

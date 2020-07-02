@@ -34,7 +34,9 @@ int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_sal.cc RGWRadosUser::list_buckets", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   RGWUserBuckets ulist;
   bool is_truncated = false;
@@ -191,7 +193,9 @@ int RGWRadosBucket::update_container_stats(void)
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_sal.cc RGWRadosBucket::update_container_stats", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   int ret;
   map<std::string, RGWBucketEnt> m;

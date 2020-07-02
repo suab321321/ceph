@@ -42,7 +42,9 @@ int RGWListBuckets_ObjStore_SWIFT::get_params()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::get_params", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("gateway", "swift");
   #endif
@@ -170,7 +172,9 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets)
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_begin", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   if (op_ret) {
     set_req_state_err(s, op_ret);
@@ -205,7 +209,9 @@ void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   if (wants_reversed) {
     /* Just store in the reversal buffer. Its content will be handled later,
@@ -220,7 +226,9 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_data(rgw::sal::RGWBucketList& 
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWListBuckets_ObjStore_SWIFT::send_response_data", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("success", true);
   #endif
@@ -316,7 +324,9 @@ int RGWListBucket_ObjStore_SWIFT::get_params()
 {
     #ifdef WITH_JAEGER
       span_structure ss;
-      start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::get_params", true);
+      string span_name = "";
+      span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+      start_trace(std::move(ss), {}, s, span_name.c_str(), true);
       if(s && s->root_span)
         s->root_span->SetTag("gatway", "swift");
     #endif
@@ -373,7 +383,9 @@ void RGWListBucket_ObjStore_SWIFT::send_response()
 {
     #ifdef WITH_JAEGER
       span_structure ss;
-      start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWListBucket_ObjStore_SWIFT::send_response", true);
+      string span_name = "";
+      span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+      start_trace(std::move(ss), {}, s, span_name.c_str(), true);
       if(s && s->root_span)
         s->root_span->SetTag("success", true);
     #endif
@@ -603,7 +615,9 @@ void RGWStatBucket_ObjStore_SWIFT::send_response()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWStatBucket_ObjStore_SWIFT::send_response", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span){
       s->root_span->SetTag("gateway", "swift");
       s->root_span->SetTag("success", true);
@@ -739,7 +753,9 @@ int RGWCreateBucket_ObjStore_SWIFT::get_params()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::get_params", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("gateway","swift");
   #endif
@@ -789,7 +805,9 @@ void RGWCreateBucket_ObjStore_SWIFT::send_response()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWCreateBucket_ObjStore_SWIFT::send_response", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("success", true);
   #endif
@@ -815,7 +833,9 @@ void RGWDeleteBucket_ObjStore_SWIFT::send_response()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWDeleteBucket_ObjStore_SWIFT::send_response", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span){
         s->root_span->SetTag("gateway", "swift");
         s->root_span->SetTag("success", true);
@@ -874,7 +894,9 @@ int RGWPutObj_ObjStore_SWIFT::verify_permission()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::verify_permission", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   op_ret = RGWPutObj_ObjStore::verify_permission();
 
@@ -892,7 +914,9 @@ int RGWPutObj_ObjStore_SWIFT::update_slo_segment_size(rgw_slo_entry& entry) {
 
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::update_slo_segment_size", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   int r = 0;
   const string& path = entry.path;
@@ -982,7 +1006,9 @@ int RGWPutObj_ObjStore_SWIFT::get_params()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::get_params", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("gateway","swift");
   #endif
@@ -1095,7 +1121,9 @@ void RGWPutObj_ObjStore_SWIFT::send_response()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWPutObj_ObjStore_SWIFT::send_response", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("success", true);
   #endif
@@ -1327,7 +1355,9 @@ int RGWDeleteObj_ObjStore_SWIFT::verify_permission()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::verify_permission", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   op_ret = RGWDeleteObj_ObjStore::verify_permission();
 
@@ -1345,7 +1375,9 @@ int RGWDeleteObj_ObjStore_SWIFT::get_params()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::get_params", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("gateway", "swift");
   #endif
@@ -1359,7 +1391,9 @@ void RGWDeleteObj_ObjStore_SWIFT::send_response()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWDeleteObj_ObjStore_SWIFT::send_response", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("success", true);
   #endif
@@ -1474,7 +1508,9 @@ int RGWCopyObj_ObjStore_SWIFT::init_dest_policy()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::init_dest_policy", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   if(s && s->root_span)
     s->root_span->SetTag("gateway", "swift");
   #endif
@@ -1487,7 +1523,9 @@ int RGWCopyObj_ObjStore_SWIFT::get_params()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::get_params", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("gateway", "swift");
   #endif
@@ -1565,7 +1603,9 @@ void RGWCopyObj_ObjStore_SWIFT::send_response()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::send_response", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("success", true);
   #endif
@@ -1592,7 +1632,9 @@ int RGWGetObj_ObjStore_SWIFT::verify_permission()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::verify_permission", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   op_ret = RGWGetObj_ObjStore::verify_permission();
 
@@ -1610,7 +1652,9 @@ int RGWGetObj_ObjStore_SWIFT::get_params()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::get_params", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("gateway","swift");
   #endif
@@ -1624,7 +1668,9 @@ int RGWGetObj_ObjStore_SWIFT::send_response_data_error()
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::send_response_data_error", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("success", true);
   #endif
@@ -1646,7 +1692,9 @@ int RGWGetObj_ObjStore_SWIFT::send_response_data(bufferlist& bl,
 {
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWGetObj_ObjStore_SWIFT::send_response_data", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     if(s && s->root_span)
       s->root_span->SetTag("success", true);
   #endif

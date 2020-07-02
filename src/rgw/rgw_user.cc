@@ -2847,36 +2847,6 @@ int RGWUserCtl::list_buckets(const rgw_user& user,
   });
 }
 
-int RGWUserCtl::list_buckets(const rgw_user& user,
-                             const string& marker,
-                             const string& end_marker,
-                             uint64_t max,
-                             bool need_stats,
-                             RGWUserBuckets *buckets,
-                             bool *is_truncated,
-                             const Span& parent_span,
-                             uint64_t default_max)
-{
-  Span span_1 = tracer_2.child_span("rgw_bucket.cc : RGWUserCtl::list_buckets", parent_span);
-  Span span_2 = tracer_2.child_span("svc_user_rados.cc : RGWSI_User_RADOS::list_buckets", span_1);
-  return be_handler->call([&](RGWSI_MetaBackend_Handler::Op *op) {
-    int ret = svc.user->list_buckets(op->ctx(), user, marker, end_marker,
-                                     max, buckets, is_truncated);
-    if (ret < 0) {
-      return ret;
-    }
-    if (need_stats) {
-      map<string, RGWBucketEnt>& m = buckets->get_buckets();
-      ret = ctl.bucket->read_buckets_stats(m, null_yield);
-      if (ret < 0 && ret != -ENOENT) {
-        ldout(svc.user->ctx(), 0) << "ERROR: could not get stats for buckets" << dendl;
-        return ret;
-      }
-    }
-    return 0;
-  });
-  span_2->Finish();
-}
 
 int RGWUserCtl::flush_bucket_stats(const rgw_user& user,
                                    const RGWBucketEnt& ent)

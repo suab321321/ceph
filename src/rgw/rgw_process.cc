@@ -89,7 +89,7 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
                               const bool skip_retarget)
 {
   RGWOpType type=op->get_type();
-  Span span = tracer_2.new_span(RGWOpTypeMapper[type]);
+  Span span = tracer.new_span(RGWOpTypeMapper[type]);
   if(type>0){
     span->SetTag("operation_type", RGWOpTypeMapper[type]);
   }

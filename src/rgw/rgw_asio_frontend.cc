@@ -142,7 +142,7 @@ void handle_connection(boost::asio::io_context& context,
 {
 
   std::call_once(tracerInit,[](){
-    tracer_2.init_tracer("RGW_Client_Process", "../src/tracerConfig.yaml");
+    tracer.init_tracer("RGW_Client_Process", "../src/tracerConfig.yaml");
   });
   // limit header to 4k, since we read it all into a single flat_buffer
   static constexpr size_t header_limit = 4096;

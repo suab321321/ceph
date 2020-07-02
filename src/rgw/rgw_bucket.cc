@@ -164,7 +164,9 @@ int rgw_read_user_buckets(rgw::sal::RGWRadosStore *store,
   rgw::sal::RGWRadosUser user(store, user_id);
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_bucket.cc rgw_read_user_buckets", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   return user.list_buckets(marker, end_marker, max, need_stats, buckets);
 }
@@ -3285,7 +3287,9 @@ int RGWBucketCtl::read_bucket_info(const rgw_bucket& bucket,
   req_state* s = info->s;
   #ifdef WITH_JAEGER
     span_structure ss;
-    start_trace(std::move(ss), {}, s, "rgw_bucket.cc RGWBucketCtl::read_bucket_info", true);
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
   #endif
   const rgw_bucket *b = &bucket;
 
