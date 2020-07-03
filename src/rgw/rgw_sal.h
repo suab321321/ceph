@@ -48,6 +48,9 @@ class RGWUser {
   protected:
     RGWUserInfo info;
     req_state* s = nullptr;
+    #ifdef WITH_JAEGER
+      Span parent_span = nullptr;
+    #endif
 
   public:
     RGWUser() : info() {}
@@ -68,7 +71,7 @@ class RGWUser {
     const RGWUserCaps& get_caps() const { return info.caps; }
     void set_req_state(req_state* _s) { this->s = _s; }
     req_state* get_req_state()const { return this->s; }
-
+    void set_parent_span(Span& span) { this->parent_span = span; }
     /* xxx dang temporary; will be removed when User is complete */
     rgw_user& get_user() { return info.user_id; }
     RGWUserInfo& get_info() { return info; }
@@ -81,6 +84,9 @@ class RGWBucket {
     RGWUser *owner;
     RGWAttrs attrs;
     req_state* s = nullptr;
+    #ifdef WITH_JAEGER
+      Span parent_span = nullptr;
+    #endif
   public:
     RGWBucket() : ent(), owner(nullptr), attrs() {}
     RGWBucket(const rgw_bucket& _b) : ent(), attrs() { ent.bucket = _b; }
@@ -144,7 +150,9 @@ class RGWBucketList {
   std::map<std::string, RGWBucket*> buckets;
   bool truncated;
   req_state* s = nullptr;
-
+  // #ifdef WITH_JAEGER
+  //   Span parent_span = nullptr;
+  // #endif
 public:
   RGWBucketList() : buckets(), truncated(false) {}
   RGWBucketList(RGWBucketList&&) = default;
@@ -161,6 +169,7 @@ public:
   void clear() { buckets.clear(); truncated = false; }
   void set_req_state(req_state* _s) { this->s = _s; }
   req_state* get_req_state()const { return this->s; }
+  // void set_parent_span(Span& span) { this->parent_span = span; }
 }; // class RGWBucketList
   
 

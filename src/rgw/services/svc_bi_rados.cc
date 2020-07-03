@@ -42,18 +42,19 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_
                                                     RGWSI_RADOS::Pool *index_pool)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, bucket_info.s, span_name.c_str(), true);
+    Span span;
+    trace(span, parent_span, span_name.c_str());
   #endif
 
   const rgw_pool& explicit_pool = bucket_info.bucket.explicit_placement.index_pool;
 
   if (!explicit_pool.empty()) {
-    Span span_1;
-    start_trace({}, std::move(span_1), bucket_info.s, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index_pool", false);
-    finish_trace(span_1);
+    #ifdef WITH_JAEGER
+      Span span_1;
+      trace(span_1, span, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_pool");
+    #endif
     return open_pool(explicit_pool, index_pool, false);
   }
 
@@ -340,10 +341,10 @@ int RGWSI_BucketIndex_RADOS::init_index(RGWBucketInfo& bucket_info)
 {
   RGWSI_RADOS::Pool index_pool;
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, bucket_info.s, span_name.c_str(), true);
+    Span span;
+    trace(span, parent_span, span_name.c_str());
   #endif
   string dir_oid = dir_oid_prefix;
   int r = open_bucket_index_pool(bucket_info, &index_pool);

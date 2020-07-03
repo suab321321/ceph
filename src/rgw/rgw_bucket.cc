@@ -160,14 +160,7 @@ int rgw_read_user_buckets(rgw::sal::RGWRadosStore *store,
                                  uint64_t max,
                                  bool need_stats)
 {
-  req_state* s = buckets.get_req_state();
   rgw::sal::RGWRadosUser user(store, user_id);
-  #ifdef WITH_JAEGER
-    span_structure ss;
-    string span_name = "";
-    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-  #endif
   return user.list_buckets(marker, end_marker, max, need_stats, buckets);
 }
 

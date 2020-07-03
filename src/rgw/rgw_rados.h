@@ -694,6 +694,9 @@ public:
     RGWObjectCtx& ctx;
     rgw_obj obj;
     req_state* s = nullptr;
+    #ifdef WITH_JAEGER
+      Span parent_span = nullptr;
+    #endif
     BucketShard bs;
 
     RGWObjState *state;
@@ -903,6 +906,9 @@ public:
     rgw_bucket& bucket;
     int shard_id;
     req_state* s = NULL;
+    #ifdef WITH_JAEGER
+      Span parent_span = nullptr;
+    #endif
   public:
     Bucket(RGWRados *_store, const RGWBucketInfo& _bucket_info) : store(_store), bucket_info(_bucket_info), bucket(bucket_info.bucket),
                                                             shard_id(RGW_NO_SHARD) {}

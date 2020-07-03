@@ -1124,7 +1124,9 @@ struct RGWBucketInfo {
   RGWObjVersionTracker objv_tracker; /* we don't need to serialize this, for runtime tracking */
   RGWQuotaInfo quota;
   req_state* s = nullptr;
-
+  #ifdef WITH_JAEGER
+    Span parent_span = nullptr;
+  #endif
   // layout of bucket index objects
   rgw::BucketLayout layout;
 
@@ -2476,6 +2478,23 @@ static inline void finish_trace(Span& span)
   #ifdef WITH_JAEGER
     if(span)
       span->Finish();
+  #endif
+}
+
+static inline void trace(Span& span, const Span& parent_span, const char* span_name)
+{
+  #ifdef WITH_JAEGER
+    if(parent_span)
+      span = tracer.child_span(span_name, parent_span);
+  #endif
+}
+
+static inline void end_trace(Span& span){
+  #ifdef WITH_JAEGER
+    if(span){
+      Span s = std::move(span);
+      s->Finish();
+    }
   #endif
 }
 

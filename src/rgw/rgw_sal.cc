@@ -33,20 +33,20 @@ int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
 			       uint64_t max, bool need_stats, RGWBucketList &buckets)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    Span span;
+    trace(span, this->parent_span, span_name.c_str());
   #endif
   RGWUserBuckets ulist;
   bool is_truncated = false;
   int ret;
 
   Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_user.cc : RGWUserCtl::list_buckets", false);
+  trace(span_1, span, "rgw_user.cc : RGWUserCtl::list_buckets");
   ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
           need_stats, &ulist, &is_truncated);
-  finish_trace(span_1);
+  end_trace(span_1);
   if (ret < 0)
     return ret;
 

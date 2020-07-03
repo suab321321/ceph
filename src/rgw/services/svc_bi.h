@@ -26,6 +26,11 @@ struct RGWBucketEnt;
 class RGWSI_BucketIndex : public RGWServiceInstance
 {
 public:
+
+  #ifdef WITH_JAEGER
+    Span parent_span;
+  #endif
+
   RGWSI_BucketIndex(CephContext *cct) : RGWServiceInstance(cct) {}
   virtual ~RGWSI_BucketIndex() {}
 

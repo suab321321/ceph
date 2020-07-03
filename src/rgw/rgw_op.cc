@@ -2596,6 +2596,8 @@ void RGWListBuckets::execute()
 
     rgw::sal::RGWRadosUser user(store, s->user->get_id());
     #ifdef WITH_JAEGER
+      if(s && !s->stack_span.empty())
+        user.set_parent_span(s->stack_span.top());
       user.set_req_state(s);
     #endif
     op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
@@ -3184,13 +3186,14 @@ int RGWCreateBucket::verify_permission()
 
   if (s->user->get_max_buckets()) {
     rgw::sal::RGWBucketList buckets;
-    #ifdef WITH_JAEGER
-      buckets.set_req_state(s);
-    #endif
     string marker;
+    Span span_1;
+    if(s && !s->stack_span.empty())
+      trace(span_1, s->stack_span.top(), "rgw_bucket.cc : rgw_read_user_buckets");
     op_ret = rgw_read_user_buckets(store, s->user->get_id(), buckets,
 				   marker, string(), s->user->get_max_buckets(),
 				   false);
+    end_trace(span_1);
     if (op_ret < 0) {
       return op_ret;
     }
@@ -3591,6 +3594,8 @@ void RGWCreateBucket::execute()
 
   #ifdef WITH_JAEGER
     info.s = s;
+    if(s && !s->stack_span.empty())
+      info.parent_span = s->stack_span.top();
   #endif
   op_ret = store->getRados()->create_bucket(s->user->get_info(), s->bucket, zonegroup_id,
                                 placement_rule, s->bucket_info.swift_ver_location,
