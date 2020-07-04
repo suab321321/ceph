@@ -5199,6 +5199,7 @@ void RGWDeleteObj::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
   #endif
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
@@ -5289,11 +5290,15 @@ void RGWDeleteObj::execute()
     obj_ctx->set_atomic(obj);
 
     bool ver_restored = false;
-    Span span_1;
-    start_trace({}, std::move(span_1), s, "rgw_rados.cc : RGWRados::swift_versoning_restore", false);
+    #ifdef WITH_JAEGER
+      Span span_1;
+      trace(span_1, s->stack_span.top(), "rgw_rados.cc : RGWRados::swift_versoning_restore");
+    #endif
     op_ret = store->getRados()->swift_versioning_restore(*obj_ctx, s->bucket_owner.get_id(),
                                             s->bucket_info, obj, ver_restored, this);
-    finish_trace(span_1);
+    #ifdef WITH_JAEGER
+      finish_trace(span_1);
+    #endif
     if (op_ret < 0) {
       return;
     }
@@ -5304,9 +5309,7 @@ void RGWDeleteObj::execute()
        * with the regular delete path. */
       RGWRados::Object del_target(store->getRados(), s->bucket_info, *obj_ctx, obj);
       RGWRados::Object::Delete del_op(&del_target);
-      #ifdef WITH_JAEGER
-        del_target.set_req_state(s);
-      #endif
+
       op_ret = get_system_versioning_params(s, &del_op.params.olh_epoch,
                                             &del_op.params.marker_version_id);
       if (op_ret < 0) {
@@ -5319,7 +5322,11 @@ void RGWDeleteObj::execute()
       del_op.params.unmod_since = unmod_since;
       del_op.params.high_precision_time = s->system_request; /* system request uses high precision time */
 
-      op_ret = del_op.delete_obj(s->yield);
+      #ifdef WITH_JAEGER
+        op_ret = del_op.delete_obj(s->yield, &this_parent_span);
+      #else
+        op_ret = del_op.delete_obj(s->yield);
+      #endif
       if (op_ret >= 0) {
         delete_marker = del_op.result.delete_marker;
         version_id = del_op.result.version_id;

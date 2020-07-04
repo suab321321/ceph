@@ -5191,14 +5191,15 @@ struct tombstone_entry {
  * obj: name of the object to delete
  * Returns: 0 on success, -ERR# otherwise.
  */
-int RGWRados::Object::Delete::delete_obj(optional_yield y)
+int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent_span)
 {
-  req_state* s = target->get_req_state();
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
   #endif
   RGWRados *store = target->get_store();
   rgw_obj& src_obj = target->get_obj();
@@ -5238,29 +5239,39 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y)
       } else {
         meta.mtime = params.mtime;
       }
-      int r;
-      Span span_1;
-      start_trace({}, std::move(span_1), s, "rgw_rados.cc : RGWRados::set_olh", false);
-      r = store->set_olh(target->get_ctx(), target->get_bucket_info(), marker, true, &meta, params.olh_epoch, params.unmod_since, params.high_precision_time, y, params.zones_trace);
-      finish_trace(span_1);
+      #ifdef WITH_JAEGER
+        Span span_2;
+        trace(span_2, span_1, "rgw_rados.cc : RGWRados::set_olh");
+      #endif
+      int r = store->set_olh(target->get_ctx(), target->get_bucket_info(), marker, true, &meta, params.olh_epoch, params.unmod_since, params.high_precision_time, y, params.zones_trace);
+      #ifdef WITH_JAEGER
+        finish_trace(span_2);
+      #endif
       if (r < 0) {
         return r;
       }
     } else {
       rgw_bucket_dir_entry dirent;
-      int r;
-      Span span_2;
-      start_trace({}, std::move(span_2), s, "rgw_rados.cc : RGWRados::bi_get_instance", false);
-      r = store->bi_get_instance(target->get_bucket_info(), obj, &dirent);
-      finish_trace(span_2);
+      #ifdef WITH_JAEGER
+        Span span_3;
+        trace(span_3, span_1, "rgw_rados.cc : RGWRados::bi_get_instance");
+      #endif
+      int r = store->bi_get_instance(target->get_bucket_info(), obj, &dirent);
+      #ifdef WITH_JAEGER
+        finish_trace(span_3);
+      #endif
       if (r < 0) {
         return r;
       }
       result.delete_marker = dirent.is_delete_marker();
-      Span span_3;
-      start_trace({}, std::move(span_3), s, "rgw_rados.cc : RGWRados::unlink_obj_instance", false);
+      #ifdef WITH_JAEGER
+        Span span_4;
+        trace(span_4, span_1, "rgw_rados.cc : RGWRados::unlink_obj_instance");
+      #endif
       r = store->unlink_obj_instance(target->get_ctx(), target->get_bucket_info(), obj, params.olh_epoch, y, params.zones_trace);
-      finish_trace(span_3);
+      #ifdef WITH_JAEGER
+        finish_trace(span_4);
+      #endif
       if (r < 0) {
         return r;
       }
@@ -5273,10 +5284,14 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y)
       ldout(store->ctx(), 5) << "failed to get BucketShard object: r=" << r << dendl;
       return r;
     }
-    Span span_4;
-    start_trace({}, std::move(span_4), s, "svc_datalog.cc : RGWSI_DataLog_RADOS::add_entry", false);
+    #ifdef WITH_JAEGER
+      Span span_5;
+      trace(span_5, span_1, "svc_datalog.cc : RGWSI_DataLog_RADOS::add_entry");
+    #endif
     r = store->svc.datalog_rados->add_entry(target->bucket_info, bs->shard_id);
-    finish_trace(span_4);
+    #ifdef WITH_JAEGER
+      finish_trace(span_5);
+    #endif
     if (r < 0) {
       lderr(store->ctx()) << "ERROR: failed writing data log" << dendl;
       return r;
@@ -5286,11 +5301,14 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y)
   }
 
   rgw_rados_ref ref;
-  int r;
-  Span span_5;
-  start_trace({}, std::move(span_5), s, "rgw_rados.cc : RGWRados::get_obj_head_ref", false);
-  r = store->get_obj_head_ref(target->get_bucket_info(), obj, &ref);
-  finish_trace(span_5);
+  #ifdef WITH_JAEGER
+    Span span_6;
+    trace(span_6, span_1, "rgw_rados.cc : RGWRados::get_obj_head_ref");
+  #endif
+  int r = store->get_obj_head_ref(target->get_bucket_info(), obj, &ref);
+  #ifdef WITH_JAEGER
+    finish_trace(span_6);
+  #endif
   if (r < 0) {
     return r;
   }
@@ -5349,39 +5367,49 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y)
     target->invalidate_state();
     return -ENOENT;
   }
-  Span span_6;
-  start_trace({}, std::move(span_6), s, "rgw_rados.cc : RGWRados::Object::prepare_atomic_modification", false);
+  #ifdef WITH_JAEGER
+    Span span_7;
+    trace(span_7, span_1, "rgw_rados.cc : RGWRados::Object::prepare_atomic_modification");
+  #endif
   r = target->prepare_atomic_modification(op, false, NULL, NULL, NULL, true, false, y);
-  finish_trace(span_6);
+  #ifdef WITH_JAEGER
+    finish_trace(span_7);
+  #endif
   
   if (r < 0)
     return r;
 
   RGWBucketInfo& bucket_info = target->get_bucket_info();
-  #ifdef WITH_JAEGER
-    bucket_info.s = s;
-  #endif
   RGWRados::Bucket bop(store, bucket_info);
   RGWRados::Bucket::UpdateIndex index_op(&bop, obj);
-  #ifdef WITH_JAEGER
-    bop.set_req_state(s);
-  #endif
   index_op.set_zones_trace(params.zones_trace);
   index_op.set_bilog_flags(params.bilog_flags);
-
-  r = index_op.prepare(CLS_RGW_OP_DEL, &state->write_tag, y);
+  
+  #ifdef WITH_JAEGER
+    r = index_op.prepare(CLS_RGW_OP_DEL, &state->write_tag, y, &this_parent_span);
+  #else
+    r = index_op.prepare(CLS_RGW_OP_DEL, &state->write_tag, y);
+  #endif
   if (r < 0)
     return r;
-  Span span_7;
-  start_trace({}, std::move(span_7), s, "rgw_rados.cc : RGWRados::remove_rgw_head_obj", false);
+  #ifdef WITH_JAEGER
+    Span span_8;
+    trace(span_8, span_1, "rgw_rados.cc : RGWRados::remove_rgw_head_obj");
+  #endif
   store->remove_rgw_head_obj(op);
-  finish_trace(span_7);
+  #ifdef WITH_JAEGER
+    finish_trace(span_8);
+  #endif
 
   auto& ioctx = ref.pool.ioctx();
-  Span span_8;
-  start_trace({}, std::move(span_8), s, "rgw_tools.cc : rgw_rados_operate", false);
+  #ifdef WITH_JAEGER
+    Span span_9;
+    trace(span_9, span_1, "rgw_tools.cc : rgw_rados_operate");
+  #endif
   r = rgw_rados_operate(ioctx, ref.obj.oid, &op, null_yield);
-  finish_trace(span_8);
+  #ifdef WITH_JAEGER
+    finish_trace(span_9);
+  #endif
   /* raced with another operation, object state is indeterminate */
   const bool need_invalidate = (r == -ECANCELED);
 
@@ -5393,11 +5421,14 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y)
       obj_tombstone_cache->add(obj, entry);
     }
     r = index_op.complete_del(poolid, ioctx.get_last_version(), state->mtime, params.remove_objs);
-    int ret;
-    Span span_9;
-    start_trace({}, std::move(span_9), s, "rgw_rados.cc : RGWRados::Object::complete_atomic_modification", false);
-    ret = target->complete_atomic_modification();
-    finish_trace(span_9);
+    #ifdef WITH_JAEGER
+      Span span_10;
+      trace(span_10, span_1, "rgw_rados.cc : RGWRados::Object::complete_atomic_modification");
+    #endif
+    int ret = target->complete_atomic_modification();
+    #ifdef WITH_JAEGER
+      finish_trace(span_10);
+    #endif
     if (ret < 0) {
       ldout(store->ctx(), 0) << "ERROR: complete_atomic_modification returned ret=" << ret << dendl;
     }
@@ -5417,10 +5448,14 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y)
     return r;
 
   /* update quota cache */
-  Span span_10;
-  start_trace({}, std::move(span_10), s, "rgw_quota.cc : update_stats", false);
+  #ifdef WITH_JAEGER
+    Span span_11;
+    trace(span_11, span_1, "rgw_quota.cc : update_stats");
+  #endif
   store->quota_handler->update_stats(params.bucket_owner, obj.bucket, -1, 0, obj_accounted_size);
-  finish_trace(span_10);
+  #ifdef WITH_JAEGER
+    finish_trace(span_11);
+  #endif
 
   return 0;
 }
@@ -6321,14 +6356,14 @@ int RGWRados::Bucket::UpdateIndex::guard_reshard(BucketShard **pbs, std::functio
   return 0;
 }
 
-int RGWRados::Bucket::UpdateIndex::prepare(RGWModifyOp op, const string *write_tag, optional_yield y)
+int RGWRados::Bucket::UpdateIndex::prepare(RGWModifyOp op, const string *write_tag, optional_yield y, optional_span* parent_span)
 {
-  req_state* s = target->get_req_state();
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
   #endif
   if (blind) {
     return 0;

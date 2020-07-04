@@ -864,7 +864,7 @@ public:
       
       explicit Delete(RGWRados::Object *_target) : target(_target) {}
 
-      int delete_obj(optional_yield y);
+      int delete_obj(optional_yield y, optional_span* parent_span = NULL);
     };
 
     struct Stat {
@@ -970,7 +970,7 @@ public:
         zones_trace = _zones_trace;
       }
 
-      int prepare(RGWModifyOp, const string *write_tag, optional_yield y);
+      int prepare(RGWModifyOp, const string *write_tag, optional_yield y, optional_span* parent_span = NULL);
       int complete(int64_t poolid, uint64_t epoch, uint64_t size,
                    uint64_t accounted_size, ceph::real_time& ut,
                    const string& etag, const string& content_type,
