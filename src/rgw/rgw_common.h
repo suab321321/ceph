@@ -2449,37 +2449,44 @@ int decode_bl(bufferlist& bl, T& t)
   return 0;
 }
 
-static inline void start_trace(span_structure&& ss, Span&& span, req_state* const s, const char* name, bool should_store)
+#ifdef WITH_JAEGER
+static inline void start_trace(span_structure&& ss, Span&& sp, req_state* const s, const char* name, bool should_store = true)
 {
-  #ifdef WITH_JAEGER
-    if(should_store)
-    {
-      Span span;
-      if(s && !s->stack_span.empty()){
-        span = tracer.child_span(name, s->stack_span.top());
-        ss.set_req_state(s);
-        ss.set_span(span);
-      }
-      else if(s && s->root_span){
-        span = tracer.child_span(name, s->root_span);
-        ss.set_req_state(s);
-        ss.set_span(span);
-      }
+    Span span;
+    if(s && !s->stack_span.empty()){
+      span = tracer.child_span(name, s->stack_span.top());
+      ss.set_req_state(s);
+      ss.set_span(span);
     }
-    else
-    {
-      if(s && !s->stack_span.empty())
-        span = tracer.child_span(name, s->stack_span.top());
+    else if(s && s->root_span){
+      span = tracer.child_span(name, s->root_span);
+      ss.set_req_state(s);
+      ss.set_span(span);
     }
-  #endif
+}
+
+static inline void trace(Span& span, const Span& parent_span, const char* span_name)
+{
+  if(parent_span)
+  {
+    span = tracer.child_span(span_name, parent_span);
+  }
 }
 
 static inline void finish_trace(Span& span)
 {
-  #ifdef WITH_JAEGER
-    if(span)
-      span->Finish();
-  #endif
+    if(span){
+      Span s = std::move(span);
+      s->Finish();
+    }
 }
+#endif
+
+struct optional_span{
+  #ifdef WITH_JAEGER
+    const Span& span;
+    optional_span(const Span& _span) : span(_span) {}
+  #endif
+};
 
 #endif

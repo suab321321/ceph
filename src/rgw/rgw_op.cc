@@ -2565,6 +2565,7 @@ void RGWListBuckets::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span parent_span(s->stack_span.top());
   #endif
   bool done;
   bool started = false;
@@ -2596,10 +2597,10 @@ void RGWListBuckets::execute()
 
     rgw::sal::RGWRadosUser user(store, s->user->get_id());
     #ifdef WITH_JAEGER
-      user.set_req_state(s);
+      op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets, &parent_span);
+    #else
+      op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
     #endif
-    op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
-
     if (op_ret < 0) {
       /* hmm.. something wrong here.. the user was authenticated, so it
          should exist */
