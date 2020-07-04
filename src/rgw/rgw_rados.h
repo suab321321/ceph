@@ -460,7 +460,7 @@ class RGWRados
   // This field represents the number of bucket index object shards
   uint32_t bucket_index_max_shards;
 
-  int get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj& obj, librados::IoCtx *ioctx);
+  int get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj& obj, librados::IoCtx *ioctx, optional_span* parent_span = NULL);
   int get_obj_head_ref(const RGWBucketInfo& bucket_info, const rgw_obj& obj, rgw_rados_ref *ref);
   int get_system_obj_ref(const rgw_raw_obj& obj, rgw_rados_ref *ref);
   uint64_t max_bucket_id;
@@ -781,10 +781,10 @@ public:
 
       explicit Read(RGWRados::Object *_source) : source(_source) {}
 
-      int prepare(optional_yield y);
+      int prepare(optional_yield y, optional_span* parent_span = NULL);
       static int range_to_ofs(uint64_t obj_size, int64_t &ofs, int64_t &end);
       int read(int64_t ofs, int64_t end, bufferlist& bl, optional_yield y);
-      int iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb, optional_yield y);
+      int iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb, optional_yield y, optional_span* parent_span = NULL);
       int get_attr(const char *name, bufferlist& dest, optional_yield y);
     };
 
@@ -1354,7 +1354,7 @@ public:
   int get_bucket_info(RGWServices *svc,
 		      const string& tenant_name, const string& bucket_name,
 		      RGWBucketInfo& info,
-		      ceph::real_time *pmtime, optional_yield y, map<string, bufferlist> *pattrs = NULL);
+		      ceph::real_time *pmtime, optional_yield y, map<string, bufferlist> *pattrs = NULL, optional_span* parent_span = NULL);
 
   // Returns 0 on successful refresh. Returns error code if there was
   // an error or the version stored on the OSD is the same as that

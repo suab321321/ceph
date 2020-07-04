@@ -1675,6 +1675,7 @@ int RGWGetObj::read_user_manifest_part(rgw_bucket& bucket,
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
   #endif
   ldpp_dout(this, 20) << "user manifest obj=" << ent.key.name
       << "[" << ent.key.instance << "]" << dendl;
@@ -1701,9 +1702,6 @@ int RGWGetObj::read_user_manifest_part(rgw_bucket& bucket,
 
   RGWRados::Object op_target(store->getRados(), s->bucket_info, obj_ctx, part);
   RGWRados::Object::Read read_op(&op_target);
-  #ifdef WITH_JAEGER
-    op_target.set_req_state(s);
-  #endif
 
   if (!swift_slo) {
     /* SLO etag is optional */
@@ -1711,8 +1709,12 @@ int RGWGetObj::read_user_manifest_part(rgw_bucket& bucket,
   }
   read_op.params.attrs = &attrs;
   read_op.params.obj_size = &obj_size;
-
-  op_ret = read_op.prepare(s->yield);
+  
+  #ifdef WITH_JAEGER
+    op_ret = read_op.prepare(s->yield, &this_parent_span);
+  #else
+    op_ret = read_op.prepare(s->yield);
+  #endif
   if (op_ret < 0)
     return op_ret;
   op_ret = read_op.range_to_ofs(ent.meta.accounted_size, cur_ofs, cur_end);
@@ -1984,6 +1986,7 @@ int RGWGetObj::handle_user_manifest(const char *prefix)
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
   #endif
   ldpp_dout(this, 2) << "RGWGetObj::handle_user_manifest() prefix="
                    << prefix_view << dendl;
@@ -2004,15 +2007,19 @@ int RGWGetObj::handle_user_manifest(const char *prefix)
   boost::optional<Policy>* bucket_policy;
   RGWBucketInfo bucket_info;
   RGWBucketInfo *pbucket_info;
-  #ifdef WITH_JAEGER
-    bucket_info.s = s;
-  #endif
+
   if (bucket_name.compare(s->bucket.name) != 0) {
     map<string, bufferlist> bucket_attrs;
     auto obj_ctx = store->svc()->sysobj->init_obj_ctx();
-    int r = store->getRados()->get_bucket_info(store->svc(), s->user->get_tenant(),
+    #ifdef WITH_JAEGER
+      int r = store->getRados()->get_bucket_info(store->svc(), s->user->get_tenant(),
+            bucket_name, bucket_info, NULL,
+            s->yield, &bucket_attrs, &this_parent_span);
+    #else
+      int r = store->getRados()->get_bucket_info(store->svc(), s->user->get_tenant(),
 				  bucket_name, bucket_info, NULL,
 				  s->yield, &bucket_attrs);
+    #endif
     if (r < 0) {
       ldpp_dout(this, 0) << "could not get bucket info for bucket="
 		       << bucket_name << dendl;
@@ -2321,6 +2328,7 @@ void RGWGetObj::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
   #endif
   bufferlist bl;
   gc_invalidate_time = ceph_clock_now();
@@ -2339,9 +2347,6 @@ void RGWGetObj::execute()
 
   RGWRados::Object op_target(store->getRados(), s->bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), obj);
   RGWRados::Object::Read read_op(&op_target);
-  #ifdef WITH_JAEGER
-    op_target.set_req_state(s);
-  #endif
   op_ret = get_params();
   if (op_ret < 0)
     goto done_err;
@@ -2361,7 +2366,11 @@ void RGWGetObj::execute()
   read_op.params.lastmod = &lastmod;
   read_op.params.obj_size = &s->obj_size;
 
-  op_ret = read_op.prepare(s->yield);
+  #ifdef WITH_JAEGER
+    op_ret = read_op.prepare(s->yield, &this_parent_span);
+  #else
+    op_ret = read_op.prepare(s->yield);
+  #endif    
   if (op_ret < 0)
     goto done_err;
   version_id = read_op.state.obj.key.instance;
@@ -2480,7 +2489,11 @@ void RGWGetObj::execute()
   ofs_x = ofs;
   end_x = end;
   filter->fixup_range(ofs_x, end_x);
-  op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield);
+  #ifdef WITH_JAEGER
+    op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield, &this_parent_span);
+  #else
+    op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield);
+  #endif
 
   if (op_ret >= 0)
     op_ret = filter->flush();

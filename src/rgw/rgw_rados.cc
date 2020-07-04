@@ -2365,26 +2365,31 @@ bool RGWRados::obj_to_raw(const rgw_placement_rule& placement_rule, const rgw_ob
   return get_obj_data_pool(placement_rule, obj, &raw_obj->pool);
 }
 
-int RGWRados::get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj& obj, librados::IoCtx *ioctx)
+int RGWRados::get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj& obj, librados::IoCtx *ioctx, optional_span* parent_span)
 {
-  req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
   #endif
   string oid, key;
   get_obj_bucket_and_oid_loc(obj, oid, key);
 
   rgw_pool pool;
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_rados.cc : RGWRados::get_obj_data_pool", false);
+  #ifdef WITH_JAEGER
+    Span span_2;
+    trace(span_2, span_1, "rgw_rados.cc : RGWRados::get_obj_data_pool");
+  #endif
   if (!get_obj_data_pool(bucket_info.placement_rule, obj, &pool)) {
     ldout(cct, 0) << "ERROR: cannot get data pool for obj=" << obj << ", probably misconfiguration" << dendl;
     return -EIO;
   }
-  finish_trace(span_1);
+  #ifdef WITH_JAEGER
+    finish_trace(span_2);
+  #endif
 
 
   int r = open_pool_ctx(pool, *ioctx, false);
@@ -6132,14 +6137,15 @@ int RGWRados::set_attrs(void *ctx, const RGWBucketInfo& bucket_info, rgw_obj& sr
   return 0;
 }
 
-int RGWRados::Object::Read::prepare(optional_yield y)
+int RGWRados::Object::Read::prepare(optional_yield y, optional_span* parent_span)
 {
-  req_state* s = source->get_req_state();
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
   #endif
   RGWRados *store = source->get_store();
   CephContext *cct = store->ctx();
@@ -6158,23 +6164,23 @@ int RGWRados::Object::Read::prepare(optional_yield y)
   }
 
   RGWBucketInfo& buck_info = source->get_bucket_info();
-  #ifdef WITH_JAEGER
-    buck_info.s = s;
-  #endif
   const RGWBucketInfo& bucket_info = buck_info;
   state.obj = astate->obj;
   #ifdef WITH_JAEGER
-    if(s && !s->stack_span.empty())
-      store->obj_to_raw(bucket_info.placement_rule, state.obj, &state.head_obj, s->stack_span.top());
-    else
-      store->obj_to_raw(bucket_info.placement_rule, state.obj, &state.head_obj);
-  #else
-    store->obj_to_raw(bucket_info.placement_rule, state.obj, &state.head_obj);
+    Span span_2;
+    trace(span_2, span_1, "rgw_rados.cc : RGWRados::obj_to_raw");
+  #endif
+  store->obj_to_raw(bucket_info.placement_rule, state.obj, &state.head_obj);
+  #ifdef WITH_JAEGER
+    finish_trace(span_2);
   #endif
   state.cur_pool = state.head_obj.pool;
   state.cur_ioctx = &state.io_ctxs[state.cur_pool];
-
-  r = store->get_obj_head_ioctx(bucket_info, state.obj, state.cur_ioctx);
+  #ifdef WITH_JAEGER
+    r = store->get_obj_head_ioctx(bucket_info, state.obj, state.cur_ioctx, &this_parent_span);
+  #else
+    r = store->get_obj_head_ioctx(bucket_info, state.obj, state.cur_ioctx);
+  #endif
   if (r < 0) {
     return r;
   }
@@ -6697,14 +6703,14 @@ int RGWRados::get_obj_iterate_cb(const rgw_raw_obj& read_obj, off_t obj_ofs,
 }
 
 int RGWRados::Object::Read::iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb,
-                                    optional_yield y)
+                                    optional_yield y, optional_span* parent_span)
 {
-  req_state* s = source->get_req_state();
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
   #endif
   RGWRados *store = source->get_store();
   CephContext *cct = store->ctx();
@@ -6714,11 +6720,16 @@ int RGWRados::Object::Read::iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb,
 
   auto aio = rgw::make_throttle(window_size, y);
   get_obj_data data(store, cb, &*aio, ofs, y);
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_rados.cc : RGWRados::iterate", false);
+
+  #ifdef WITH_JAEGER
+    Span span_2;
+    trace(span_2, span_1, "rgw_rados.cc : RGWRados::iterate");
+  #endif
   int r = store->iterate_obj(obj_ctx, source->get_bucket_info(), state.obj,
                             ofs, end, chunk_size, _get_obj_iterate_cb, &data, y);
-  finish_trace(span_1);
+  #ifdef WITH_JAEGER
+    finish_trace(span_2);
+  #endif
   if (r < 0) {
     ldout(cct, 0) << "iterate_obj() failed with " << r << dendl;
     data.cancel(); // drain completions without writing back to client
@@ -7990,14 +8001,14 @@ int RGWRados::get_bucket_info(RGWServices *svc,
                               const string& tenant, const string& bucket_name,
                               RGWBucketInfo& info,
                               real_time *pmtime,
-                              optional_yield y, map<string, bufferlist> *pattrs)
+                              optional_yield y, map<string, bufferlist> *pattrs, optional_span* parent_span)
 {
-  req_state* s = info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
   #endif
 
   auto obj_ctx = svc->sysobj->init_obj_ctx();
