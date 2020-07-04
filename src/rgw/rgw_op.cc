@@ -3191,13 +3191,17 @@ int RGWCreateBucket::verify_permission()
 
   if (s->user->get_max_buckets()) {
     rgw::sal::RGWBucketList buckets;
-    #ifdef WITH_JAEGER
-      buckets.set_req_state(s);
-    #endif
     string marker;
+    #ifdef WITH_JAEGER
+      Span span_1;
+      trace(span_1, s->stack_span.top(), "rgw_bucket.cc : rgw_read_user_buckets");
+    #endif
     op_ret = rgw_read_user_buckets(store, s->user->get_id(), buckets,
 				   marker, string(), s->user->get_max_buckets(),
 				   false);
+    #ifdef WITH_JAEGER
+      finish_trace(span_1);
+    #endif
     if (op_ret < 0) {
       return op_ret;
     }
@@ -3420,6 +3424,7 @@ void RGWCreateBucket::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
   #endif
   RGWAccessControlPolicy old_policy(s->cct);
   buffer::list aclbl;
@@ -3469,10 +3474,14 @@ void RGWCreateBucket::execute()
   s->bucket.tenant = s->bucket_tenant;
   s->bucket.name = s->bucket_name;
   rgw::sal::RGWBucket* bucket = NULL;
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_sal.cc : RGWRadosStore::get_bucket", false);
+  #ifdef WITH_JAEGER
+    Span span_1;
+    trace(span_1,s->stack_span.top(), "rgw_sal.cc : RGWRadosStore::get_bucket");
+  #endif
   op_ret = store->get_bucket(*s->user, s->bucket, &bucket);
-  finish_trace(span_1);
+  #ifdef WITH_JAEGER
+    finish_trace(span_1);
+  #endif
   if (op_ret < 0 && op_ret != -ENOENT)
     return;
   s->bucket_exists = (op_ret != -ENOENT);
@@ -3536,13 +3545,17 @@ void RGWCreateBucket::execute()
     rgw_bucket bucket;
     bucket.tenant = s->bucket_tenant;
     bucket.name = s->bucket_name;
-    Span span_2;
-    start_trace({}, std::move(span_2), s, "svc_zone.cc : RGWSI_Zone::select_bucket_placement", false);
+    #ifdef WITH_JAEGER
+      Span span_2;
+      trace(span_2, s->stack_span.top(), "svc_zone.cc : RGWSI_Zone::select_bucket_placement");
+    #endif
     op_ret = store->svc()->zone->select_bucket_placement(s->user->get_info(),
               zonegroup_id,
               placement_rule,
               &selected_placement_rule, nullptr);
-    finish_trace(span_2);
+    #ifdef WITH_JAEGER
+      finish_trace(span_2);
+    #endif
     if (selected_placement_rule != s->bucket_info.placement_rule) {
       op_ret = -EEXIST;
       return;
@@ -3595,15 +3608,19 @@ void RGWCreateBucket::execute()
   if (obj_lock_enabled) {
     info.flags = BUCKET_VERSIONED | BUCKET_OBJ_LOCK_ENABLED;
   }
-
   #ifdef WITH_JAEGER
-    info.s = s;
-  #endif
-  op_ret = store->getRados()->create_bucket(s->user->get_info(), s->bucket, zonegroup_id,
+    op_ret = store->getRados()->create_bucket(s->user->get_info(), s->bucket, zonegroup_id,
+                                  placement_rule, s->bucket_info.swift_ver_location,
+                                  pquota_info, attrs,
+                                  info, pobjv, &ep_objv, creation_time,
+                                  pmaster_bucket, pmaster_num_shards, true, &this_parent_span);
+  #else
+    op_ret = store->getRados()->create_bucket(s->user->get_info(), s->bucket, zonegroup_id,
                                 placement_rule, s->bucket_info.swift_ver_location,
                                 pquota_info, attrs,
                                 info, pobjv, &ep_objv, creation_time,
                                 pmaster_bucket, pmaster_num_shards, true);
+  #endif
   /* continue if EEXIST and create_bucket will fail below.  this way we can
    * recover from a partial create by retrying it. */
   ldpp_dout(this, 20) << "rgw_create_bucket returned ret=" << op_ret << " bucket=" << s->bucket << dendl;
@@ -3626,11 +3643,15 @@ void RGWCreateBucket::execute()
     }
     s->bucket = info.bucket;
   }
-    Span span_3;
-    start_trace({}, std::move(span_3), s, "rgw_rados.cc : RGWBucketCtl::link_bucket", false);
+    #ifdef WITH_JAEGER
+      Span span_3;
+      trace(span_3, s->stack_span.top(), "rgw_rados.cc : RGWBucketCtl::link_bucket");
+    #endif
     op_ret = store->ctl()->bucket->link_bucket(s->user->get_id(), s->bucket,
                                             info.creation_time, s->yield, false);
-    finish_trace(span_3);
+    #ifdef WITH_JAEGER
+      finish_trace(span_3);
+    #endif
   
   if (op_ret && !existed && op_ret != -EEXIST) {
     /* if it exists (or previously existed), don't remove it! */

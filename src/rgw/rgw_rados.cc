@@ -2213,14 +2213,15 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
                             real_time creation_time,
                             rgw_bucket *pmaster_bucket,
                             uint32_t *pmaster_num_shards,
-			    bool exclusive)
+			    bool exclusive, optional_span* parent_span)
 {
-req_state* s = info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    Span span_1;
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
   #endif
 
 #define MAX_CREATE_RETRIES 20 /* need to bound retries */
@@ -2229,19 +2230,27 @@ req_state* s = info.s;
 
   for (int i = 0; i < MAX_CREATE_RETRIES; i++) {
     int ret = 0;
-    Span span_1;
-    start_trace({}, std::move(span_1), s, "svc_zone.cc : RGWSI_Zone::select_bucket_placement", false);
+    #ifdef WITH_JAEGER
+      Span span_2;
+      trace(span_2, span_1, "svc_zone.cc : RGWSI_Zone::select_bucket_placement");
+    #endif
     ret = svc.zone->select_bucket_placement(owner, zonegroup_id, placement_rule,
                                             &selected_placement_rule, &rule_info);
-    finish_trace(span_1);
+    #ifdef WITH_JAEGER
+      finish_trace(span_2);
+    #endif
     if (ret < 0)
       return ret;
 
     if (!pmaster_bucket) {
-      Span span_2;
-      start_trace({}, std::move(span_2), s, "rgw_rados.cc : RGWRados::create_bucket_id", false);
+      #ifdef WITH_JAEGER
+        Span span_3;
+        trace(span_3, span_1, "rgw_rados.cc : RGWRados::create_bucket_id");
+      #endif
       create_bucket_id(&bucket.marker);
-      finish_trace(span_2);
+      #ifdef WITH_JAEGER
+        finish_trace(span_3);
+      #endif
       bucket.bucket_id = bucket.marker;
     } else {
       bucket.marker = pmaster_bucket->marker;
@@ -2280,12 +2289,19 @@ req_state* s = info.s;
     if (pquota_info) {
       info.quota = *pquota_info;
     }
-    int r = svc.bi->init_index(info);
+    #ifdef WITH_JAEGER
+      int r = svc.bi->init_index(info, &this_parent_span);
+    #else
+      int r = svc.bi->init_index(info);
+    #endif
     if (r < 0) {
       return r;
     }
-
-    ret = put_linked_bucket_info(info, exclusive, ceph::real_time(), pep_objv, &attrs, true);
+    #ifdef WITH_JAEGER
+      ret = put_linked_bucket_info(info, exclusive, ceph::real_time(), pep_objv, &attrs, true, &this_parent_span);
+    #else
+      ret = put_linked_bucket_info(info, exclusive, ceph::real_time(), pep_objv, &attrs, true);
+    #endif
     if (ret == -ECANCELED) {
       ret = -EEXIST;
     }
@@ -8023,21 +8039,26 @@ int RGWRados::put_bucket_instance_info(RGWBucketInfo& info, bool exclusive,
 }
 
 int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_time mtime, obj_version *pep_objv,
-                                     map<string, bufferlist> *pattrs, bool create_entry_point)
+                                     map<string, bufferlist> *pattrs, bool create_entry_point, optional_span* parent_span)
 {
-req_state* s = info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
   #endif
   bool create_head = !info.has_instance_obj || create_entry_point;
   int ret;
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_rados.cc : RGWRados::put_bucket_instance_info", false);
+  #ifdef WITH_JAEGER
+    Span span_2;
+    trace(span_2, span_1, "rgw_rados.cc : RGWRados::put_bucket_instance_info");
+  #endif
   ret = put_bucket_instance_info(info, exclusive, mtime, pattrs);
-  finish_trace(span_1);
+  #ifdef WITH_JAEGER
+    finish_trace(span_2);
+  #endif
   if (ret < 0) {
     return ret;
   }
@@ -8059,14 +8080,17 @@ req_state* s = info.s;
       *pep_objv = ot.write_version;
     }
   }
-  Span span_2;
-  start_trace({}, std::move(span_2), s, "rgw_rados.cc : RGWRados::store_bucket_entrypoint_info", false);
-  
+  #ifdef WITH_JAEGER
+    Span span_3;
+    trace(span_3, span_1, "rgw_rados.cc : RGWRados::store_bucket_entrypoint_info");
+  #endif
   ret = ctl.bucket->store_bucket_entrypoint_info(info.bucket, entry_point, null_yield, RGWBucketCtl::Bucket::PutParams()
                                       .set_exclusive(exclusive)
                     .set_objv_tracker(&ot)
                     .set_mtime(mtime));
-  finish_trace(span_2);
+  #ifdef WITH_JAEGER
+    finish_trace(span_3);
+  #endif
   if (ret < 0)
     return ret;
 

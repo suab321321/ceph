@@ -671,7 +671,7 @@ public:
                             ceph::real_time creation_time,
                             rgw_bucket *master_bucket,
                             uint32_t *master_num_shards,
-                            bool exclusive = true);
+                            bool exclusive = true, optional_span* parent_span = NULL);
 
   RGWCoroutinesManagerRegistry *get_cr_registry() { return cr_registry; }
 
@@ -1365,7 +1365,7 @@ public:
 			      map<string, bufferlist> *pattrs = nullptr);
 
   int put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, ceph::real_time mtime, obj_version *pep_objv,
-			     map<string, bufferlist> *pattrs, bool create_entry_point);
+			     map<string, bufferlist> *pattrs, bool create_entry_point, optional_span* parent_span = NULL);
 
   int cls_obj_prepare_op(BucketShard& bs, RGWModifyOp op, string& tag, rgw_obj& obj, uint16_t bilog_flags, optional_yield y, rgw_zone_set *zones_trace = nullptr);
   int cls_obj_complete_op(BucketShard& bs, const rgw_obj& obj, RGWModifyOp op, string& tag, int64_t pool, uint64_t epoch,

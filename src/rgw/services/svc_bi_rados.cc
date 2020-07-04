@@ -39,21 +39,23 @@ int RGWSI_BucketIndex_RADOS::open_pool(const rgw_pool& pool,
 }
 
 int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_info,
-                                                    RGWSI_RADOS::Pool *index_pool)
+                                                    RGWSI_RADOS::Pool *index_pool, optional_span* parent_span)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, bucket_info.s, span_name.c_str(), true);
+    Span span_1;
+    if(parent_span) 
+      trace(span_1, parent_span->span, span_name.c_str());
   #endif
 
   const rgw_pool& explicit_pool = bucket_info.bucket.explicit_placement.index_pool;
 
   if (!explicit_pool.empty()) {
-    Span span_1;
-    start_trace({}, std::move(span_1), bucket_info.s, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index_pool", false);
-    finish_trace(span_1);
+    #ifdef WITH_JAEGER
+      Span span_2;
+      trace(span_2, span_1, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_pool");
+    #endif
     return open_pool(explicit_pool, index_pool, false);
   }
 
@@ -337,17 +339,23 @@ int RGWSI_BucketIndex_RADOS::cls_bucket_head(const RGWBucketInfo& bucket_info,
 }
 
 
-int RGWSI_BucketIndex_RADOS::init_index(RGWBucketInfo& bucket_info)
+int RGWSI_BucketIndex_RADOS::init_index(RGWBucketInfo& bucket_info, optional_span* parent_span)
 {
   RGWSI_RADOS::Pool index_pool;
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, bucket_info.s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
   #endif
   string dir_oid = dir_oid_prefix;
-  int r = open_bucket_index_pool(bucket_info, &index_pool);
+  #ifdef WITH_JAEGER
+    int r = open_bucket_index_pool(bucket_info, &index_pool, &this_parent_span);
+  #else
+    int r = open_bucket_index_pool(bucket_info, &index_pool);
+  #endif
   if (r < 0) {
     return r;
   }

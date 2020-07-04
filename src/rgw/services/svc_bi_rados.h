@@ -42,7 +42,7 @@ class RGWSI_BucketIndex_RADOS : public RGWSI_BucketIndex
                 bool mostly_omap);
 
   int open_bucket_index_pool(const RGWBucketInfo& bucket_info,
-                            RGWSI_RADOS::Pool *index_pool);
+                            RGWSI_RADOS::Pool *index_pool, optional_span* parent_span = NULL);
   int open_bucket_index_base(const RGWBucketInfo& bucket_info,
                              RGWSI_RADOS::Pool *index_pool,
                              string *bucket_oid_base);
@@ -93,7 +93,7 @@ public:
     return rgw_shards_mod(sid2, num_shards);
   }
 
-  int init_index(RGWBucketInfo& bucket_info);
+  int init_index(RGWBucketInfo& bucket_info, optional_span* parent_span = NULL);
   int clean_index(RGWBucketInfo& bucket_info);
 
 
