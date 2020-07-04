@@ -3100,6 +3100,7 @@ void RGWListBucket::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span parent_span(s->stack_span.top());
   #endif
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
@@ -3114,16 +3115,18 @@ void RGWListBucket::execute()
   }
 
   if (need_container_stats()) {
-      op_ret = bucket->update_container_stats();
+      #ifdef WITH_JAEGER
+        op_ret = bucket->update_container_stats(&parent_span);
+      #else
+        op_ret = bucket->update_container_stats();
+      #endif
   }
 
   RGWRados::Bucket target(store->getRados(), s->bucket_info);
   if (shard_id >= 0) {
     target.set_shard_id(shard_id);
   }
-  #ifdef WITH_JAEGER
-    target.set_req_state(s);
-  #endif
+
   RGWRados::Bucket::List list_op(&target);
 
   list_op.params.prefix = prefix;
@@ -3132,8 +3135,11 @@ void RGWListBucket::execute()
   list_op.params.end_marker = end_marker;
   list_op.params.list_versions = list_versions;
   list_op.params.allow_unordered = allow_unordered;
-
-  op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
+  #ifdef WITH_JAEGER
+    op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield, &parent_span);
+  #else
+    op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
+  #endif
   if (op_ret >= 0) {
     next_marker = list_op.get_next_marker();
   }

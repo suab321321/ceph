@@ -178,15 +178,16 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
                                                std::optional<int> _shard_id,
                                                RGWSI_RADOS::Pool *index_pool,
                                                map<int, string> *bucket_objs,
-                                               map<int, string> *bucket_instance_ids)
+                                               map<int, string> *bucket_instance_ids, optional_span* parent_span)
 {
   int shard_id = _shard_id.value_or(-1);
   string bucket_oid_base;
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, bucket_info.s, span_name.c_str(), true);
+    Span span_1;
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
   #endif
   int ret = open_bucket_index_base(bucket_info, index_pool, &bucket_oid_base);
   if (ret < 0) {

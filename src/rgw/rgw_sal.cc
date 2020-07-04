@@ -193,22 +193,27 @@ int RGWRadosBucket::sync_user_stats()
       return store->ctl()->bucket->sync_user_stats(user.info.user_id, info, &ent);
 }
 
-int RGWRadosBucket::update_container_stats(void)
+int RGWRadosBucket::update_container_stats(optional_span* parent_span)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    Span span_1;
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
   #endif
   int ret;
   map<std::string, RGWBucketEnt> m;
 
   m[ent.bucket.name] = ent;
-  Span span_2;
-  start_trace({}, std::move(span_2), s, "rgw_rados.cc : RGWRados::update_containers_stats", false);
+  #ifdef WITH_JAEGER
+    Span span_2;
+    trace(span_2, span_1, "rgw_rados.cc : RGWRados::update_containers_stats");
+  #endif
   ret = store->getRados()->update_containers_stats(m);
-  finish_trace(span_2);
+  #ifdef WITH_JAEGER
+    finish_trace(span_2);
+  #endif
   if (!ret)
     return -EEXIST;
   if (ret < 0)

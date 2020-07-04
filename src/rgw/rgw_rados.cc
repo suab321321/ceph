@@ -1733,14 +1733,15 @@ int RGWRados::Bucket::List::list_objects_ordered(
   vector<rgw_bucket_dir_entry> *result,
   map<string, bool> *common_prefixes,
   bool *is_truncated,
-  optional_yield y)
+  optional_yield y, optional_span* parent_span)
 {
-  req_state* s = target->get_req_state();
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    Span span_1;
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
   #endif
 
   RGWRados *store = target->get_store();
@@ -1806,9 +1807,21 @@ int RGWRados::Bucket::List::list_objects_ordered(
     ent_map_t ent_map;
     ent_map.reserve(read_ahead);
     #ifdef WITH_JAEGER
-      target->get_bucket_info().s = s;
-    #endif
-    int r = store->cls_bucket_list_ordered(target->get_bucket_info(),
+      int r = store->cls_bucket_list_ordered(target->get_bucket_info(),
+                shard_id,
+                cur_marker,
+                cur_prefix,
+                params.delim,
+                read_ahead + 1 - count,
+                params.list_versions,
+                attempt,
+                ent_map,
+                &truncated,
+                &cls_filtered,
+                &cur_marker,
+                                              y, NULL, &this_parent_span);
+      #else
+        int r = store->cls_bucket_list_ordered(target->get_bucket_info(),
               shard_id,
               cur_marker,
               cur_prefix,
@@ -1821,6 +1834,7 @@ int RGWRados::Bucket::List::list_objects_ordered(
               &cls_filtered,
               &cur_marker,
                                             y);
+      #endif
       if (r < 0) {
         return r;
     }
@@ -2024,14 +2038,15 @@ int RGWRados::Bucket::List::list_objects_unordered(int64_t max_p,
 						   vector<rgw_bucket_dir_entry> *result,
 						   map<string, bool> *common_prefixes,
 						   bool *is_truncated,
-                                                   optional_yield y)
+                                                   optional_yield y, optional_span* parent_span)
 {
-  req_state* s = target->get_req_state();
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    Span span_1;
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
   #endif
 
   RGWRados *store = target->get_store();
@@ -2075,18 +2090,28 @@ int RGWRados::Bucket::List::list_objects_unordered(int64_t max_p,
     std::vector<rgw_bucket_dir_entry> ent_list;
     ent_list.reserve(read_ahead);
     #ifdef WITH_JAEGER
-      target->get_bucket_info().s = s;
+      int r = store->cls_bucket_list_unordered(target->get_bucket_info(),
+                  shard_id,
+                  cur_marker,
+                  cur_prefix,
+                  read_ahead,
+                  params.list_versions,
+                  ent_list,
+                  &truncated,
+                  &cur_marker,
+                                                y, NULL, &this_parent_span);
+    #else
+      int r = store->cls_bucket_list_unordered(target->get_bucket_info(),
+                  shard_id,
+                  cur_marker,
+                  cur_prefix,
+                  read_ahead,
+                  params.list_versions,
+                  ent_list,
+                  &truncated,
+                  &cur_marker,
+                                                y);
     #endif
-    int r = store->cls_bucket_list_unordered(target->get_bucket_info(),
-                shard_id,
-                cur_marker,
-                cur_prefix,
-                read_ahead,
-                params.list_versions,
-                ent_list,
-                &truncated,
-                &cur_marker,
-                                              y);
     if (r < 0)
       return r;
 
@@ -8594,18 +8619,19 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
 				      bool* cls_filtered,
 				      rgw_obj_index_key *last_entry,
                                       optional_yield y,
-				      check_filter_t force_check_filter)
+				      check_filter_t force_check_filter, optional_span* parent_span)
 {
   /* expansion_factor allows the number of entries to read to grow
    * exponentially; this is used when earlier reads are producing too
    * few results, perhaps due to filtering or to a series of
    * namespaced entries */
-  req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    Span span_1;
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
   #endif
   ldout(cct, 10) << "RGWRados::" << __func__ << ": " << bucket_info.bucket <<
     " start_after=\"" << start_after.name <<
@@ -8622,9 +8648,15 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
   // value - list result for the corresponding oid (shard), it is filled by
   //         the AIO callback
   map<int, string> shard_oids;
-  int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id,
+  #ifdef WITH_JAEGER
+    int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id,
+            &index_pool, &shard_oids,
+            nullptr, &this_parent_span);
+  #else
+    int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id,
 					&index_pool, &shard_oids,
 					nullptr);
+  #endif
   if (r < 0) {
     return r;
   }
@@ -8809,8 +8841,10 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
   } // while we haven't provided requested # of result entries
 
   // suggest updates if there are any
-  Span span_2;
-  start_trace({}, std::move(span_2), s, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate", false);
+  #ifdef WITH_JAEGER
+    Span span_2;
+    trace(span_2, span_1, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate");
+  #endif
   for (auto& miter : updates) {
     if (miter.second.length()) {
       ObjectWriteOperation o;
@@ -8822,7 +8856,9 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
       c->release();
     }
   } // updates loop
-  finish_trace(span_2);
+  #ifdef WITH_JAEGER
+    finish_trace(span_2);
+  #endif
   // determine truncation by checking if all the returned entries are
   // consumed or not
   *is_truncated = false;
@@ -8866,16 +8902,17 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
 					bool *is_truncated,
 					rgw_obj_index_key *last_entry,
                                         optional_yield y,
-					check_filter_t force_check_filter) {
+					check_filter_t force_check_filter, optional_span* parent_span) {
   ldout(cct, 10) << "cls_bucket_list_unordered " << bucket_info.bucket <<
     " start_after " << start_after.name << "[" << start_after.instance <<
     "] num_entries " << num_entries << dendl;
-  req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    Span span_1;
+    if(parent_span)
+      trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
   #endif
   ent_list.clear();
   static MultipartMetaFilter multipart_meta_filter;
@@ -8884,7 +8921,11 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
   RGWSI_RADOS::Pool index_pool;
 
   map<int, string> oids;
-  int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id, &index_pool, &oids, nullptr);
+  #ifdef WITH_JAEGER
+    int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id, &index_pool, &oids, nullptr, &this_parent_span);
+  #else
+    int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id, &index_pool, &oids, nullptr);
+  #endif
   if (r < 0)
     return r;
 
@@ -8928,10 +8969,14 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
     } else {
       // so now we have the key used to compute the bucket index shard
       // and can extract the specific shard from it
-      Span span_2;
-      start_trace({}, std::move(span_2), s, "svc_bi_rados.cc : RGWSI_BucketIndex_RADOS::bucket_shard_index", false);
+      #ifdef WITH_JAEGER
+        Span span_2;
+        trace(span_2, span_1, "svc_bi_rados.cc : RGWSI_BucketIndex_RADOS::bucket_shard_index");
+      #endif
       current_shard = svc.bi_rados->bucket_shard_index(obj_key.name, num_shards);
-      finish_trace(span_2);
+      #ifdef WITH_JAEGER
+        finish_trace(span_2);
+      #endif
     }
   }
 
@@ -8949,10 +8994,14 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
     cls_rgw_bucket_list_op(op, marker, prefix, empty_delimiter,
 			   num_entries,
                            list_versions, &result);
-    Span span_3;
-    start_trace({}, std::move(span_3), s, "rgw_tools.cc : rgw_rados_operate", false);
+    #ifdef WITH_JAEGER
+      Span span_3;
+      trace(span_3, span_1, "rgw_tools.cc : rgw_rados_operate");
+    #endif
     r = rgw_rados_operate(ioctx, oid, &op, nullptr, null_yield);
-    finish_trace(span_3);
+    #ifdef WITH_JAEGER
+      finish_trace(span_3);
+    #endif
     if (r < 0)
       return r;
 
@@ -9006,8 +9055,10 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
 check_updates:
 
   // suggest updates if there is any
-  Span span_4;
-  start_trace({}, std::move(span_4), s, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate", false);
+  #ifdef WITH_JAEGER
+    Span span_4;
+    trace(span_4, span_1, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate");
+  #endif
   map<string, bufferlist>::iterator miter = updates.begin();
   for (; miter != updates.end(); ++miter) {
     if (miter->second.length()) {
@@ -9019,7 +9070,9 @@ check_updates:
       c->release();
     }
   }
-  finish_trace(span_4);
+  #ifdef WITH_JAEGER
+    finish_trace(span_4);
+  #endif
   if (last_entry && !ent_list.empty()) {
     *last_entry = last_added_entry;
   }
