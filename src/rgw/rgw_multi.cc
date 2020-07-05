@@ -322,19 +322,19 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
 			   const string& delim,
 			   const int& max_uploads,
 			   vector<rgw_bucket_dir_entry> *objs,
-			   map<string, bool> *common_prefixes, bool *is_truncated)
+			   map<string, bool> *common_prefixes, bool *is_truncated, optional_span* parent_span)
 {
-  req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   RGWRados::Bucket target(store->getRados(), bucket_info);
-  #ifdef WITH_JAEGER
-    target.set_req_state(s);
-  #endif;
   RGWRados::Bucket::List list_op(&target);
   MultipartMetaFilter mp_filter;
 
@@ -344,18 +344,25 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
   list_op.params.ns = RGW_OBJ_NS_MULTIPART;
   list_op.params.filter = &mp_filter;
 
-  return(list_op.list_objects(max_uploads, objs, common_prefixes, is_truncated, null_yield));
+  #ifdef WITH_JAEGER
+    return(list_op.list_objects(max_uploads, objs, common_prefixes, is_truncated, null_yield, &this_parent_span));
+  #else
+    return(list_op.list_objects(max_uploads, objs, common_prefixes, is_truncated, null_yield));
+  #endif
 }
 
 int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RGWBucketInfo& bucket_info,
-				string& prefix, string& delim)
+				string& prefix, string& delim, optional_span* parent_span)
 {
-  req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   constexpr int max = 1000;
   int ret, num_deleted = 0;
@@ -365,8 +372,13 @@ int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RG
   bool is_truncated;
 
   do {
-    ret = list_bucket_multiparts(store, bucket_info, prefix, marker, delim,
+    #ifdef WITH_JAEGER
+      ret = list_bucket_multiparts(store, bucket_info, prefix, marker, delim,
+          max, &objs, nullptr, &is_truncated, &this_parent_span);
+    #else
+      ret = list_bucket_multiparts(store, bucket_info, prefix, marker, delim,
 				 max, &objs, nullptr, &is_truncated);
+    #endif
     if (ret < 0) {
       ldout(store->ctx(), 0) << __func__ <<
 	" ERROR : calling list_bucket_multiparts; ret=" << ret <<

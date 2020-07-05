@@ -3763,6 +3763,9 @@ void RGWDeleteBucket::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   if (s->bucket_name.empty()) {
     op_ret = -EINVAL;
@@ -3794,16 +3797,17 @@ void RGWDeleteBucket::execute()
     }
   }
   Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_bucket.cc : RGWBucketCtl::sync_user_stats", false);
+  trace(span_1, this_parent_span, "rgw_bucket.cc : RGWBucketCtl::sync_user_stats");
   op_ret = store->ctl()->bucket->sync_user_stats(s->user->get_id(), s->bucket_info);
   finish_trace(span_1);
   if ( op_ret < 0) {
      ldpp_dout(this, 1) << "WARNING: failed to sync user stats before bucket delete: op_ret= " << op_ret << dendl;
   }
   #ifdef WITH_JAEGER
-    s->bucket_info.s = s;
-  #endif
+    op_ret = store->getRados()->check_bucket_empty(s->bucket_info, s->yield, &this_parent_span);
+  #else
     op_ret = store->getRados()->check_bucket_empty(s->bucket_info, s->yield);
+  #endif
   if (op_ret < 0) {
     return;
   }
@@ -3836,14 +3840,21 @@ void RGWDeleteBucket::execute()
       delimiter="/";
     }
   }
-
-  op_ret = abort_bucket_multiparts(store, s->cct, s->bucket_info, prefix, delimiter);
+  #ifdef WITH_JAEGER
+    op_ret = abort_bucket_multiparts(store, s->cct, s->bucket_info, prefix, delimiter, &this_parent_span);
+  #else
+    op_ret = abort_bucket_multiparts(store, s->cct, s->bucket_info, prefix, delimiter);
+  #endif
 
   if (op_ret < 0) {
     return;
   }
 
-  op_ret = store->getRados()->delete_bucket(s->bucket_info, ot, s->yield, false);
+  #ifdef WITH_JAEGER
+    op_ret = store->getRados()->delete_bucket(s->bucket_info, ot, s->yield, false, &this_parent_span);
+  #else
+    op_ret = store->getRados()->delete_bucket(s->bucket_info, ot, s->yield, false);
+  #endif
 
   if (op_ret == -ECANCELED) {
     // lost a race, either with mdlog sync or another delete bucket operation.
@@ -3854,10 +3865,10 @@ void RGWDeleteBucket::execute()
 
   if (op_ret == 0) {
     Span span_2;
-    start_trace({}, std::move(span_2), s, "rgw_bucket.cc : RGWBucketCtl::unlink_bucket", false);
+    trace(span_2, this_parent_span, "rgw_bucket.cc : RGWBucketCtl::unlink_bucket");
     op_ret = store->ctl()->bucket->unlink_bucket(s->bucket_info.owner,
                                               s->bucket, s->yield, false);
-    finish_trace(span_2);   
+    finish_trace(span_2);
     if (op_ret < 0) {
       ldpp_dout(this, 0) << "WARNING: failed to unlink bucket: ret=" << op_ret
 		       << dendl;

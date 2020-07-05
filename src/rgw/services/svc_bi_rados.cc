@@ -41,8 +41,8 @@ int RGWSI_BucketIndex_RADOS::open_pool(const rgw_pool& pool,
 int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_info,
                                                     RGWSI_RADOS::Pool *index_pool, optional_span* parent_span)
 {
-  Span span_1;
   #ifdef WITH_JAEGER
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span) 

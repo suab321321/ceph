@@ -132,8 +132,8 @@ extern int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo&
 				  const string& delim,
 				  const int& max_uploads,
 				  vector<rgw_bucket_dir_entry> *objs,
-				  map<string, bool> *common_prefixes, bool *is_truncated);
+				  map<string, bool> *common_prefixes, bool *is_truncated, optional_span* parent_span = NULL);
 
 extern int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RGWBucketInfo& bucket_info,
-                                string& prefix, string& delim);
+                                string& prefix, string& delim, optional_span* parent_span = NULL);
 #endif
