@@ -1736,12 +1736,14 @@ int RGWRados::Bucket::List::list_objects_ordered(
   optional_yield y, optional_span* parent_span)
 {
   #ifdef WITH_JAEGER
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    Span span_1;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
     optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
 
   RGWRados *store = target->get_store();
@@ -2041,12 +2043,14 @@ int RGWRados::Bucket::List::list_objects_unordered(int64_t max_p,
                                                    optional_yield y, optional_span* parent_span)
 {
   #ifdef WITH_JAEGER
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    Span span_1;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
     optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
 
   RGWRados *store = target->get_store();
@@ -2216,12 +2220,14 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
 			    bool exclusive, optional_span* parent_span)
 {
   #ifdef WITH_JAEGER
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    Span span_1;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
     optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
 
 #define MAX_CREATE_RETRIES 20 /* need to bound retries */
@@ -2230,27 +2236,19 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
 
   for (int i = 0; i < MAX_CREATE_RETRIES; i++) {
     int ret = 0;
-    #ifdef WITH_JAEGER
-      Span span_2;
-      trace(span_2, span_1, "svc_zone.cc : RGWSI_Zone::select_bucket_placement");
-    #endif
+    Span span_2;
+    trace(span_2, this_parent_span, "svc_zone.cc : RGWSI_Zone::select_bucket_placement");
     ret = svc.zone->select_bucket_placement(owner, zonegroup_id, placement_rule,
                                             &selected_placement_rule, &rule_info);
-    #ifdef WITH_JAEGER
-      finish_trace(span_2);
-    #endif
+    finish_trace(span_2);
     if (ret < 0)
       return ret;
 
     if (!pmaster_bucket) {
-      #ifdef WITH_JAEGER
-        Span span_3;
-        trace(span_3, span_1, "rgw_rados.cc : RGWRados::create_bucket_id");
-      #endif
+      Span span_3;
+      trace(span_3, this_parent_span, "rgw_rados.cc : RGWRados::create_bucket_id");
       create_bucket_id(&bucket.marker);
-      #ifdef WITH_JAEGER
-        finish_trace(span_3);
-      #endif
+      finish_trace(span_3);
       bucket.bucket_id = bucket.marker;
     } else {
       bucket.marker = pmaster_bucket->marker;
@@ -2372,24 +2370,22 @@ int RGWRados::get_obj_head_ioctx(const RGWBucketInfo& bucket_info, const rgw_obj
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
     optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   string oid, key;
   get_obj_bucket_and_oid_loc(obj, oid, key);
 
   rgw_pool pool;
-  #ifdef WITH_JAEGER
-    Span span_2;
-    trace(span_2, span_1, "rgw_rados.cc : RGWRados::get_obj_data_pool");
-  #endif
+  Span span_2;
+  trace(span_2, this_parent_span, "rgw_rados.cc : RGWRados::get_obj_data_pool");
   if (!get_obj_data_pool(bucket_info.placement_rule, obj, &pool)) {
     ldout(cct, 0) << "ERROR: cannot get data pool for obj=" << obj << ", probably misconfiguration" << dendl;
     return -EIO;
   }
-  #ifdef WITH_JAEGER
-    finish_trace(span_2);
-  #endif
+  finish_trace(span_2);
 
 
   int r = open_pool_ctx(pool, *ioctx, false);
@@ -5198,8 +5194,10 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
     optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   RGWRados *store = target->get_store();
   rgw_obj& src_obj = target->get_obj();
@@ -5239,39 +5237,27 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent
       } else {
         meta.mtime = params.mtime;
       }
-      #ifdef WITH_JAEGER
-        Span span_2;
-        trace(span_2, span_1, "rgw_rados.cc : RGWRados::set_olh");
-      #endif
+      Span span_2;
+      trace(span_2, this_parent_span, "rgw_rados.cc : RGWRados::set_olh");
       int r = store->set_olh(target->get_ctx(), target->get_bucket_info(), marker, true, &meta, params.olh_epoch, params.unmod_since, params.high_precision_time, y, params.zones_trace);
-      #ifdef WITH_JAEGER
-        finish_trace(span_2);
-      #endif
+      finish_trace(span_2);
       if (r < 0) {
         return r;
       }
     } else {
       rgw_bucket_dir_entry dirent;
-      #ifdef WITH_JAEGER
-        Span span_3;
-        trace(span_3, span_1, "rgw_rados.cc : RGWRados::bi_get_instance");
-      #endif
+      Span span_3;
+      trace(span_3, this_parent_span, "rgw_rados.cc : RGWRados::bi_get_instance");
       int r = store->bi_get_instance(target->get_bucket_info(), obj, &dirent);
-      #ifdef WITH_JAEGER
-        finish_trace(span_3);
-      #endif
+      finish_trace(span_3);
       if (r < 0) {
         return r;
       }
       result.delete_marker = dirent.is_delete_marker();
-      #ifdef WITH_JAEGER
-        Span span_4;
-        trace(span_4, span_1, "rgw_rados.cc : RGWRados::unlink_obj_instance");
-      #endif
+      Span span_4;
+      trace(span_4, this_parent_span, "rgw_rados.cc : RGWRados::unlink_obj_instance");
       r = store->unlink_obj_instance(target->get_ctx(), target->get_bucket_info(), obj, params.olh_epoch, y, params.zones_trace);
-      #ifdef WITH_JAEGER
-        finish_trace(span_4);
-      #endif
+      finish_trace(span_4);
       if (r < 0) {
         return r;
       }
@@ -5284,14 +5270,10 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent
       ldout(store->ctx(), 5) << "failed to get BucketShard object: r=" << r << dendl;
       return r;
     }
-    #ifdef WITH_JAEGER
-      Span span_5;
-      trace(span_5, span_1, "svc_datalog.cc : RGWSI_DataLog_RADOS::add_entry");
-    #endif
+    Span span_5;
+    trace(span_5, this_parent_span, "svc_datalog.cc : RGWSI_DataLog_RADOS::add_entry");
     r = store->svc.datalog_rados->add_entry(target->bucket_info, bs->shard_id);
-    #ifdef WITH_JAEGER
-      finish_trace(span_5);
-    #endif
+    finish_trace(span_5);
     if (r < 0) {
       lderr(store->ctx()) << "ERROR: failed writing data log" << dendl;
       return r;
@@ -5301,14 +5283,10 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent
   }
 
   rgw_rados_ref ref;
-  #ifdef WITH_JAEGER
-    Span span_6;
-    trace(span_6, span_1, "rgw_rados.cc : RGWRados::get_obj_head_ref");
-  #endif
+  Span span_6;
+  trace(span_6, this_parent_span, "rgw_rados.cc : RGWRados::get_obj_head_ref");
   int r = store->get_obj_head_ref(target->get_bucket_info(), obj, &ref);
-  #ifdef WITH_JAEGER
-    finish_trace(span_6);
-  #endif
+  finish_trace(span_6);
   if (r < 0) {
     return r;
   }
@@ -5367,14 +5345,10 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent
     target->invalidate_state();
     return -ENOENT;
   }
-  #ifdef WITH_JAEGER
-    Span span_7;
-    trace(span_7, span_1, "rgw_rados.cc : RGWRados::Object::prepare_atomic_modification");
-  #endif
+  Span span_7;
+  trace(span_7, this_parent_span, "rgw_rados.cc : RGWRados::Object::prepare_atomic_modification");
   r = target->prepare_atomic_modification(op, false, NULL, NULL, NULL, true, false, y);
-  #ifdef WITH_JAEGER
-    finish_trace(span_7);
-  #endif
+  finish_trace(span_7);
   
   if (r < 0)
     return r;
@@ -5392,24 +5366,17 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent
   #endif
   if (r < 0)
     return r;
-  #ifdef WITH_JAEGER
-    Span span_8;
-    trace(span_8, span_1, "rgw_rados.cc : RGWRados::remove_rgw_head_obj");
-  #endif
+  Span span_8;
+  trace(span_8, this_parent_span, "rgw_rados.cc : RGWRados::remove_rgw_head_obj");
   store->remove_rgw_head_obj(op);
-  #ifdef WITH_JAEGER
-    finish_trace(span_8);
-  #endif
+  finish_trace(span_8);
+ 
 
   auto& ioctx = ref.pool.ioctx();
-  #ifdef WITH_JAEGER
-    Span span_9;
-    trace(span_9, span_1, "rgw_tools.cc : rgw_rados_operate");
-  #endif
+  Span span_9;
+  trace(span_9, this_parent_span, "rgw_tools.cc : rgw_rados_operate");
   r = rgw_rados_operate(ioctx, ref.obj.oid, &op, null_yield);
-  #ifdef WITH_JAEGER
-    finish_trace(span_9);
-  #endif
+  finish_trace(span_9);
   /* raced with another operation, object state is indeterminate */
   const bool need_invalidate = (r == -ECANCELED);
 
@@ -5421,14 +5388,10 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent
       obj_tombstone_cache->add(obj, entry);
     }
     r = index_op.complete_del(poolid, ioctx.get_last_version(), state->mtime, params.remove_objs);
-    #ifdef WITH_JAEGER
-      Span span_10;
-      trace(span_10, span_1, "rgw_rados.cc : RGWRados::Object::complete_atomic_modification");
-    #endif
+    Span span_10;
+    trace(span_10, this_parent_span, "rgw_rados.cc : RGWRados::Object::complete_atomic_modification");
     int ret = target->complete_atomic_modification();
-    #ifdef WITH_JAEGER
-      finish_trace(span_10);
-    #endif
+    finish_trace(span_10);
     if (ret < 0) {
       ldout(store->ctx(), 0) << "ERROR: complete_atomic_modification returned ret=" << ret << dendl;
     }
@@ -5448,14 +5411,10 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent
     return r;
 
   /* update quota cache */
-  #ifdef WITH_JAEGER
-    Span span_11;
-    trace(span_11, span_1, "rgw_quota.cc : update_stats");
-  #endif
+  Span span_11;
+  trace(span_11, this_parent_span, "rgw_quota.cc : update_stats");
   store->quota_handler->update_stats(params.bucket_owner, obj.bucket, -1, 0, obj_accounted_size);
-  #ifdef WITH_JAEGER
-    finish_trace(span_11);
-  #endif
+  finish_trace(span_11);
 
   return 0;
 }
@@ -6179,8 +6138,10 @@ int RGWRados::Object::Read::prepare(optional_yield y, optional_span* parent_span
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
     optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   RGWRados *store = source->get_store();
   CephContext *cct = store->ctx();
@@ -6201,14 +6162,10 @@ int RGWRados::Object::Read::prepare(optional_yield y, optional_span* parent_span
   RGWBucketInfo& buck_info = source->get_bucket_info();
   const RGWBucketInfo& bucket_info = buck_info;
   state.obj = astate->obj;
-  #ifdef WITH_JAEGER
-    Span span_2;
-    trace(span_2, span_1, "rgw_rados.cc : RGWRados::obj_to_raw");
-  #endif
+  Span span_2;
+  trace(span_2, this_parent_span, "rgw_rados.cc : RGWRados::obj_to_raw");
   store->obj_to_raw(bucket_info.placement_rule, state.obj, &state.head_obj);
-  #ifdef WITH_JAEGER
-    finish_trace(span_2);
-  #endif
+  finish_trace(span_2);
   state.cur_pool = state.head_obj.pool;
   state.cur_ioctx = &state.io_ctxs[state.cur_pool];
   #ifdef WITH_JAEGER
@@ -6363,7 +6320,7 @@ int RGWRados::Bucket::UpdateIndex::prepare(RGWModifyOp op, const string *write_t
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
   #endif
   if (blind) {
     return 0;
@@ -6745,7 +6702,10 @@ int RGWRados::Object::Read::iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb,
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   RGWRados *store = source->get_store();
   CephContext *cct = store->ctx();
@@ -6756,15 +6716,11 @@ int RGWRados::Object::Read::iterate(int64_t ofs, int64_t end, RGWGetDataCB *cb,
   auto aio = rgw::make_throttle(window_size, y);
   get_obj_data data(store, cb, &*aio, ofs, y);
 
-  #ifdef WITH_JAEGER
-    Span span_2;
-    trace(span_2, span_1, "rgw_rados.cc : RGWRados::iterate");
-  #endif
+  Span span_2;
+  trace(span_2, this_parent_span, "rgw_rados.cc : RGWRados::iterate");
   int r = store->iterate_obj(obj_ctx, source->get_bucket_info(), state.obj,
                             ofs, end, chunk_size, _get_obj_iterate_cb, &data, y);
-  #ifdef WITH_JAEGER
-    finish_trace(span_2);
-  #endif
+  finish_trace(span_2);
   if (r < 0) {
     ldout(cct, 0) << "iterate_obj() failed with " << r << dendl;
     data.cancel(); // drain completions without writing back to client
@@ -8043,7 +7999,7 @@ int RGWRados::get_bucket_info(RGWServices *svc,
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
   #endif
 
   auto obj_ctx = svc->sysobj->init_obj_ctx();
@@ -8092,19 +8048,17 @@ int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_t
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
     optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   bool create_head = !info.has_instance_obj || create_entry_point;
   int ret;
-  #ifdef WITH_JAEGER
-    Span span_2;
-    trace(span_2, span_1, "rgw_rados.cc : RGWRados::put_bucket_instance_info");
-  #endif
+  Span span_2;
+  trace(span_2, this_parent_span, "rgw_rados.cc : RGWRados::put_bucket_instance_info");
   ret = put_bucket_instance_info(info, exclusive, mtime, pattrs);
-  #ifdef WITH_JAEGER
-    finish_trace(span_2);
-  #endif
+  finish_trace(span_2);
   if (ret < 0) {
     return ret;
   }
@@ -8126,17 +8080,14 @@ int RGWRados::put_linked_bucket_info(RGWBucketInfo& info, bool exclusive, real_t
       *pep_objv = ot.write_version;
     }
   }
-  #ifdef WITH_JAEGER
-    Span span_3;
-    trace(span_3, span_1, "rgw_rados.cc : RGWRados::store_bucket_entrypoint_info");
-  #endif
+  Span span_3;
+  trace(span_3, this_parent_span, "rgw_rados.cc : RGWRados::store_bucket_entrypoint_info");
   ret = ctl.bucket->store_bucket_entrypoint_info(info.bucket, entry_point, null_yield, RGWBucketCtl::Bucket::PutParams()
                                       .set_exclusive(exclusive)
                     .set_objv_tracker(&ot)
                     .set_mtime(mtime));
-  #ifdef WITH_JAEGER
-    finish_trace(span_3);
-  #endif
+  finish_trace(span_3);
+
   if (ret < 0)
     return ret;
 
@@ -8696,12 +8647,14 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
    * few results, perhaps due to filtering or to a series of
    * namespaced entries */
   #ifdef WITH_JAEGER
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    Span span_1;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
     optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   ldout(cct, 10) << "RGWRados::" << __func__ << ": " << bucket_info.bucket <<
     " start_after=\"" << start_after.name <<
@@ -8911,10 +8864,8 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
   } // while we haven't provided requested # of result entries
 
   // suggest updates if there are any
-  #ifdef WITH_JAEGER
-    Span span_2;
-    trace(span_2, span_1, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate");
-  #endif
+  Span span_2;
+  trace(span_2, this_parent_span, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate");
   for (auto& miter : updates) {
     if (miter.second.length()) {
       ObjectWriteOperation o;
@@ -8926,9 +8877,7 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
       c->release();
     }
   } // updates loop
-  #ifdef WITH_JAEGER
-    finish_trace(span_2);
-  #endif
+  finish_trace(span_2);
   // determine truncation by checking if all the returned entries are
   // consumed or not
   *is_truncated = false;
@@ -8977,12 +8926,14 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
     " start_after " << start_after.name << "[" << start_after.instance <<
     "] num_entries " << num_entries << dendl;
   #ifdef WITH_JAEGER
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    Span span_1;
     if(parent_span)
-      trace(span_1, parent_span->span, span_name.c_str());
+      trace(span_1, *parent_span, span_name.c_str());
     optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   ent_list.clear();
   static MultipartMetaFilter multipart_meta_filter;
@@ -9039,14 +8990,10 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
     } else {
       // so now we have the key used to compute the bucket index shard
       // and can extract the specific shard from it
-      #ifdef WITH_JAEGER
-        Span span_2;
-        trace(span_2, span_1, "svc_bi_rados.cc : RGWSI_BucketIndex_RADOS::bucket_shard_index");
-      #endif
+      Span span_2;
+      trace(span_2, this_parent_span, "svc_bi_rados.cc : RGWSI_BucketIndex_RADOS::bucket_shard_index");
       current_shard = svc.bi_rados->bucket_shard_index(obj_key.name, num_shards);
-      #ifdef WITH_JAEGER
-        finish_trace(span_2);
-      #endif
+      finish_trace(span_2);
     }
   }
 
@@ -9064,14 +9011,10 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
     cls_rgw_bucket_list_op(op, marker, prefix, empty_delimiter,
 			   num_entries,
                            list_versions, &result);
-    #ifdef WITH_JAEGER
-      Span span_3;
-      trace(span_3, span_1, "rgw_tools.cc : rgw_rados_operate");
-    #endif
+    Span span_3;
+    trace(span_3, this_parent_span, "rgw_tools.cc : rgw_rados_operate");
     r = rgw_rados_operate(ioctx, oid, &op, nullptr, null_yield);
-    #ifdef WITH_JAEGER
-      finish_trace(span_3);
-    #endif
+    finish_trace(span_3);
     if (r < 0)
       return r;
 
@@ -9125,10 +9068,8 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
 check_updates:
 
   // suggest updates if there is any
-  #ifdef WITH_JAEGER
-    Span span_4;
-    trace(span_4, span_1, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate");
-  #endif
+  Span span_4;
+  trace(span_4, this_parent_span, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate");
   map<string, bufferlist>::iterator miter = updates.begin();
   for (; miter != updates.end(); ++miter) {
     if (miter->second.length()) {
@@ -9140,9 +9081,7 @@ check_updates:
       c->release();
     }
   }
-  #ifdef WITH_JAEGER
-    finish_trace(span_4);
-  #endif
+  finish_trace(span_4);
   if (last_entry && !ent_list.empty()) {
     *last_entry = last_added_entry;
   }

@@ -33,24 +33,23 @@ int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
 			       uint64_t max, bool need_stats, RGWBucketList &buckets, optional_span* parent_span)
 {
   #ifdef WITH_JAEGER
+    Span span_1;
     std::string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    Span span_1;
     if(parent_span && parent_span->span)
       trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   RGWUserBuckets ulist;
   bool is_truncated = false;
   int ret;
-  #ifdef WITH_JAEGER
-    Span span_2;
-    trace(span_2, span_1, "rgw_user.cc : RGWUSerCtl::list_buckets");
-  #endif
+  Span span_2;
+  trace(span_2, this_parent_span, "rgw_user.cc : RGWUSerCtl::list_buckets");
   ret = store->ctl()->user->list_buckets(info.user_id, marker, end_marker, max,
           need_stats, &ulist, &is_truncated);
-  #ifdef WITH_JAEGER
-    finish_trace(span_2);
-  #endif
+  finish_trace(span_2);
   if (ret < 0)
     return ret;
 
@@ -195,10 +194,10 @@ int RGWRadosBucket::sync_user_stats()
 
 int RGWRadosBucket::update_container_stats(optional_span* parent_span)
 {
+  Span span_1;
   #ifdef WITH_JAEGER
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    Span span_1;
     if(parent_span)
       trace(span_1, parent_span->span, span_name.c_str());
   #endif
@@ -206,14 +205,11 @@ int RGWRadosBucket::update_container_stats(optional_span* parent_span)
   map<std::string, RGWBucketEnt> m;
 
   m[ent.bucket.name] = ent;
-  #ifdef WITH_JAEGER
-    Span span_2;
-    trace(span_2, span_1, "rgw_rados.cc : RGWRados::update_containers_stats");
-  #endif
+  Span span_2;
+  trace(span_2, span_1, "rgw_rados.cc : RGWRados::update_containers_stats");
   ret = store->getRados()->update_containers_stats(m);
-  #ifdef WITH_JAEGER
-    finish_trace(span_2);
-  #endif
+  finish_trace(span_2);
+
   if (!ret)
     return -EEXIST;
   if (ret < 0)

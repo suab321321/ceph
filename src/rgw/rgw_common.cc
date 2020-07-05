@@ -2172,20 +2172,20 @@ bool RGWBucketInfo::empty_sync_policy() const
   return sync_policy->empty();
 }
 
-Jager_Tracer tracer;
+#ifdef WITH_JAEGER
+  Jager_Tracer tracer;
 
-void span_structure::set_span(Span& span){
-  this->s->stack_span.push(std::move(span));
-}
-void span_structure::set_req_state(req_state* s){
-  this->s = s;
-  this->is_inserted = true;
-}
-span_structure::~span_structure(){
-  if(this->s && !this->s->stack_span.empty() && this->is_inserted)
-			this->s->stack_span.pop();
-}
-
+  void span_structure::set_span(Span& span){
+    this->req_state_span->stack_span.push(std::move(span));
+  }
+  void span_structure::set_req_state(req_state* _s){
+    this->req_state_span = _s;
+    this->is_inserted = true;
+  }
+  span_structure::~span_structure(){
+    if(this->req_state_span && !this->req_state_span->stack_span.empty() && this->is_inserted)
+        this->req_state_span->stack_span.pop();
+  }
 
 std::unordered_map<int, const char*> RGWOpTypeMapper={
   {0,"RGW_OP_UNKNOWN"},
@@ -2291,3 +2291,4 @@ std::unordered_map<int, const char*> RGWOpTypeMapper={
   {100,"RGW_OP_GET_BUCKET_PUBLIC_ACCESS_BLOCK"},
   {101,"RGW_OP_DELETE_BUCKET_PUBLIC_ACCESS_BLOCK"}
 };
+#endif

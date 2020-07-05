@@ -41,21 +41,22 @@ int RGWSI_BucketIndex_RADOS::open_pool(const rgw_pool& pool,
 int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_info,
                                                     RGWSI_RADOS::Pool *index_pool, optional_span* parent_span)
 {
+  Span span_1;
   #ifdef WITH_JAEGER
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    Span span_1;
     if(parent_span) 
       trace(span_1, parent_span->span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
 
   const rgw_pool& explicit_pool = bucket_info.bucket.explicit_placement.index_pool;
 
   if (!explicit_pool.empty()) {
-    #ifdef WITH_JAEGER
-      Span span_2;
-      trace(span_2, span_1, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_pool");
-    #endif
+    Span span_2;
+    trace(span_2, this_parent_span, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_pool");
     return open_pool(explicit_pool, index_pool, false);
   }
 
@@ -185,9 +186,9 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
   int shard_id = _shard_id.value_or(-1);
   string bucket_oid_base;
   #ifdef WITH_JAEGER
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    Span span_1;
     if(parent_span)
       trace(span_1, parent_span->span, span_name.c_str());
   #endif
@@ -342,13 +343,15 @@ int RGWSI_BucketIndex_RADOS::cls_bucket_head(const RGWBucketInfo& bucket_info,
 int RGWSI_BucketIndex_RADOS::init_index(RGWBucketInfo& bucket_info, optional_span* parent_span)
 {
   RGWSI_RADOS::Pool index_pool;
+  Span span_1;
   #ifdef WITH_JAEGER
-    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span)
       trace(span_1, parent_span->span, span_name.c_str());
     optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   string dir_oid = dir_oid_prefix;
   #ifdef WITH_JAEGER

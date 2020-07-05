@@ -17,13 +17,15 @@
 #ifndef CEPH_RGW_COMMON_H
 #define CEPH_RGW_COMMON_H
 
+//Only for testing purpose now
+#define WITH_JAEGER
+
 #include <array>
 #include <string_view>
 #include<cstring>
 
 #include "common/ceph_crypto.h"
 #include "common/random_string.h"
-#include "common/tracer.h"
 #include "rgw_acl.h"
 #include "rgw_bucket_layout.h"
 #include "rgw_cors.h"
@@ -43,6 +45,9 @@
 
 #ifdef WITH_JAEGER
   #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+  #include "common/tracer.h"
+#else
+  typedef char Span;
 #endif
 
 namespace ceph {
@@ -282,6 +287,14 @@ enum HostStyle {
   VirtualStyle = 1,
 };
 
+/** Optional Paramter to function which will be traced */
+struct optional_span{
+  #ifdef WITH_JAEGER
+    const Span& span;
+    optional_span(const Span& _span) : span(_span) {}
+  #endif
+};
+
 /** Store error returns for output at a different point in the program */
 struct rgw_err {
   rgw_err();
@@ -294,15 +307,6 @@ struct rgw_err {
   int ret;
   std::string err_code;
   std::string message;
-};
-
-/** span_structure to manage spans of a req_state */
-struct span_structure{
-  req_state* s = nullptr;
-  bool is_inserted = false;
-  void set_req_state(req_state* s);
-	void set_span(Span& span);
-	~span_structure();
 };
 
 /* Helper class used for RGWHTTPArgs parsing */
@@ -2372,8 +2376,10 @@ extern bool match_policy(std::string_view pattern, std::string_view input,
 extern string camelcase_dash_http_attr(const string& orig);
 extern string lowercase_dash_http_attr(const string& orig);
 
-extern Jager_Tracer tracer;
-extern std::unordered_map<int, const char*> RGWOpTypeMapper;
+#ifdef WITH_JAEGER
+  extern Jager_Tracer tracer;
+  extern std::unordered_map<int, const char*> RGWOpTypeMapper;
+#endif
 
 void rgw_setup_saved_curl_handles();
 void rgw_release_all_curl_handles();
@@ -2464,29 +2470,26 @@ static inline void start_trace(span_structure&& ss, Span&& sp, req_state* const 
       ss.set_span(span);
     }
 }
+#endif
 
-static inline void trace(Span& span, const Span& parent_span, const char* span_name)
+static inline void trace(Span& span, const optional_span& parent_span, const char* span_name)
 {
-  if(parent_span)
-  {
-    span = tracer.child_span(span_name, parent_span);
-  }
+  #ifdef WITH_JAEGER
+    if(parent_span.span)
+    {
+      span = tracer.child_span(span_name, parent_span.span);
+    }
+  #endif
 }
 
 static inline void finish_trace(Span& span)
 {
+  #ifdef WITH_JAEGER
     if(span){
       Span s = std::move(span);
       s->Finish();
     }
-}
-#endif
-
-struct optional_span{
-  #ifdef WITH_JAEGER
-    const Span& span;
-    optional_span(const Span& _span) : span(_span) {}
   #endif
-};
+}
 
 #endif

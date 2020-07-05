@@ -9,9 +9,8 @@
 
 #include <jaegertracing/Tracer.h>
 
-#ifndef WITH_JAEGER
-  #define WITH_JAEGER
-#endif
+//forward declaration of req_state defined /rgw/rgw_common.h
+struct req_state;
 
 typedef std::unique_ptr<opentracing::Span> Span;
 
@@ -51,6 +50,15 @@ class Jager_Tracer{
   }
 private:
   std::shared_ptr<opentracing::v2::Tracer> tracer = NULL;
+};
+
+// structure to manage spans to trace functions who have access to req_state in /rgw/*
+struct span_structure{
+    req_state* req_state_span = nullptr;
+    bool is_inserted = false;
+    void set_req_state(req_state* _s);
+    void set_span(Span& span);
+    ~span_structure();
 };
 
 #endif

@@ -2579,6 +2579,8 @@ void RGWListBuckets::execute()
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     optional_span parent_span(s->stack_span.top());
+  #else
+    optional_span parent_span;
   #endif
   bool done;
   bool started = false;
@@ -3114,7 +3116,10 @@ void RGWListBucket::execute()
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     optional_span parent_span(s->stack_span.top());
+  #else
+    optional_span parent_span;
   #endif
+    
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
     return;
@@ -3175,6 +3180,9 @@ int RGWCreateBucket::verify_permission()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   /* This check is mostly needed for S3 that doesn't support account ACL.
    * Swift doesn't allow to delegate any permission to an anonymous user,
@@ -3205,16 +3213,12 @@ int RGWCreateBucket::verify_permission()
   if (s->user->get_max_buckets()) {
     rgw::sal::RGWBucketList buckets;
     string marker;
-    #ifdef WITH_JAEGER
-      Span span_1;
-      trace(span_1, s->stack_span.top(), "rgw_bucket.cc : rgw_read_user_buckets");
-    #endif
+    Span span_1;
+    trace(span_1, this_parent_span, "rgw_bucket.cc : rgw_read_user_buckets");
     op_ret = rgw_read_user_buckets(store, s->user->get_id(), buckets,
 				   marker, string(), s->user->get_max_buckets(),
 				   false);
-    #ifdef WITH_JAEGER
-      finish_trace(span_1);
-    #endif
+    finish_trace(span_1);
     if (op_ret < 0) {
       return op_ret;
     }
@@ -3438,6 +3442,8 @@ void RGWCreateBucket::execute()
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   RGWAccessControlPolicy old_policy(s->cct);
   buffer::list aclbl;
@@ -3487,14 +3493,10 @@ void RGWCreateBucket::execute()
   s->bucket.tenant = s->bucket_tenant;
   s->bucket.name = s->bucket_name;
   rgw::sal::RGWBucket* bucket = NULL;
-  #ifdef WITH_JAEGER
-    Span span_1;
-    trace(span_1,s->stack_span.top(), "rgw_sal.cc : RGWRadosStore::get_bucket");
-  #endif
+  Span span_1;
+  trace(span_1, this_parent_span, "rgw_sal.cc : RGWRadosStore::get_bucket");
   op_ret = store->get_bucket(*s->user, s->bucket, &bucket);
-  #ifdef WITH_JAEGER
-    finish_trace(span_1);
-  #endif
+  finish_trace(span_1);
   if (op_ret < 0 && op_ret != -ENOENT)
     return;
   s->bucket_exists = (op_ret != -ENOENT);
@@ -3558,17 +3560,13 @@ void RGWCreateBucket::execute()
     rgw_bucket bucket;
     bucket.tenant = s->bucket_tenant;
     bucket.name = s->bucket_name;
-    #ifdef WITH_JAEGER
-      Span span_2;
-      trace(span_2, s->stack_span.top(), "svc_zone.cc : RGWSI_Zone::select_bucket_placement");
-    #endif
+    Span span_2;
+    trace(span_2, this_parent_span, "svc_zone.cc : RGWSI_Zone::select_bucket_placement");
     op_ret = store->svc()->zone->select_bucket_placement(s->user->get_info(),
               zonegroup_id,
               placement_rule,
-              &selected_placement_rule, nullptr);
-    #ifdef WITH_JAEGER
-      finish_trace(span_2);
-    #endif
+              &selected_placement_rule, nullptr);      
+    finish_trace(span_2);
     if (selected_placement_rule != s->bucket_info.placement_rule) {
       op_ret = -EEXIST;
       return;
@@ -3656,15 +3654,11 @@ void RGWCreateBucket::execute()
     }
     s->bucket = info.bucket;
   }
-    #ifdef WITH_JAEGER
-      Span span_3;
-      trace(span_3, s->stack_span.top(), "rgw_rados.cc : RGWBucketCtl::link_bucket");
-    #endif
+    Span span_3;
+    trace(span_3, this_parent_span, "rgw_rados.cc : RGWBucketCtl::link_bucket");
     op_ret = store->ctl()->bucket->link_bucket(s->user->get_id(), s->bucket,
                                             info.creation_time, s->yield, false);
-    #ifdef WITH_JAEGER
-      finish_trace(span_3);
-    #endif
+    finish_trace(span_3);
   
   if (op_ret && !existed && op_ret != -EEXIST) {
     /* if it exists (or previously existed), don't remove it! */
@@ -5200,6 +5194,8 @@ void RGWDeleteObj::execute()
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
     optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
@@ -5290,15 +5286,11 @@ void RGWDeleteObj::execute()
     obj_ctx->set_atomic(obj);
 
     bool ver_restored = false;
-    #ifdef WITH_JAEGER
-      Span span_1;
-      trace(span_1, s->stack_span.top(), "rgw_rados.cc : RGWRados::swift_versoning_restore");
-    #endif
+    Span span_1;
+    trace(span_1, this_parent_span, "rgw_rados.cc : RGWRados::swift_versoning_restore");
     op_ret = store->getRados()->swift_versioning_restore(*obj_ctx, s->bucket_owner.get_id(),
                                             s->bucket_info, obj, ver_restored, this);
-    #ifdef WITH_JAEGER
-      finish_trace(span_1);
-    #endif
+    finish_trace(span_1);
     if (op_ret < 0) {
       return;
     }
