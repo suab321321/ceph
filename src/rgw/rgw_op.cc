@@ -4053,6 +4053,9 @@ int RGWPutObj::get_data(const off_t fst, const off_t lst, bufferlist& bl)
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   RGWPutObj_CB cb(this);
   RGWGetObj_Filter* filter = &cb;
@@ -4073,14 +4076,15 @@ int RGWPutObj::get_data(const off_t fst, const off_t lst, bufferlist& bl)
   rgw_obj obj(copy_source_bucket_info.bucket, obj_key);
 
   RGWRados::Object op_target(store->getRados(), copy_source_bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), obj);
-  #ifdef WITH_JAEGER
-    op_target.set_req_state(s);
-  #endif
   RGWRados::Object::Read read_op(&op_target);
   read_op.params.obj_size = &obj_size;
   read_op.params.attrs = &attrs;
 
-  ret = read_op.prepare(s->yield);
+  #ifdef WITH_JAEGER
+    ret = read_op.prepare(s->yield,&this_parent_span);
+  #else
+    ret = read_op.prepare(s->yield,&this_parent_span);
+  #endif
   if (ret < 0)
     return ret;
 
@@ -4116,7 +4120,11 @@ int RGWPutObj::get_data(const off_t fst, const off_t lst, bufferlist& bl)
     return ret;
 
   filter->fixup_range(new_ofs, new_end);
-  ret = read_op.iterate(new_ofs, new_end, filter, s->yield);
+  #ifdef WITH_JAEGER
+    ret = read_op.iterate(new_ofs, new_end, filter, s->yield, &this_parent_span);
+  #else
+    ret = read_op.iterate(new_ofs, new_end, filter, s->yield, &this_parent_span);
+  #endif
 
   if (ret >= 0)
     ret = filter->flush();
@@ -4156,6 +4164,9 @@ void RGWPutObj::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   char supplied_md5_bin[CEPH_CRYPTO_MD5_DIGESTSIZE + 1];
   char supplied_md5[CEPH_CRYPTO_MD5_DIGESTSIZE * 2 + 1];
@@ -4174,10 +4185,6 @@ void RGWPutObj::execute()
   auto put_lat = make_scope_guard([&] {
       perfcounter->tinc(l_rgw_put_lat, s->time_elapsed());
     });
-
-  #ifdef WITH_JAEGER
-      s->bucket_info.s = s;
-  #endif
 
   op_ret = -EINVAL;
   if (s->object.empty()) {
@@ -4208,20 +4215,20 @@ void RGWPutObj::execute()
       op_ret = -ERR_INVALID_DIGEST;
       return;
     }
-    Span span_1;
-    start_trace({}, std::move(span_1), s, "rgw_common.h : buf_to_hex", false);
+    Span span_2;
+    trace(span_2, this_parent_span, "rgw_common.h : buf_to_hex");
     buf_to_hex((const unsigned char *)supplied_md5_bin, CEPH_CRYPTO_MD5_DIGESTSIZE, supplied_md5);
-    finish_trace(span_1);
+    finish_trace(span_2);
     ldpp_dout(this, 15) << "supplied_md5=" << supplied_md5 << dendl;
   }
 
   if (!chunked_upload) { /* with chunked upload we don't know how big is the upload.
                             we also check sizes at the end anyway */
-    Span span_2;
-    start_trace({}, std::move(span_2), s, "rgw_rados.cc : RGWRados::check_quota", false);
+    Span span_3;
+    trace(span_3, this_parent_span, "rgw_rados.cc : RGWRados::check_quota");
     op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
         user_quota, bucket_quota, s->content_length);
-    finish_trace(span_2);
+    finish_trace(span_3);
     if (op_ret < 0) {
       ldpp_dout(this, 20) << "check_quota() returned ret=" << op_ret << dendl;
       return;
@@ -4239,15 +4246,15 @@ void RGWPutObj::execute()
 
   /* Handle object versioning of Swift API. */
   if (! multipart) {
-    Span span_2;
-    start_trace({}, std::move(span_2), s, "rgw_rados.cc : RGWRados::swift_versioning_copy", false);
+    Span span_4;
+    trace(span_4, this_parent_span, "rgw_rados.cc : RGWRados::swift_versioning_copy");
     op_ret = store->getRados()->swift_versioning_copy(obj_ctx,
                                           s->bucket_owner.get_id(),
                                           s->bucket_info,
                                           obj,
                                           this,
                                           s->yield);
-    finish_trace(span_2);
+    finish_trace(span_4);
     if (op_ret < 0) {
       return;
     }
@@ -4308,8 +4315,11 @@ void RGWPutObj::execute()
         s->bucket_owner.get_id(), obj_ctx, obj, olh_epoch,
         s->req_id, this, s->yield);
   }
-
-  op_ret = processor->prepare(s->yield);
+  #ifdef WITH_JAEGER
+    op_ret = processor->prepare(s->yield, &this_parent_span);
+  #else
+    op_ret = processor->prepare(s->yield);
+  #endif
   if (op_ret < 0) {
     ldpp_dout(this, 20) << "processor->prepare() returned ret=" << op_ret
 		      << dendl;
@@ -4321,11 +4331,11 @@ void RGWPutObj::execute()
     rgw_obj obj(copy_source_bucket_info.bucket, obj_key.name);
 
     RGWObjState *astate;
-    Span span_3;
-    start_trace({}, std::move(span_3), s, "rgw_rados.cc : RGWRados::get_obj_state", false);
+    Span span_5;
+    trace(span_5, this_parent_span, "rgw_rados.cc : RGWRados::get_obj_state");
     op_ret = store->getRados()->get_obj_state(&obj_ctx, copy_source_bucket_info, obj,
                                   &astate, true, s->yield, false);
-    finish_trace(span_3);
+    finish_trace(span_5);
     if (op_ret < 0) {
       ldpp_dout(this, 0) << "ERROR: get copy source obj state returned with error" << op_ret << dendl;
       return;
@@ -4428,11 +4438,11 @@ void RGWPutObj::execute()
   if (op_ret < 0) {
     return;
   }
-  Span span_4;
-  start_trace({}, std::move(span_4), s, "rgw_rados.cc : RGWRados::check_quota", false);
+  Span span_6;
+  trace(span_6, this_parent_span, "rgw_rados.cc : RGWRados::check_quota");
   op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
                               user_quota, bucket_quota, s->obj_size);
-  finish_trace(span_4);
+  finish_trace(span_6);
   if (op_ret < 0) {
     ldpp_dout(this, 20) << "second check_quota() returned op_ret=" << op_ret << dendl;
     return;
@@ -4517,10 +4527,17 @@ void RGWPutObj::execute()
   }
 
   tracepoint(rgw_op, processor_complete_enter, s->req_id.c_str());
-  op_ret = processor->complete(s->obj_size, etag, &mtime, real_time(), attrs,
-                               (delete_at ? *delete_at : real_time()), if_match, if_nomatch,
-                               (user_data.empty() ? nullptr : &user_data), nullptr, nullptr,
-                               s->yield);
+  #ifdef WITH_JAEGER
+    op_ret = processor->complete(s->obj_size, etag, &mtime, real_time(), attrs,
+                                (delete_at ? *delete_at : real_time()), if_match, if_nomatch,
+                                (user_data.empty() ? nullptr : &user_data), nullptr, nullptr,
+                                s->yield, &this_parent_span);
+  #else
+    op_ret = processor->complete(s->obj_size, etag, &mtime, real_time(), attrs,
+                                (delete_at ? *delete_at : real_time()), if_match, if_nomatch,
+                                (user_data.empty() ? nullptr : &user_data), nullptr, nullptr,
+                                s->yield);
+  #endif
   tracepoint(rgw_op, processor_complete_exit, s->req_id.c_str());
 
   /* produce torrent */

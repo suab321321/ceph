@@ -824,9 +824,9 @@ public:
       int _do_write_meta(uint64_t size, uint64_t accounted_size,
                      map<std::string, bufferlist>& attrs,
                      bool modify_tail, bool assume_noent,
-                     void *index_op, optional_yield y);
+                     void *index_op, optional_yield y, optional_span* parent_span = nullptr);
       int write_meta(uint64_t size, uint64_t accounted_size,
-                     map<std::string, bufferlist>& attrs, optional_yield y);
+                     map<std::string, bufferlist>& attrs, optional_yield y, optional_span* parent_span = nullptr);
       int write_data(const char *data, uint64_t ofs, uint64_t len, bool exclusive);
       const req_state* get_req_state() {
         return (req_state *)target->get_ctx().get_private();
@@ -976,7 +976,7 @@ public:
                    const string& etag, const string& content_type,
                    const string& storage_class,
                    bufferlist *acl_bl, RGWObjCategory category,
-		   list<rgw_obj_index_key> *remove_objs, const string *user_data = nullptr, bool appendable = false);
+		   list<rgw_obj_index_key> *remove_objs, const string *user_data = nullptr, bool appendable = false, optional_span* parent_span = nullptr);
       int complete_del(int64_t poolid, uint64_t epoch,
                        ceph::real_time& removed_mtime, /* mtime of removed object */
                        list<rgw_obj_index_key> *remove_objs);
