@@ -5439,8 +5439,9 @@ int RGWCopyObj::verify_permission()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-    src_bucket_info.s = s;
-    dest_bucket_info.s = s;
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   RGWAccessControlPolicy src_acl(s->cct);
   boost::optional<Policy> src_policy;
@@ -5455,11 +5456,18 @@ int RGWCopyObj::verify_permission()
   map<string, bufferlist> src_attrs;
 
   if (s->bucket_instance_id.empty()) {
-    op_ret = store->getRados()->get_bucket_info(store->svc(), src_tenant_name, src_bucket_name, src_bucket_info, NULL, s->yield, &src_attrs);
+    #ifdef WITH_JAEGER
+      op_ret = store->getRados()->get_bucket_info(store->svc(), src_tenant_name, src_bucket_name, src_bucket_info, NULL, s->yield, &src_attrs, &this_parent_span);
+    #else
+      op_ret = store->getRados()->get_bucket_info(store->svc(), src_tenant_name, src_bucket_name, src_bucket_info, NULL, s->yield, &src_attrs);
+    #endif
   } else {
     /* will only happen in intra region sync where the source and dest bucket is the same */
     rgw_bucket b(rgw_bucket_key(src_tenant_name, src_bucket_name, s->bucket_instance_id));
+    Span span_1;
+    trace(span_1, this_parent_span, "rgw_rados.cc : RGWRados::get_bucket_instance_info");
     op_ret = store->getRados()->get_bucket_instance_info(*s->sysobj_ctx, b, src_bucket_info, NULL, &src_attrs, s->yield);
+    finish_trace(span_1);
   }
   if (op_ret < 0) {
     if (op_ret == -ENOENT) {
@@ -5591,8 +5599,6 @@ int RGWCopyObj::init_common()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-    src_bucket_info.s = s;
-    dest_bucket_info.s = s;
   #endif
   if (if_mod) {
     if (parse_time(if_mod, &mod_time) < 0) {
@@ -5636,8 +5642,6 @@ void RGWCopyObj::progress_cb(off_t ofs)
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-    src_bucket_info.s = s;
-    dest_bucket_info.s = s;
   #endif
   if (!s->cct->_conf->rgw_copy_obj_progress)
     return;
@@ -5657,8 +5661,6 @@ void RGWCopyObj::pre_exec()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-    src_bucket_info.s = s;
-    dest_bucket_info.s = s;
   #endif
   rgw_bucket_object_pre_exec(s);
 }
@@ -5670,8 +5672,9 @@ void RGWCopyObj::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-    src_bucket_info.s = s;
-    dest_bucket_info.s = s;
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   if (init_common() < 0)
     return;
@@ -5718,7 +5721,7 @@ void RGWCopyObj::execute()
                                         dest_bucket_info,
                                         dst_obj,
                                         this,
-                                        s->yield);
+                                          s->yield, &this_parent_span);
   if (op_ret < 0) {
     return;
   }
@@ -5749,7 +5752,7 @@ void RGWCopyObj::execute()
 	   &etag,
 	   copy_obj_progress_cb, (void *)this,
 	   this,
-	   s->yield);
+	   s->yield, &this_parent_span);
 
   const auto ret = rgw::notify::publish(s, s->object, s->obj_size, mtime, etag, rgw::notify::ObjectCreatedCopy, store);
   if (ret < 0) {

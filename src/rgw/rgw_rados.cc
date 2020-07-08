@@ -2830,14 +2830,17 @@ int RGWRados::swift_versioning_copy(RGWObjectCtx& obj_ctx,
                                     RGWBucketInfo& bucket_info,
                                     rgw_obj& obj, 
                                     const DoutPrefixProvider *dpp,
-                                    optional_yield y)
+                                    optional_yield y, optional_span* parent_span)
 {
-  req_state* s = bucket_info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span(;
   #endif
   if (! swift_versioning_enabled(bucket_info)) {
     return 0;
@@ -2862,11 +2865,8 @@ int RGWRados::swift_versioning_copy(RGWObjectCtx& obj_ctx,
            src_name.c_str(), (long long)ts.tv_sec, ts.tv_nsec / 1000);
 
   RGWBucketInfo dest_bucket_info;
-  #ifdef WITH_JAEGER
-    bucket_info.s = s;
-  #endif
 
-  r = get_bucket_info(&svc, bucket_info.bucket.tenant, bucket_info.swift_ver_location, dest_bucket_info, NULL, null_yield, NULL);
+  r = get_bucket_info(&svc, bucket_info.bucket.tenant, bucket_info.swift_ver_location, dest_bucket_info, NULL, null_yield, NULL, &this_parent_span);
   if (r < 0) {
     ldout(cct, 10) << "failed to read dest bucket info: r=" << r << dendl;
     if (r == -ENOENT) {
@@ -2917,7 +2917,7 @@ int RGWRados::swift_versioning_copy(RGWObjectCtx& obj_ctx,
                NULL, /* void (*progress_cb)(off_t, void *) */
                NULL, /* void *progress_data */
                dpp,
-               null_yield);
+               null_yield, &this_parent_span);
   if (r == -ECANCELED || r == -ENOENT) {
     /* Has already been overwritten, meaning another rgw process already
      * copied it out */
@@ -4336,16 +4336,17 @@ int RGWRados::copy_obj(RGWObjectCtx& obj_ctx,
                void (*progress_cb)(off_t, void *),
                void *progress_data,
                const DoutPrefixProvider *dpp,
-               optional_yield y)
+               optional_yield y, optional_span* parent_span)
 {
-  req_state* s = src_bucket_info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-    src_bucket_info.s = s;
-    dest_bucket_info.s = s;
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   int ret;
   uint64_t obj_size;
@@ -4382,9 +4383,6 @@ int RGWRados::copy_obj(RGWObjectCtx& obj_ctx,
 
   map<string, bufferlist> src_attrs;
   RGWRados::Object src_op_target(this, src_bucket_info, obj_ctx, src_obj);
-  #ifdef WITH_JAEGER
-    src_op_target.set_req_state(s);
-  #endif
   RGWRados::Object::Read read_op(&src_op_target);
 
   read_op.conds.mod_ptr = mod_ptr;
@@ -4396,7 +4394,7 @@ int RGWRados::copy_obj(RGWObjectCtx& obj_ctx,
   read_op.params.lastmod = src_mtime;
   read_op.params.obj_size = &obj_size;
 
-  ret = read_op.prepare(y);
+  ret = read_op.prepare(y, &this_parent_span);
   if (ret < 0) {
     return ret;
   }
@@ -4436,10 +4434,10 @@ int RGWRados::copy_obj(RGWObjectCtx& obj_ctx,
     return copy_obj_to_remote_dest(astate, attrs, read_op, user_id, dest_obj, mtime);
   }
   uint64_t max_chunk_size;
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_rados.cc : RGWRados::get_max_chunk_size", false);
+  Span span_2;
+  trace(span_2, this_parent_span, "rgw_rados.cc : RGWRados::get_max_chunk_size");
   ret = get_max_chunk_size(dest_bucket_info.placement_rule, dest_obj, &max_chunk_size);
-  finish_trace(span_1);
+  finish_trace(span_2);
   if (ret < 0) {
     ldpp_dout(dpp, 0) << "ERROR: failed to get max_chunk_size() for bucket " << dest_obj.bucket << dendl;
     return ret;
@@ -4503,7 +4501,7 @@ int RGWRados::copy_obj(RGWObjectCtx& obj_ctx,
   if (copy_data) { /* refcounting tail wouldn't work here, just copy the data */
     attrs.erase(RGW_ATTR_TAIL_TAG);
     return copy_obj_data(obj_ctx, dest_bucket_info, dest_placement, read_op, obj_size - 1, dest_obj,
-                         mtime, real_time(), attrs, olh_epoch, delete_at, petag, dpp, y);
+                         mtime, real_time(), attrs, olh_epoch, delete_at, petag, dpp, y, &this_parent_span);
   }
 
   RGWObjManifest::obj_iterator miter = astate->manifest->obj_begin();
@@ -4525,9 +4523,6 @@ int RGWRados::copy_obj(RGWObjectCtx& obj_ctx,
   ldpp_dout(dpp, 20) << "dest_obj=" << dest_obj << " src_obj=" << src_obj << " copy_itself=" << (int)copy_itself << dendl;
 
   RGWRados::Object dest_op_target(this, dest_bucket_info, obj_ctx, dest_obj);
-  #ifdef WITH_JAEGER
-    dest_op_target.set_req_state(s);
-  #endif
   RGWRados::Object::Write write_op(&dest_op_target);
 
   string tag;
@@ -4556,10 +4551,10 @@ int RGWRados::copy_obj(RGWObjectCtx& obj_ctx,
 
       auto& ioctx = ref.pool.ioctx();
       ioctx.locator_set_key(loc.loc);
-      Span span_2;
-      start_trace({}, std::move(span_2), s, "rgw_tools.cc : rgw_rados_operate", false);
+      Span span_3;
+      trace(span_3, this_parent_span, "rgw_tools.cc : rgw_rados_operate");
       ret = rgw_rados_operate(ioctx, loc.oid, &op, null_yield);
-      finish_trace(span_2);
+      finish_trace(span_3);
       if (ret < 0) {
         goto done_ret;
       }
@@ -4596,7 +4591,7 @@ int RGWRados::copy_obj(RGWObjectCtx& obj_ctx,
   write_op.meta.delete_at = delete_at;
   write_op.meta.modify_tail = !copy_itself;
 
-  ret = write_op.write_meta(obj_size, astate->accounted_size, attrs, y);
+  ret = write_op.write_meta(obj_size, astate->accounted_size, attrs, y, &this_parent_span);
   if (ret < 0) {
     goto done_ret;
   }
@@ -4612,10 +4607,11 @@ done_ret:
     for (riter = ref_objs.begin(); riter != ref_objs.end(); ++riter) {
       ObjectWriteOperation op;
       cls_refcount_put(op, ref_tag, true);
-
       ref.pool.ioctx().locator_set_key(riter->loc);
-
+      Span span_4;
+      trace(span_4, this_parent_span, "rgw_tools.cc : rgw_rados_operate");
       int r = rgw_rados_operate(ref.pool.ioctx(), riter->oid, &op, null_yield);
+      finish_trace(span_4);
       if (r < 0) {
         ldpp_dout(dpp, 0) << "ERROR: cleanup after error failed to drop reference on obj=" << *riter << dendl;
       }
@@ -4637,14 +4633,17 @@ int RGWRados::copy_obj_data(RGWObjectCtx& obj_ctx,
 	       real_time delete_at,
                string *petag,
                const DoutPrefixProvider *dpp,
-               optional_yield y)
+               optional_yield y, optional_span* parent_span)
 {
-  req_state* s = dest_bucket_info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   string tag;
   append_rand_alpha(cct, tag, tag, 32);
@@ -4656,7 +4655,7 @@ int RGWRados::copy_obj_data(RGWObjectCtx& obj_ctx,
   AtomicObjectProcessor processor(&aio, this->store, dest_bucket_info, &dest_placement,
                                   dest_bucket_info.owner, obj_ctx,
                                   dest_obj, olh_epoch, tag, dpp, null_yield);
-  int ret = processor.prepare(y);
+  int ret = processor.prepare(y, &this_parent_span);
   if (ret < 0)
     return ret;
 
@@ -4664,7 +4663,10 @@ int RGWRados::copy_obj_data(RGWObjectCtx& obj_ctx,
 
   do {
     bufferlist bl;
+    Span span_2;
+    trace(span_2, this_parent_span, "rgw_rados.cc : RGWRados::Object::Read::read");
     ret = read_op.read(ofs, end, bl, y);
+    finish_trace(span_2);
     if (ret < 0) {
       ldpp_dout(dpp, 0) << "ERROR: fail to read object data, ret = " << ret << dendl;
       return ret;
@@ -4680,10 +4682,10 @@ int RGWRados::copy_obj_data(RGWObjectCtx& obj_ctx,
   } while (ofs <= end);
 
   // flush
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_putobj_processor.cc : HeadObjectProcesssor::processor", false);    
+  Span span_3;
+  trace(span_3, this_parent_span, "rgw_putobj_processor.cc : HeadObjectProcesssor::processor");    
   ret = processor.process({}, ofs);
-  finish_trace(span_1);
+  finish_trace(span_3);
   if (ret < 0) {
     return ret;
   }
@@ -4712,7 +4714,7 @@ int RGWRados::copy_obj_data(RGWObjectCtx& obj_ctx,
   }
 
   return processor.complete(accounted_size, etag, mtime, set_mtime, attrs, delete_at,
-                            nullptr, nullptr, nullptr, nullptr, nullptr, y);
+                            nullptr, nullptr, nullptr, nullptr, nullptr, y, &this_parent_span);
 }
 
 int RGWRados::transition_obj(RGWObjectCtx& obj_ctx,

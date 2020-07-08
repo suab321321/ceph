@@ -1066,7 +1066,7 @@ public:
                             RGWBucketInfo& bucket_info,         /* in */
                             rgw_obj& obj,                       /* in */
                             const DoutPrefixProvider *dpp,      /* in/out */ 
-                            optional_yield y);                  /* in */                
+                            optional_yield y, optional_span* parent_span = nullptr); /* in */                
   int swift_versioning_restore(RGWObjectCtx& obj_ctx,           /* in/out */
                                const rgw_user& user,            /* in */
                                RGWBucketInfo& bucket_info,      /* in */
@@ -1179,7 +1179,7 @@ public:
                void (*progress_cb)(off_t, void *),
                void *progress_data,
                const DoutPrefixProvider *dpp,
-               optional_yield y);
+               optional_yield y, optional_span* parent_span = nullptr);
 
   int copy_obj_data(RGWObjectCtx& obj_ctx,
                RGWBucketInfo& dest_bucket_info,
@@ -1193,7 +1193,7 @@ public:
 	       ceph::real_time delete_at,
                string *petag,
                const DoutPrefixProvider *dpp,
-               optional_yield y);
+               optional_yield y, optional_span* parent_span = nullptr);
   
   int transition_obj(RGWObjectCtx& obj_ctx,
                      RGWBucketInfo& bucket_info,
