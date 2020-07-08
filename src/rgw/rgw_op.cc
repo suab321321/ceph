@@ -606,6 +606,9 @@ int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* 
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   int ret = 0;
   rgw_obj_key obj;
@@ -637,13 +640,13 @@ int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* 
   /* check if copy source is within the current domain */
   if (!s->src_bucket_name.empty()) {
     RGWBucketInfo source_info;
-    #ifdef WITH_JAEGER
-      source_info.s = s;
-    #endif
     if (s->bucket_instance_id.empty()) {
-        ret = store->getRados()->get_bucket_info(store->svc(), s->src_tenant_name, s->src_bucket_name, source_info, NULL, s->yield);
+        ret = store->getRados()->get_bucket_info(store->svc(), s->src_tenant_name, s->src_bucket_name, source_info, NULL, s->yield, NULL, &this_parent_span);
     } else {
+        Span span_1;
+        trace(span_1, this_parent_span, "rgw_rados.cc : RGWRados::get_bucket_instance_info");
         ret = store->getRados()->get_bucket_instance_info(obj_ctx, s->bucket_instance_id, source_info, NULL, NULL, s->yield);
+        finish_trace(span_1);
     }
     if (ret == 0) {
       string& zonegroup = source_info.zonegroup;
@@ -3047,18 +3050,17 @@ void RGWStatBucket::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
     return;
   }
-
   rgw::sal::RGWRadosUser user(store, s->user->get_id());
   bucket = new rgw::sal::RGWRadosBucket(store, user, s->bucket);
-  #ifdef WITH_JAEGER
-    bucket->set_req_state(s);
-  #endif
-  op_ret = bucket->update_container_stats();
+  op_ret = bucket->update_container_stats(&this_parent_span);
 }
 
 int RGWListBucket::verify_permission()
@@ -4379,6 +4381,8 @@ void RGWPutObj::execute()
     }
   }
   tracepoint(rgw_op, before_data_transfer, s->req_id.c_str());
+  Span span_6;
+  trace(span_6, this_parent_span, "rgw_op.cc : RGWPutObj-data transfer");
   do {
     bufferlist data;
     if (fst > lst)
@@ -4418,6 +4422,7 @@ void RGWPutObj::execute()
 
     ofs += len;
   } while (len > 0);
+  finish_trace(span_6);
   tracepoint(rgw_op, after_data_transfer, s->req_id.c_str(), ofs);
 
   // flush any data in filters
@@ -4438,11 +4443,11 @@ void RGWPutObj::execute()
   if (op_ret < 0) {
     return;
   }
-  Span span_6;
-  trace(span_6, this_parent_span, "rgw_rados.cc : RGWRados::check_quota");
+  Span span_7;
+  trace(span_7, this_parent_span, "rgw_rados.cc : RGWRados::check_quota");
   op_ret = store->getRados()->check_quota(s->bucket_owner.get_id(), s->bucket,
                               user_quota, bucket_quota, s->obj_size);
-  finish_trace(span_6);
+  finish_trace(span_7);
   if (op_ret < 0) {
     ldpp_dout(this, 20) << "second check_quota() returned op_ret=" << op_ret << dendl;
     return;
@@ -6435,6 +6440,9 @@ void RGWInitMultipart::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   bufferlist aclbl;
   map<string, bufferlist> attrs;
@@ -6446,7 +6454,7 @@ void RGWInitMultipart::execute()
   if (s->object.empty())
     return;
   Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_acl.h : RGWAccessControlPolicy::encode", false);
+  trace(span_1, this_parent_span, "rgw_acl.h : RGWAccessControlPolicy::encode");
   policy.encode(aclbl);
   finish_trace(span_1);
   attrs[RGW_ATTR_ACL] = aclbl;
@@ -6482,9 +6490,6 @@ void RGWInitMultipart::execute()
     op_target.set_versioning_disabled(true); /* no versioning for multipart meta */
 
     RGWRados::Object::Write obj_op(&op_target);
-    #ifdef WITH_JAEGER
-      obj_op.target->set_req_state(s);
-    #endif
 
     obj_op.meta.owner = s->owner.get_id();
     obj_op.meta.category = RGWObjCategory::MultiMeta;
@@ -6495,12 +6500,12 @@ void RGWInitMultipart::execute()
 
     bufferlist bl;
     Span span_2;
-    start_trace({}, std::move(span_2), s, "rgw_op.cc : encode", false);
+    trace(span_2, this_parent_span, "rgw_op.cc : encode");
     encode(upload_info, bl);
     finish_trace(span_2);
     obj_op.meta.data = &bl;
 
-    op_ret = obj_op.write_meta(bl.length(), 0, attrs, s->yield);
+    op_ret = obj_op.write_meta(bl.length(), 0, attrs, s->yield, &this_parent_span);
   } while (op_ret == -EEXIST);
   
   const auto ret = rgw::notify::publish(s, s->object, s->obj_size, ceph::real_clock::now(), attrs[RGW_ATTR_ETAG].to_str(), rgw::notify::ObjectCreatedPost, store);
@@ -6569,6 +6574,9 @@ void RGWCompleteMultipart::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   RGWMultiCompleteUpload *parts;
   map<int, string>::iterator iter;
@@ -6655,21 +6663,11 @@ void RGWCompleteMultipart::execute()
     s->cct->_conf.get_val<int64_t>("rgw_mp_lock_max_time");
   utime_t dur(max_lock_secs_mp, 0);
 
-  #ifdef WITH_JAEGER
-    if(s && !s->stack_span.empty())
-      store->getRados()->obj_to_raw((s->bucket_info).placement_rule, meta_obj, &raw_obj, s->stack_span.top());
-    else
-      store->getRados()->obj_to_raw((s->bucket_info).placement_rule, meta_obj, &raw_obj);
-  #else
-    store->getRados()->obj_to_raw((s->bucket_info).placement_rule, meta_obj, &raw_obj);
-  #endif
+  store->getRados()->obj_to_raw((s->bucket_info).placement_rule, meta_obj, &raw_obj);
 
   store->getRados()->get_obj_data_pool((s->bucket_info).placement_rule,
 			   meta_obj,&meta_pool);
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_rados.cc : RGWRados::open_pool_ctx", false);
   store->getRados()->open_pool_ctx(meta_pool, serializer.ioctx, true);
-  finish_trace(span_1);
   op_ret = serializer.try_lock(raw_obj.oid, dur);
   if (op_ret < 0) {
     ldpp_dout(this, 0) << "failed to acquire lock" << dendl;
@@ -6726,11 +6724,11 @@ void RGWCompleteMultipart::execute()
         op_ret = -ERR_INVALID_PART;
         return;
       }
-      Span span_2;
-      start_trace({}, std::move(span_2), s, "rgw_common.h : hex_to_buf", false);
+      Span span_1;
+      trace(span_1, this_parent_span, "rgw_common.h : hex_to_buf");
         hex_to_buf(obj_iter->second.etag.c_str(), petag,
       CEPH_CRYPTO_MD5_DIGESTSIZE);
-      finish_trace(span_2);
+      finish_trace(span_1);
       hash.Update((const unsigned char *)petag, sizeof(petag));
 
       RGWUploadPartInfo& obj_part = obj_iter->second;
@@ -6789,10 +6787,10 @@ void RGWCompleteMultipart::execute()
     }
   } while (truncated);
   hash.Final((unsigned char *)final_etag);
-  Span span_3;
-  start_trace({}, std::move(span_3), s, "rgw_op.cc : buf_to_hex", false);
+  Span span_2;
+  trace(span_2, this_parent_span, "rgw_op.cc : buf_to_hex");
   buf_to_hex((unsigned char *)final_etag, sizeof(final_etag), final_etag_str);
-  finish_trace(span_3);
+  finish_trace(span_2);
   snprintf(&final_etag_str[CEPH_CRYPTO_MD5_DIGESTSIZE * 2],  sizeof(final_etag_str) - CEPH_CRYPTO_MD5_DIGESTSIZE * 2,
            "-%lld", (long long)parts->parts.size());
   etag = final_etag_str;
@@ -6825,10 +6823,6 @@ void RGWCompleteMultipart::execute()
 
   RGWRados::Object op_target(store->getRados(), s->bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), target_obj);
   RGWRados::Object::Write obj_op(&op_target);
-  #ifdef WITH_JAEGER
-    obj_op.target->set_req_state(s);
-    s->bucket_info.s = s;
-  #endif
   obj_op.meta.manifest = &manifest;
   obj_op.meta.remove_objs = &remove_objs;
 
@@ -6838,13 +6832,13 @@ void RGWCompleteMultipart::execute()
   obj_op.meta.modify_tail = true;
   obj_op.meta.completeMultipart = true;
   obj_op.meta.olh_epoch = olh_epoch;
-  op_ret = obj_op.write_meta(ofs, accounted_size, attrs, s->yield);
+  op_ret = obj_op.write_meta(ofs, accounted_size, attrs, s->yield, &this_parent_span);
   if (op_ret < 0)
     return;
 
   // remove the upload obj
   int r = store->getRados()->delete_obj(*static_cast<RGWObjectCtx *>(s->obj_ctx),
-			    s->bucket_info, meta_obj, 0);
+			    s->bucket_info, meta_obj, 0, 0, ceph::real_time(), nullptr, &this_parent_span);
   if (r >= 0)  {
     /* serializer's exclusive lock is released */
     serializer.clear_locked();
@@ -6951,6 +6945,9 @@ void RGWAbortMultipart::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   op_ret = -EINVAL;
   string upload_id;
@@ -6970,10 +6967,7 @@ void RGWAbortMultipart::execute()
     return;
 
   RGWObjectCtx *obj_ctx = static_cast<RGWObjectCtx *>(s->obj_ctx);
-  #ifdef WITH_JAEGER
-    s->bucket_info.s = s;
-  #endif
-  op_ret = abort_multipart_upload(store, s->cct, obj_ctx, s->bucket_info, mp);
+  op_ret = abort_multipart_upload(store, s->cct, obj_ctx, s->bucket_info, mp, &this_parent_span);
 }
 
 int RGWListMultipart::verify_permission()

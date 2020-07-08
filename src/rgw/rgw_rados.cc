@@ -5470,27 +5470,27 @@ int RGWRados::delete_obj(RGWObjectCtx& obj_ctx,
                          int versioning_status,
                          uint16_t bilog_flags,
                          const real_time& expiration_time,
-                         rgw_zone_set *zones_trace)
+                         rgw_zone_set *zones_trace, optional_span* parent_span)
 {
-  req_state * s = bucket_info.s;
   #ifdef WITH_JAEGER
-    span_structure ss;
+    Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
   #endif
   RGWRados::Object del_target(this, bucket_info, obj_ctx, obj);
   RGWRados::Object::Delete del_op(&del_target);
-  #ifdef WITH_JAEGER
-    del_op.target->set_req_state(s);
-  #endif
   del_op.params.bucket_owner = bucket_info.owner;
   del_op.params.versioning_status = versioning_status;
   del_op.params.bilog_flags = bilog_flags;
   del_op.params.expiration_time = expiration_time;
   del_op.params.zones_trace = zones_trace;
 
-  return del_op.delete_obj(null_yield);
+  return del_op.delete_obj(null_yield, &this_parent_span);
 }
 
 int RGWRados::delete_raw_obj(const rgw_raw_obj& obj)
@@ -8011,13 +8011,6 @@ int RGWRados::get_bucket_instance_info(RGWSysObjectCtx& obj_ctx,
 				       map<string, bufferlist> *pattrs,
 				       optional_yield y)
 {
-  req_state* s = info.s;
-  #ifdef WITH_JAEGER
-    span_structure ss;
-    string span_name = "";
-    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-  #endif
   rgw_bucket bucket;
   rgw_bucket_parse_bucket_key(cct, meta_key, &bucket, nullptr);
 

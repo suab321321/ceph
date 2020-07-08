@@ -3277,13 +3277,6 @@ int RGWBucketCtl::read_bucket_info(const rgw_bucket& bucket,
                                    const BucketInstance::GetParams& params,
                                    RGWObjVersionTracker *ep_objv_tracker)
 {
-  req_state* s = info->s;
-  #ifdef WITH_JAEGER
-    span_structure ss;
-    string span_name = "";
-    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-  #endif
   const rgw_bucket *b = &bucket;
 
   std::optional<RGWBucketEntryPoint> ep;

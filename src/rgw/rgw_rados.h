@@ -1230,7 +1230,7 @@ public:
                          int versioning_status,
                          uint16_t bilog_flags = 0,
                          const ceph::real_time& expiration_time = ceph::real_time(),
-                         rgw_zone_set *zones_trace = nullptr);
+                         rgw_zone_set *zones_trace = nullptr, optional_span* parent_span = nullptr);
 
   int delete_raw_obj(const rgw_raw_obj& obj);
 
