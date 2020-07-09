@@ -47,8 +47,6 @@ class RGWStore {
 class RGWUser {
   protected:
     RGWUserInfo info;
-    req_state* s = nullptr;
-
   public:
     RGWUser() : info() {}
     RGWUser(const rgw_user& _u) : info() { info.user_id = _u; }
@@ -66,8 +64,6 @@ class RGWUser {
     uint32_t get_type() const { return info.type; }
     int32_t get_max_buckets() const { return info.max_buckets; }
     const RGWUserCaps& get_caps() const { return info.caps; }
-    void set_req_state(req_state* _s) { this->s = _s; }
-    req_state* get_req_state()const { return this->s; }
 
     /* xxx dang temporary; will be removed when User is complete */
     rgw_user& get_user() { return info.user_id; }
@@ -80,7 +76,6 @@ class RGWBucket {
     RGWBucketInfo info;
     RGWUser *owner;
     RGWAttrs attrs;
-    req_state* s = nullptr;
   public:
     RGWBucket() : ent(), owner(nullptr), attrs() {}
     RGWBucket(const rgw_bucket& _b) : ent(), attrs() { ent.bucket = _b; }
@@ -119,8 +114,6 @@ class RGWBucket {
     uint64_t get_count() const { return ent.count; }
     rgw_placement_rule get_placement_rule() const { return ent.placement_rule; }
     ceph::real_time& get_creation_time() { return ent.creation_time; };
-    void set_req_state(req_state* _s) { this->s = _s; }
-    req_state* get_req_state(req_state* _s)const {return this->s; }
     void convert(cls_user_bucket_entry *b) const {
       ent.convert(b);
     }
@@ -143,7 +136,6 @@ class RGWBucket {
 class RGWBucketList {
   std::map<std::string, RGWBucket*> buckets;
   bool truncated;
-  req_state* s = nullptr;
 
 public:
   RGWBucketList() : buckets(), truncated(false) {}
@@ -159,8 +151,6 @@ public:
   }
   size_t count() const { return buckets.size(); }
   void clear() { buckets.clear(); truncated = false; }
-  void set_req_state(req_state* _s) { this->s = _s; }
-  req_state* get_req_state()const { return this->s; }
 }; // class RGWBucketList
   
 

@@ -343,9 +343,6 @@ static int get_obj_attrs(rgw::sal::RGWRadosStore *store, struct req_state *s, co
   #endif
   RGWRados::Object op_target(store->getRados(), s->bucket_info, *static_cast<RGWObjectCtx *>(s->obj_ctx), obj);
   RGWRados::Object::Read read_op(&op_target);
-  #ifdef WITH_JAEGER
-    op_target.set_req_state(s);
-  #endif
   read_op.params.attrs = &attrs;
   read_op.params.target_obj = target_obj;
 
@@ -668,9 +665,6 @@ int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* 
     auto b = rgw_bucket(rgw_bucket_key(s->bucket_tenant, s->bucket_name, s->bucket_instance_id));
 
     RGWObjVersionTracker ep_ot;
-    #ifdef WITH_JAEGER
-      s->bucket_info.s = s;
-    #endif
       ret = store->ctl()->bucket->read_bucket_info(b, &s->bucket_info,
                                                   s->yield,
                   RGWBucketCtl::BucketInstance::GetParams()
@@ -1488,9 +1482,6 @@ int RGWOp::init_quota()
       return r;
     user = &owner_user;
   }
-  #ifdef WITH_JAEGER
-    user->set_req_state(s);
-  #endif
   if (s->bucket_info.quota.enabled) {
     bucket_quota = s->bucket_info.quota;
   } else if (user->get_info().bucket_quota.enabled) {
@@ -7037,6 +7028,9 @@ void RGWListBucketMultiparts::execute()
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
   #endif
   vector<rgw_bucket_dir_entry> objs;
   string marker_meta;
@@ -7058,11 +7052,8 @@ void RGWListBucketMultiparts::execute()
     }
   }
   marker_meta = marker.get_meta();
-  #ifdef WITH_JAEGER
-    s->bucket_info.s = s;
-  #endif
   op_ret = list_bucket_multiparts(store, s->bucket_info, prefix, marker_meta, delimiter,
-                                  max_uploads, &objs, &common_prefixes, &is_truncated);
+                                  max_uploads, &objs, &common_prefixes, &is_truncated, &this_parent_span);
   if (op_ret < 0) {
     return;
   }

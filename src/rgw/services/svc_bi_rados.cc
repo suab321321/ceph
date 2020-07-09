@@ -73,7 +73,7 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_
     return -EINVAL;
   }
   Span span_2;
-  start_trace({}, std::move(span_2), bucket_info.s, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index_pool", false);
+  trace(span_2, this_parent_span, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index_pool");
   int r = open_pool(iter->second.index_pool, index_pool, true);
   finish_trace(span_2);
   if (r < 0)

@@ -3939,14 +3939,6 @@ int RGWRados::fetch_remote_obj(RGWObjectCtx& obj_ctx,
                std::optional<uint64_t>* bytes_transferred)
 {
   /* source is in a different zonegroup, copy from there */
-  req_state* s = dest_bucket_info.s;
-  #ifdef WITH_JAEGER
-    span_structure ss;
-    string span_name = "";
-    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-  #endif
-
   RGWRESTStreamRWRequest *in_stream_req;
   string tag;
   int i;
@@ -4257,23 +4249,12 @@ int RGWRados::copy_obj_to_remote_dest(RGWObjState *astate,
                                       rgw_obj& dest_obj,
                                       real_time *mtime)
 {
-  req_state* s = read_op.source->get_req_state();
-  #ifdef WITH_JAEGER
-    span_structure ss;
-    string span_name = "";
-    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-  #endif
   string etag;
 
   RGWRESTStreamS3PutObj *out_stream_req;
 
   auto rest_master_conn = svc.zone->get_master_conn();
   int ret;
-  Span span_1;
-  start_trace({}, std::move(span_1), s, "rgw_rest_conn.cc : GWRESTConn::put_obj_async", false);
-  ret = rest_master_conn->put_obj_async(user_id, dest_obj, astate->size, src_attrs, true, &out_stream_req);
-  finish_trace(span_1);
   if (ret < 0) {
     return ret;
   }
@@ -4283,10 +4264,6 @@ int RGWRados::copy_obj_to_remote_dest(RGWObjState *astate,
     delete out_stream_req;
     return ret;
   }
-  Span span_2;
-  start_trace({}, std::move(span_2), s, "rgw_rest_conn.cc : GWRESTConn::complete_request", false);
-  ret = rest_master_conn->complete_request(out_stream_req, etag, mtime);
-  finish_trace(span_2);
   if (ret < 0)
     return ret;
 
@@ -7584,13 +7561,6 @@ int RGWRados::set_olh(RGWObjectCtx& obj_ctx, const RGWBucketInfo& bucket_info, c
                       uint64_t olh_epoch, real_time unmod_since, bool high_precision_time,
                       optional_yield y, rgw_zone_set *zones_trace, bool log_data_change)
 {
-  req_state* s = bucket_info.s;
-  #ifdef WITH_JAEGER
-    span_structure ss;
-    string span_name = "";
-    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
-  #endif
   string op_tag;
 
   rgw_obj olh_obj = target_obj;

@@ -30,8 +30,6 @@
 
 static constexpr char RGW_REFERER_WILDCARD[] = "*";
 
-struct req_state;
-
 enum ACLGranteeTypeEnum {
 /* numbers are encoded, should not change */
   ACL_TYPE_CANON_USER = 0,
