@@ -23,12 +23,14 @@ class Jager_Tracer{
     }
 
     void init_tracer(const char* tracerName,const char* filePath){
+      try{
         auto yaml = YAML::LoadFile(filePath);
         auto configuration = jaegertracing::Config::parse(yaml);
         this->tracer = jaegertracing::Tracer::make(
         tracerName,
         configuration,
         jaegertracing::logging::consoleLogger());
+      }catch(const std::exception& ex){ return; }
         opentracing::Tracer::InitGlobal(
         std::static_pointer_cast<opentracing::Tracer>(tracer));
     }
@@ -53,12 +55,12 @@ private:
 };
 
 // structure to manage spans to trace functions who have access to req_state in /rgw/*
-struct span_structure{
-    req_state* req_state_span = nullptr;
+struct req_state_span{
+    req_state* state = nullptr;
     bool is_inserted = false;
     void set_req_state(req_state* _s);
     void set_span(Span& span);
-    ~span_structure();
+    ~req_state_span();
 };
 
 #endif

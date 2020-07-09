@@ -1845,7 +1845,7 @@ static http_op op_from_method(const char *method)
 int RGWHandler_REST::init_permissions(RGWOp* op)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -1876,7 +1876,7 @@ int RGWHandler_REST::init_permissions(RGWOp* op)
 int RGWHandler_REST::read_permissions(RGWOp* op_obj)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);

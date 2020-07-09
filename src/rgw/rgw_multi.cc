@@ -195,7 +195,7 @@ int list_multipart_parts(rgw::sal::RGWRadosStore *store, struct req_state *s,
 			 bool assume_unsorted)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);

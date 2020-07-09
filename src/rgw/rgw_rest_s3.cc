@@ -151,7 +151,7 @@ int RGWGetObj_ObjStore_S3Website::send_response_data_error()
 int RGWGetObj_ObjStore_S3::get_params()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -174,7 +174,7 @@ int RGWGetObj_ObjStore_S3::get_params()
 int RGWGetObj_ObjStore_S3::send_response_data_error()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -220,7 +220,7 @@ int RGWGetObj_ObjStore_S3::send_response_data(bufferlist& bl, off_t bl_ofs,
 					      off_t bl_len)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -452,7 +452,7 @@ send_data:
 int RGWGetObj_ObjStore_S3::get_decrypt_filter(std::unique_ptr<RGWGetObj_Filter> *filter, RGWGetObj_Filter* cb, bufferlist* manifest_bl)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -1275,7 +1275,7 @@ void RGWDeleteBucketReplication_ObjStore_S3::send_response()
 void RGWListBuckets_ObjStore_S3::send_response_begin(bool has_buckets)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -1301,7 +1301,7 @@ void RGWListBuckets_ObjStore_S3::send_response_begin(bool has_buckets)
 void RGWListBuckets_ObjStore_S3::send_response_data(rgw::sal::RGWBucketList& buckets)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -1506,7 +1506,7 @@ int RGWListBucket_ObjStore_S3::get_common_params()
 int RGWListBucket_ObjStore_S3::get_params()
 {
     #ifdef WITH_JAEGER
-      span_structure ss;
+      req_state_span ss;
       string span_name = "";
       span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
       start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -1685,7 +1685,7 @@ void RGWListBucket_ObjStore_S3::send_common_response()
 void RGWListBucket_ObjStore_S3::send_response()
 {
     #ifdef WITH_JAEGER
-      span_structure ss;
+      req_state_span ss;
       string span_name = "";
       span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
       start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2197,7 +2197,7 @@ static void dump_bucket_metadata(struct req_state *s, rgw::sal::RGWBucket* bucke
 void RGWStatBucket_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-      span_structure ss;
+      req_state_span ss;
       string span_name = "";
       span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
       start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2283,7 +2283,7 @@ public:
 int RGWCreateBucket_ObjStore_S3::get_params()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2365,7 +2365,7 @@ int RGWCreateBucket_ObjStore_S3::get_params()
 void RGWCreateBucket_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2397,7 +2397,7 @@ void RGWCreateBucket_ObjStore_S3::send_response()
 void RGWDeleteBucket_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2433,7 +2433,7 @@ int RGWPutObj_ObjStore_S3::get_params()
   #ifdef WITH_JAEGER
     if(s && s->root_span)
       s->root_span->SetTag("gateway", "s3");
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2624,7 +2624,7 @@ int RGWPutObj_ObjStore_S3::get_params()
 int RGWPutObj_ObjStore_S3::get_data(bufferlist& bl)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2656,7 +2656,7 @@ void RGWPutObj_ObjStore_S3::send_response()
   #ifdef WITH_JAEGER
     if(s && s->root_span)
       s->root_span->SetTag("success", true);
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2747,7 +2747,7 @@ int RGWPutObj_ObjStore_S3::get_decrypt_filter(
     bufferlist* manifest_bl)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2779,7 +2779,7 @@ int RGWPutObj_ObjStore_S3::get_encrypt_filter(
     rgw::putobj::DataProcessor *cb)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3348,7 +3348,7 @@ int RGWPostObj_ObjStore_S3::get_encrypt_filter(
 int RGWDeleteObj_ObjStore_S3::get_params()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3384,7 +3384,7 @@ int RGWDeleteObj_ObjStore_S3::get_params()
 void RGWDeleteObj_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3409,7 +3409,7 @@ void RGWDeleteObj_ObjStore_S3::send_response()
 int RGWCopyObj_ObjStore_S3::init_dest_policy()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3429,7 +3429,7 @@ int RGWCopyObj_ObjStore_S3::init_dest_policy()
 int RGWCopyObj_ObjStore_S3::get_params()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3485,7 +3485,7 @@ int RGWCopyObj_ObjStore_S3::get_params()
 int RGWCopyObj_ObjStore_S3::check_storage_class(const rgw_placement_rule& src_placement)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3504,7 +3504,7 @@ int RGWCopyObj_ObjStore_S3::check_storage_class(const rgw_placement_rule& src_pl
 void RGWCopyObj_ObjStore_S3::send_partial_response(off_t ofs)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3536,7 +3536,7 @@ void RGWCopyObj_ObjStore_S3::send_partial_response(off_t ofs)
 void RGWCopyObj_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3559,7 +3559,7 @@ void RGWCopyObj_ObjStore_S3::send_response()
 void RGWGetACLs_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3580,7 +3580,7 @@ void RGWGetACLs_ObjStore_S3::send_response()
 int RGWPutACLs_ObjStore_S3::get_params()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3611,7 +3611,7 @@ int RGWPutACLs_ObjStore_S3::get_policy_from_state(rgw::sal::RGWRadosStore *store
 						  stringstream& ss)
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -3638,7 +3638,7 @@ int RGWPutACLs_ObjStore_S3::get_policy_from_state(rgw::sal::RGWRadosStore *store
 void RGWPutACLs_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3932,7 +3932,7 @@ void RGWSetRequestPayment_ObjStore_S3::send_response()
 int RGWInitMultipart_ObjStore_S3::get_params()
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -3952,7 +3952,7 @@ int RGWInitMultipart_ObjStore_S3::get_params()
 void RGWInitMultipart_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -3981,7 +3981,7 @@ void RGWInitMultipart_ObjStore_S3::send_response()
 int RGWInitMultipart_ObjStore_S3::prepare_encryption(map<string, bufferlist>& attrs)
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -3994,7 +3994,7 @@ int RGWInitMultipart_ObjStore_S3::prepare_encryption(map<string, bufferlist>& at
 int RGWCompleteMultipart_ObjStore_S3::get_params()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -4014,7 +4014,7 @@ int RGWCompleteMultipart_ObjStore_S3::get_params()
 void RGWCompleteMultipart_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -4056,7 +4056,7 @@ void RGWCompleteMultipart_ObjStore_S3::send_response()
 void RGWAbortMultipart_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -4128,7 +4128,7 @@ void RGWListMultipart_ObjStore_S3::send_response()
 void RGWListBucketMultiparts_ObjStore_S3::send_response()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);

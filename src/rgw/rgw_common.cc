@@ -1123,7 +1123,7 @@ bool verify_user_permission(const DoutPrefixProvider* dpp,
                             const uint64_t op)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2175,16 +2175,16 @@ bool RGWBucketInfo::empty_sync_policy() const
 #ifdef WITH_JAEGER
   Jager_Tracer tracer;
 
-  void span_structure::set_span(Span& span){
-    this->req_state_span->stack_span.push(std::move(span));
+  void req_state_span::set_span(Span& span){
+    this->state->stack_span.push(std::move(span));
   }
-  void span_structure::set_req_state(req_state* _s){
-    this->req_state_span = _s;
+  void req_state_span::set_req_state(req_state* _s){
+    this->state = _s;
     this->is_inserted = true;
   }
-  span_structure::~span_structure(){
-    if(this->req_state_span && !this->req_state_span->stack_span.empty() && this->is_inserted)
-        this->req_state_span->stack_span.pop();
+  req_state_span::~req_state_span(){
+    if(this->state && !this->state->stack_span.empty() && this->is_inserted)
+        this->state->stack_span.pop();
   }
 
 std::unordered_map<int, const char*> RGWOpTypeMapper={

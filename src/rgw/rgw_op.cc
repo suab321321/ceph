@@ -99,7 +99,7 @@ static constexpr auto S3_EXISTING_OBJTAG = "s3:ExistingObjectTag";
 int RGWGetObj::parse_range(void)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -336,7 +336,7 @@ vector<Policy> get_iam_user_policy_from_attr(CephContext* cct,
 static int get_obj_attrs(rgw::sal::RGWRadosStore *store, struct req_state *s, const rgw_obj& obj, map<string, bufferlist>& attrs, rgw_obj *target_obj = nullptr)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -449,7 +449,7 @@ static int get_multipart_info(rgw::sal::RGWRadosStore *store, struct req_state *
                               multipart_upload_info *upload_info)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -489,7 +489,7 @@ static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
                               rgw_bucket& bucket)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -525,7 +525,7 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
                            rgw_obj_key& object)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -599,7 +599,7 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
 int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -824,7 +824,7 @@ int rgw_build_object_policies(rgw::sal::RGWRadosStore *store, struct req_state *
 			      bool prefetch_data)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -1009,7 +1009,7 @@ int retry_raced_bucket_write(RGWRados* g, req_state* s, const F& f) {
 int RGWGetObj::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -1078,7 +1078,7 @@ void populate_metadata_in_request(req_state* s, std::map<std::string, bufferlist
 int RGWOp::verify_op_mask()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -1452,7 +1452,7 @@ int RGWOp::do_aws4_auth_completion()
 int RGWOp::init_quota()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, "rgw_op.cc RGWOp::init_quota", true);
@@ -1665,7 +1665,7 @@ int RGWGetObj::read_user_manifest_part(rgw_bucket& bucket,
                                        bool swift_slo)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -1976,7 +1976,7 @@ int RGWGetObj::handle_user_manifest(const char *prefix)
 {
   const std::string_view prefix_view(prefix);
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2087,7 +2087,7 @@ int RGWGetObj::handle_user_manifest(const char *prefix)
 int RGWGetObj::handle_slo_manifest(bufferlist& bl)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2228,7 +2228,7 @@ int RGWGetObj::handle_slo_manifest(bufferlist& bl)
 int RGWGetObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2249,7 +2249,7 @@ int RGWGetObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 bool RGWGetObj::prefetch_data()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2272,7 +2272,7 @@ bool RGWGetObj::prefetch_data()
 void RGWGetObj::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2318,7 +2318,7 @@ static inline void rgw_cond_decode_objtags(
 void RGWGetObj::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2510,7 +2510,7 @@ done_err:
 int RGWGetObj::init_common()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2541,7 +2541,7 @@ int RGWGetObj::init_common()
 int RGWListBuckets::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -2568,7 +2568,7 @@ int RGWGetUsage::verify_permission()
 void RGWListBuckets::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3010,7 +3010,7 @@ void RGWDeleteBucketWebsite::execute()
 int RGWStatBucket::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3026,7 +3026,7 @@ int RGWStatBucket::verify_permission()
 void RGWStatBucket::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3037,7 +3037,7 @@ void RGWStatBucket::pre_exec()
 void RGWStatBucket::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3057,7 +3057,7 @@ void RGWStatBucket::execute()
 int RGWListBucket::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3104,7 +3104,7 @@ void RGWListBucket::pre_exec()
 void RGWListBucket::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3169,7 +3169,7 @@ int RGWGetBucketLocation::verify_permission()
 int RGWCreateBucket::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3253,7 +3253,7 @@ int forward_request_to_master(struct req_state *s, obj_version *objv,
 void RGWCreateBucket::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3430,7 +3430,7 @@ static void filter_out_website(std::map<std::string, ceph::bufferlist>& add_attr
 void RGWCreateBucket::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3726,7 +3726,7 @@ void RGWCreateBucket::execute()
 int RGWDeleteBucket::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3741,7 +3741,7 @@ int RGWDeleteBucket::verify_permission()
 void RGWDeleteBucket::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3752,7 +3752,7 @@ void RGWDeleteBucket::pre_exec()
 void RGWDeleteBucket::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -3872,7 +3872,7 @@ void RGWDeleteBucket::execute()
 int RGWPutObj::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -4003,7 +4003,7 @@ int RGWPutObj::verify_permission()
 void RGWPutObj::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -4026,7 +4026,7 @@ public:
 int RGWPutObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -4042,7 +4042,7 @@ int RGWPutObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 int RGWPutObj::get_data(const off_t fst, const off_t lst, bufferlist& bl)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -4153,7 +4153,7 @@ static CompressorRef get_compressor_plugin(const req_state *s,
 void RGWPutObj::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5081,7 +5081,7 @@ void RGWPutMetadataObject::execute()
 int RGWDeleteObj::handle_slo_manifest(bufferlist& bl)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5136,7 +5136,7 @@ int RGWDeleteObj::handle_slo_manifest(bufferlist& bl)
 int RGWDeleteObj::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5202,7 +5202,7 @@ int RGWDeleteObj::verify_permission()
 void RGWDeleteObj::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5213,7 +5213,7 @@ void RGWDeleteObj::pre_exec()
 void RGWDeleteObj::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5431,7 +5431,7 @@ bool RGWCopyObj::parse_copy_location(const std::string_view& url_src,
 int RGWCopyObj::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5591,7 +5591,7 @@ int RGWCopyObj::verify_permission()
 int RGWCopyObj::init_common()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5634,7 +5634,7 @@ static void copy_obj_progress_cb(off_t ofs, void *param)
 void RGWCopyObj::progress_cb(off_t ofs)
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5653,7 +5653,7 @@ void RGWCopyObj::progress_cb(off_t ofs)
 void RGWCopyObj::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5664,7 +5664,7 @@ void RGWCopyObj::pre_exec()
 void RGWCopyObj::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5762,7 +5762,7 @@ void RGWCopyObj::execute()
 int RGWGetACLs::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5801,7 +5801,7 @@ int RGWGetACLs::verify_permission()
 void RGWGetACLs::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -5812,7 +5812,7 @@ void RGWGetACLs::pre_exec()
 void RGWGetACLs::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -5831,7 +5831,7 @@ void RGWGetACLs::execute()
 int RGWPutACLs::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -5888,7 +5888,7 @@ int RGWDeleteLC::verify_permission()
 void RGWPutACLs::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -5914,7 +5914,7 @@ void RGWDeleteLC::pre_exec()
 void RGWPutACLs::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -6377,7 +6377,7 @@ void RGWSetRequestPayment::execute()
 int RGWInitMultipart::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -6416,7 +6416,7 @@ int RGWInitMultipart::verify_permission()
 void RGWInitMultipart::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -6427,7 +6427,7 @@ void RGWInitMultipart::pre_exec()
 void RGWInitMultipart::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss_1;
+    req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss_1), {}, s, span_name.c_str(), true);
@@ -6511,7 +6511,7 @@ void RGWInitMultipart::execute()
 int RGWCompleteMultipart::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -6550,7 +6550,7 @@ int RGWCompleteMultipart::verify_permission()
 void RGWCompleteMultipart::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -6561,7 +6561,7 @@ void RGWCompleteMultipart::pre_exec()
 void RGWCompleteMultipart::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -6865,7 +6865,7 @@ int RGWCompleteMultipart::MPSerializer::try_lock(
 void RGWCompleteMultipart::complete()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -6883,7 +6883,7 @@ void RGWCompleteMultipart::complete()
 int RGWAbortMultipart::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -6921,7 +6921,7 @@ int RGWAbortMultipart::verify_permission()
 void RGWAbortMultipart::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -6932,7 +6932,7 @@ void RGWAbortMultipart::pre_exec()
 void RGWAbortMultipart::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -6997,7 +6997,7 @@ void RGWListMultipart::execute()
 int RGWListBucketMultiparts::verify_permission()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -7013,7 +7013,7 @@ int RGWListBucketMultiparts::verify_permission()
 void RGWListBucketMultiparts::pre_exec()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);
@@ -7024,7 +7024,7 @@ void RGWListBucketMultiparts::pre_exec()
 void RGWListBucketMultiparts::execute()
 {
   #ifdef WITH_JAEGER
-    span_structure ss;
+    req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     start_trace(std::move(ss), {}, s, span_name.c_str(), true);

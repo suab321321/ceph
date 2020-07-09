@@ -2455,7 +2455,7 @@ int decode_bl(bufferlist& bl, T& t)
 }
 
 #ifdef WITH_JAEGER
-static inline void start_trace(span_structure&& ss, Span&& sp, req_state* const s, const char* name, bool should_store = true)
+static inline void start_trace(req_state_span&& ss, Span&& sp, req_state* const s, const char* name, bool should_store = true)
 {
     Span span;
     if(s && !s->stack_span.empty()){
