@@ -32,7 +32,7 @@ namespace rgw::sal {
 int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
 			       uint64_t max, bool need_stats, RGWBucketList &buckets, optional_span* parent_span)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     Span span_1;
     std::string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -195,7 +195,7 @@ int RGWRadosBucket::sync_user_stats()
 int RGWRadosBucket::update_container_stats(optional_span* parent_span)
 {
   Span span_1;
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span)

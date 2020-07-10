@@ -202,7 +202,7 @@ int AtomicObjectProcessor::process_first_chunk(bufferlist&& data,
 
 int AtomicObjectProcessor::prepare(optional_yield y, optional_span* parent_span)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -307,7 +307,7 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
                                     rgw_zone_set *zones_trace,
                                     bool *pcanceled, optional_yield y, optional_span* parent_span)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -352,7 +352,7 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
   obj_op.meta.zones_trace = zones_trace;
   obj_op.meta.modify_tail = true;
 
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     r = obj_op.write_meta(actual_size, accounted_size, attrs, y, &this_parent_span);
   #else
     r = obj_op.write_meta(actual_size, accounted_size, attrs, y);

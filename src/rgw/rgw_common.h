@@ -18,7 +18,7 @@
 #define CEPH_RGW_COMMON_H
 
 //Only for testing purpose now
-#define WITH_JAEGER
+#define WITH_JAGER
 
 #include <array>
 #include <string_view>
@@ -43,7 +43,7 @@
 #include "include/rados/librados.hpp"
 #include "rgw_public_access.h"
 
-#ifdef WITH_JAEGER
+#ifdef WITH_JAGER
   #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
   #include "common/tracer.h"
 #else
@@ -289,7 +289,7 @@ enum HostStyle {
 
 /** Optional Paramter to function which will be traced */
 struct optional_span{
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     const Span& span;
     optional_span(const Span& _span) : span(_span) {}
   #endif
@@ -1650,7 +1650,7 @@ struct req_state : DoutPrefixProvider {
   string bucket_instance_id;
   int bucket_instance_shard_id{-1};
   string redirect_zone_endpoint;
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     std::stack<Span> stack_span;
     Span root_span;
   #endif
@@ -2375,7 +2375,7 @@ extern bool match_policy(std::string_view pattern, std::string_view input,
 extern string camelcase_dash_http_attr(const string& orig);
 extern string lowercase_dash_http_attr(const string& orig);
 
-#ifdef WITH_JAEGER
+#ifdef WITH_JAGER
   extern Jager_Tracer tracer;
   extern std::unordered_map<int, const char*> RGWOpTypeMapper;
 #endif
@@ -2454,7 +2454,7 @@ int decode_bl(bufferlist& bl, T& t)
   return 0;
 }
 
-#ifdef WITH_JAEGER
+#ifdef WITH_JAGER
 static inline void start_trace(req_state_span&& ss, Span&& sp, req_state* const s, const char* name, bool should_store = true)
 {
     Span span;
@@ -2473,7 +2473,7 @@ static inline void start_trace(req_state_span&& ss, Span&& sp, req_state* const 
 
 static inline void trace(Span& span, const optional_span& parent_span, const char* span_name)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     if(parent_span.span)
     {
       span = tracer.child_span(span_name, parent_span.span);
@@ -2483,7 +2483,7 @@ static inline void trace(Span& span, const optional_span& parent_span, const cha
 
 static inline void finish_trace(Span& span)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     if(span){
       Span s = std::move(span);
       s->Finish();

@@ -153,7 +153,7 @@ public:
   int get_ret() const { return op_ret; }
 
   virtual int init_processing() {
-    #ifdef WITH_JAEGER
+    #ifdef WITH_JAGER
       req_state_span ss;
       string span_name = "";
       span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;

@@ -98,7 +98,7 @@ static constexpr auto S3_EXISTING_OBJTAG = "s3:ExistingObjectTag";
 
 int RGWGetObj::parse_range(void)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -335,7 +335,7 @@ vector<Policy> get_iam_user_policy_from_attr(CephContext* cct,
 
 static int get_obj_attrs(rgw::sal::RGWRadosStore *store, struct req_state *s, const rgw_obj& obj, map<string, bufferlist>& attrs, rgw_obj *target_obj = nullptr)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -448,7 +448,7 @@ static int get_multipart_info(rgw::sal::RGWRadosStore *store, struct req_state *
 			      map<string, bufferlist> *attrs,
                               multipart_upload_info *upload_info)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -488,7 +488,7 @@ static int read_bucket_policy(rgw::sal::RGWRadosStore *store,
                               RGWAccessControlPolicy *policy,
                               rgw_bucket& bucket)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -524,7 +524,7 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
                            rgw_bucket& bucket,
                            rgw_obj_key& object)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -598,7 +598,7 @@ static int read_obj_policy(rgw::sal::RGWRadosStore *store,
  */
 int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* s)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -823,7 +823,7 @@ int rgw_build_bucket_policies(rgw::sal::RGWRadosStore* store, struct req_state* 
 int rgw_build_object_policies(rgw::sal::RGWRadosStore *store, struct req_state *s,
 			      bool prefetch_data)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1008,7 +1008,7 @@ int retry_raced_bucket_write(RGWRados* g, req_state* s, const F& f) {
 
 int RGWGetObj::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1077,7 +1077,7 @@ void populate_metadata_in_request(req_state* s, std::map<std::string, bufferlist
 
 int RGWOp::verify_op_mask()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1451,7 +1451,7 @@ int RGWOp::do_aws4_auth_completion()
 
 int RGWOp::init_quota()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1664,7 +1664,7 @@ int RGWGetObj::read_user_manifest_part(rgw_bucket& bucket,
                                        const off_t end_ofs,
                                        bool swift_slo)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1704,7 +1704,7 @@ int RGWGetObj::read_user_manifest_part(rgw_bucket& bucket,
   read_op.params.attrs = &attrs;
   read_op.params.obj_size = &obj_size;
   
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     op_ret = read_op.prepare(s->yield, &this_parent_span);
   #else
     op_ret = read_op.prepare(s->yield);
@@ -1975,7 +1975,7 @@ static int get_obj_user_manifest_iterate_cb(rgw_bucket& bucket,
 int RGWGetObj::handle_user_manifest(const char *prefix)
 {
   const std::string_view prefix_view(prefix);
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -2005,7 +2005,7 @@ int RGWGetObj::handle_user_manifest(const char *prefix)
   if (bucket_name.compare(s->bucket.name) != 0) {
     map<string, bufferlist> bucket_attrs;
     auto obj_ctx = store->svc()->sysobj->init_obj_ctx();
-    #ifdef WITH_JAEGER
+    #ifdef WITH_JAGER
       int r = store->getRados()->get_bucket_info(store->svc(), s->user->get_tenant(),
             bucket_name, bucket_info, NULL,
             s->yield, &bucket_attrs, &this_parent_span);
@@ -2086,7 +2086,7 @@ int RGWGetObj::handle_user_manifest(const char *prefix)
 
 int RGWGetObj::handle_slo_manifest(bufferlist& bl)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -2227,7 +2227,7 @@ int RGWGetObj::handle_slo_manifest(bufferlist& bl)
 
 int RGWGetObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -2248,7 +2248,7 @@ int RGWGetObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 
 bool RGWGetObj::prefetch_data()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -2271,7 +2271,7 @@ bool RGWGetObj::prefetch_data()
 
 void RGWGetObj::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -2317,7 +2317,7 @@ static inline void rgw_cond_decode_objtags(
 
 void RGWGetObj::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -2360,7 +2360,7 @@ void RGWGetObj::execute()
   read_op.params.lastmod = &lastmod;
   read_op.params.obj_size = &s->obj_size;
 
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     op_ret = read_op.prepare(s->yield, &this_parent_span);
   #else
     op_ret = read_op.prepare(s->yield);
@@ -2483,7 +2483,7 @@ void RGWGetObj::execute()
   ofs_x = ofs;
   end_x = end;
   filter->fixup_range(ofs_x, end_x);
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield, &this_parent_span);
   #else
     op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield);
@@ -2509,7 +2509,7 @@ done_err:
 
 int RGWGetObj::init_common()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -2540,7 +2540,7 @@ int RGWGetObj::init_common()
 
 int RGWListBuckets::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -2567,7 +2567,7 @@ int RGWGetUsage::verify_permission()
 
 void RGWListBuckets::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -2605,7 +2605,7 @@ void RGWListBuckets::execute()
     }
 
     rgw::sal::RGWRadosUser user(store, s->user->get_id());
-    #ifdef WITH_JAEGER
+    #ifdef WITH_JAGER
       op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets, &parent_span);
     #else
       op_ret = user.list_buckets(marker, end_marker, read_count, should_get_stats(), buckets);
@@ -3009,7 +3009,7 @@ void RGWDeleteBucketWebsite::execute()
 
 int RGWStatBucket::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3025,7 +3025,7 @@ int RGWStatBucket::verify_permission()
 
 void RGWStatBucket::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3036,7 +3036,7 @@ void RGWStatBucket::pre_exec()
 
 void RGWStatBucket::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3056,7 +3056,7 @@ void RGWStatBucket::execute()
 
 int RGWListBucket::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3103,7 +3103,7 @@ void RGWListBucket::pre_exec()
 
 void RGWListBucket::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3126,7 +3126,7 @@ void RGWListBucket::execute()
   }
 
   if (need_container_stats()) {
-      #ifdef WITH_JAEGER
+      #ifdef WITH_JAGER
         op_ret = bucket->update_container_stats(&parent_span);
       #else
         op_ret = bucket->update_container_stats();
@@ -3146,7 +3146,7 @@ void RGWListBucket::execute()
   list_op.params.end_marker = end_marker;
   list_op.params.list_versions = list_versions;
   list_op.params.allow_unordered = allow_unordered;
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield, &parent_span);
   #else
     op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
@@ -3168,7 +3168,7 @@ int RGWGetBucketLocation::verify_permission()
 
 int RGWCreateBucket::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3252,7 +3252,7 @@ int forward_request_to_master(struct req_state *s, obj_version *objv,
 
 void RGWCreateBucket::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3429,7 +3429,7 @@ static void filter_out_website(std::map<std::string, ceph::bufferlist>& add_attr
 
 void RGWCreateBucket::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3612,7 +3612,7 @@ void RGWCreateBucket::execute()
   if (obj_lock_enabled) {
     info.flags = BUCKET_VERSIONED | BUCKET_OBJ_LOCK_ENABLED;
   }
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     op_ret = store->getRados()->create_bucket(s->user->get_info(), s->bucket, zonegroup_id,
                                   placement_rule, s->bucket_info.swift_ver_location,
                                   pquota_info, attrs,
@@ -3725,7 +3725,7 @@ void RGWCreateBucket::execute()
 
 int RGWDeleteBucket::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3740,7 +3740,7 @@ int RGWDeleteBucket::verify_permission()
 
 void RGWDeleteBucket::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3751,7 +3751,7 @@ void RGWDeleteBucket::pre_exec()
 
 void RGWDeleteBucket::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -3796,7 +3796,7 @@ void RGWDeleteBucket::execute()
   if ( op_ret < 0) {
      ldpp_dout(this, 1) << "WARNING: failed to sync user stats before bucket delete: op_ret= " << op_ret << dendl;
   }
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     op_ret = store->getRados()->check_bucket_empty(s->bucket_info, s->yield, &this_parent_span);
   #else
     op_ret = store->getRados()->check_bucket_empty(s->bucket_info, s->yield);
@@ -3833,7 +3833,7 @@ void RGWDeleteBucket::execute()
       delimiter="/";
     }
   }
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     op_ret = abort_bucket_multiparts(store, s->cct, s->bucket_info, prefix, delimiter, &this_parent_span);
   #else
     op_ret = abort_bucket_multiparts(store, s->cct, s->bucket_info, prefix, delimiter);
@@ -3843,7 +3843,7 @@ void RGWDeleteBucket::execute()
     return;
   }
 
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     op_ret = store->getRados()->delete_bucket(s->bucket_info, ot, s->yield, false, &this_parent_span);
   #else
     op_ret = store->getRados()->delete_bucket(s->bucket_info, ot, s->yield, false);
@@ -3871,7 +3871,7 @@ void RGWDeleteBucket::execute()
 
 int RGWPutObj::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -4002,7 +4002,7 @@ int RGWPutObj::verify_permission()
 
 void RGWPutObj::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -4025,7 +4025,7 @@ public:
 
 int RGWPutObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -4041,7 +4041,7 @@ int RGWPutObj::get_data_cb(bufferlist& bl, off_t bl_ofs, off_t bl_len)
 
 int RGWPutObj::get_data(const off_t fst, const off_t lst, bufferlist& bl)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -4073,7 +4073,7 @@ int RGWPutObj::get_data(const off_t fst, const off_t lst, bufferlist& bl)
   read_op.params.obj_size = &obj_size;
   read_op.params.attrs = &attrs;
 
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     ret = read_op.prepare(s->yield,&this_parent_span);
   #else
     ret = read_op.prepare(s->yield,&this_parent_span);
@@ -4113,7 +4113,7 @@ int RGWPutObj::get_data(const off_t fst, const off_t lst, bufferlist& bl)
     return ret;
 
   filter->fixup_range(new_ofs, new_end);
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     ret = read_op.iterate(new_ofs, new_end, filter, s->yield, &this_parent_span);
   #else
     ret = read_op.iterate(new_ofs, new_end, filter, s->yield, &this_parent_span);
@@ -4152,7 +4152,7 @@ static CompressorRef get_compressor_plugin(const req_state *s,
 
 void RGWPutObj::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -4308,7 +4308,7 @@ void RGWPutObj::execute()
         s->bucket_owner.get_id(), obj_ctx, obj, olh_epoch,
         s->req_id, this, s->yield);
   }
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     op_ret = processor->prepare(s->yield, &this_parent_span);
   #else
     op_ret = processor->prepare(s->yield);
@@ -4523,7 +4523,7 @@ void RGWPutObj::execute()
   }
 
   tracepoint(rgw_op, processor_complete_enter, s->req_id.c_str());
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     op_ret = processor->complete(s->obj_size, etag, &mtime, real_time(), attrs,
                                 (delete_at ? *delete_at : real_time()), if_match, if_nomatch,
                                 (user_data.empty() ? nullptr : &user_data), nullptr, nullptr,
@@ -5080,7 +5080,7 @@ void RGWPutMetadataObject::execute()
 
 int RGWDeleteObj::handle_slo_manifest(bufferlist& bl)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5135,7 +5135,7 @@ int RGWDeleteObj::handle_slo_manifest(bufferlist& bl)
 
 int RGWDeleteObj::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5201,7 +5201,7 @@ int RGWDeleteObj::verify_permission()
 
 void RGWDeleteObj::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5212,7 +5212,7 @@ void RGWDeleteObj::pre_exec()
 
 void RGWDeleteObj::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5338,7 +5338,7 @@ void RGWDeleteObj::execute()
       del_op.params.unmod_since = unmod_since;
       del_op.params.high_precision_time = s->system_request; /* system request uses high precision time */
 
-      #ifdef WITH_JAEGER
+      #ifdef WITH_JAGER
         op_ret = del_op.delete_obj(s->yield, &this_parent_span);
       #else
         op_ret = del_op.delete_obj(s->yield);
@@ -5430,7 +5430,7 @@ bool RGWCopyObj::parse_copy_location(const std::string_view& url_src,
 
 int RGWCopyObj::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5452,7 +5452,7 @@ int RGWCopyObj::verify_permission()
   map<string, bufferlist> src_attrs;
 
   if (s->bucket_instance_id.empty()) {
-    #ifdef WITH_JAEGER
+    #ifdef WITH_JAGER
       op_ret = store->getRados()->get_bucket_info(store->svc(), src_tenant_name, src_bucket_name, src_bucket_info, NULL, s->yield, &src_attrs, &this_parent_span);
     #else
       op_ret = store->getRados()->get_bucket_info(store->svc(), src_tenant_name, src_bucket_name, src_bucket_info, NULL, s->yield, &src_attrs);
@@ -5590,7 +5590,7 @@ int RGWCopyObj::verify_permission()
 
 int RGWCopyObj::init_common()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5633,7 +5633,7 @@ static void copy_obj_progress_cb(off_t ofs, void *param)
 
 void RGWCopyObj::progress_cb(off_t ofs)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5652,7 +5652,7 @@ void RGWCopyObj::progress_cb(off_t ofs)
 
 void RGWCopyObj::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5663,7 +5663,7 @@ void RGWCopyObj::pre_exec()
 
 void RGWCopyObj::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5761,7 +5761,7 @@ void RGWCopyObj::execute()
 
 int RGWGetACLs::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5800,7 +5800,7 @@ int RGWGetACLs::verify_permission()
 
 void RGWGetACLs::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5811,7 +5811,7 @@ void RGWGetACLs::pre_exec()
 
 void RGWGetACLs::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5830,7 +5830,7 @@ void RGWGetACLs::execute()
 
 int RGWPutACLs::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5887,7 +5887,7 @@ int RGWDeleteLC::verify_permission()
 
 void RGWPutACLs::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5913,7 +5913,7 @@ void RGWDeleteLC::pre_exec()
 
 void RGWPutACLs::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -5924,9 +5924,6 @@ void RGWPutACLs::execute()
   RGWAccessControlPolicy_S3 *policy = NULL;
   RGWACLXMLParser_S3 parser(s->cct);
   RGWAccessControlPolicy_S3 new_policy(s->cct);
-  // #ifdef WITH_JAEGER
-  //   new_policy.set_req_state(s);
-  // #endif
   stringstream ss;
   rgw_obj obj;
 
@@ -5978,9 +5975,6 @@ void RGWPutACLs::execute()
     return;
   }
   policy = static_cast<RGWAccessControlPolicy_S3 *>(parser.find_first("AccessControlPolicy"));
-  // #ifdef WITH_JAEGER
-  //   policy->set_req_state(s);
-  // #endif
   if (!policy) {
     op_ret = -EINVAL;
     return;
@@ -6376,7 +6370,7 @@ void RGWSetRequestPayment::execute()
 
 int RGWInitMultipart::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -6415,7 +6409,7 @@ int RGWInitMultipart::verify_permission()
 
 void RGWInitMultipart::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -6426,7 +6420,7 @@ void RGWInitMultipart::pre_exec()
 
 void RGWInitMultipart::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -6510,7 +6504,7 @@ void RGWInitMultipart::execute()
 
 int RGWCompleteMultipart::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -6549,7 +6543,7 @@ int RGWCompleteMultipart::verify_permission()
 
 void RGWCompleteMultipart::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -6560,7 +6554,7 @@ void RGWCompleteMultipart::pre_exec()
 
 void RGWCompleteMultipart::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -6864,7 +6858,7 @@ int RGWCompleteMultipart::MPSerializer::try_lock(
 
 void RGWCompleteMultipart::complete()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -6882,7 +6876,7 @@ void RGWCompleteMultipart::complete()
 
 int RGWAbortMultipart::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -6920,7 +6914,7 @@ int RGWAbortMultipart::verify_permission()
 
 void RGWAbortMultipart::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -6931,7 +6925,7 @@ void RGWAbortMultipart::pre_exec()
 
 void RGWAbortMultipart::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -6996,7 +6990,7 @@ void RGWListMultipart::execute()
 
 int RGWListBucketMultiparts::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -7012,7 +7006,7 @@ int RGWListBucketMultiparts::verify_permission()
 
 void RGWListBucketMultiparts::pre_exec()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -7023,7 +7017,7 @@ void RGWListBucketMultiparts::pre_exec()
 
 void RGWListBucketMultiparts::execute()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;

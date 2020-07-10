@@ -41,7 +41,7 @@ int RGWSI_BucketIndex_RADOS::open_pool(const rgw_pool& pool,
 int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_info,
                                                     RGWSI_RADOS::Pool *index_pool, optional_span* parent_span)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -185,7 +185,7 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
 {
   int shard_id = _shard_id.value_or(-1);
   string bucket_oid_base;
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -344,7 +344,7 @@ int RGWSI_BucketIndex_RADOS::init_index(RGWBucketInfo& bucket_info, optional_spa
 {
   RGWSI_RADOS::Pool index_pool;
   Span span_1;
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
     if(parent_span)
@@ -354,7 +354,7 @@ int RGWSI_BucketIndex_RADOS::init_index(RGWBucketInfo& bucket_info, optional_spa
     optional_span this_parent_span;
   #endif
   string dir_oid = dir_oid_prefix;
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     int r = open_bucket_index_pool(bucket_info, &index_pool, &this_parent_span);
   #else
     int r = open_bucket_index_pool(bucket_info, &index_pool);

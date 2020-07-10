@@ -194,7 +194,7 @@ int list_multipart_parts(rgw::sal::RGWRadosStore *store, struct req_state *s,
 			 int *next_marker, bool *truncated,
 			 bool assume_unsorted)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -209,7 +209,7 @@ int abort_multipart_upload(rgw::sal::RGWRadosStore *store, CephContext *cct,
 			   RGWObjectCtx *obj_ctx, RGWBucketInfo& bucket_info,
 			   RGWMPObj& mp_obj, optional_span* parent_span)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -317,7 +317,7 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
 			   vector<rgw_bucket_dir_entry> *objs,
 			   map<string, bool> *common_prefixes, bool *is_truncated, optional_span* parent_span)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -337,7 +337,7 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
   list_op.params.ns = RGW_OBJ_NS_MULTIPART;
   list_op.params.filter = &mp_filter;
 
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     return(list_op.list_objects(max_uploads, objs, common_prefixes, is_truncated, null_yield, &this_parent_span));
   #else
     return(list_op.list_objects(max_uploads, objs, common_prefixes, is_truncated, null_yield));
@@ -347,7 +347,7 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
 int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RGWBucketInfo& bucket_info,
 				string& prefix, string& delim, optional_span* parent_span)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     Span span_1;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -365,7 +365,7 @@ int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RG
   bool is_truncated;
 
   do {
-    #ifdef WITH_JAEGER
+    #ifdef WITH_JAGER
       ret = list_bucket_multiparts(store, bucket_info, prefix, marker, delim,
           max, &objs, nullptr, &is_truncated, &this_parent_span);
     #else

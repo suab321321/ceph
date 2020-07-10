@@ -40,7 +40,7 @@
 
 int RGWListBuckets_ObjStore_SWIFT::get_params()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -170,7 +170,7 @@ static void dump_account_metadata(struct req_state * const s,
 
 void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -207,7 +207,7 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets)
 
 void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList&& buckets)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -224,7 +224,7 @@ void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList
 
 void RGWListBuckets_ObjStore_SWIFT::send_response_data(rgw::sal::RGWBucketList& buckets)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -322,7 +322,7 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_end()
 
 int RGWListBucket_ObjStore_SWIFT::get_params()
 {
-    #ifdef WITH_JAEGER
+    #ifdef WITH_JAGER
       req_state_span ss;
       string span_name = "";
       span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -381,7 +381,7 @@ static void dump_container_metadata(struct req_state *,
 
 void RGWListBucket_ObjStore_SWIFT::send_response()
 {
-    #ifdef WITH_JAEGER
+    #ifdef WITH_JAGER
       req_state_span ss;
       string span_name = "";
       span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -613,7 +613,7 @@ void RGWStatAccount_ObjStore_SWIFT::send_response()
 
 void RGWStatBucket_ObjStore_SWIFT::send_response()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -751,7 +751,7 @@ static int get_swift_versioning_settings(
 
 int RGWCreateBucket_ObjStore_SWIFT::get_params()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -803,7 +803,7 @@ static inline int handle_metadata_errors(req_state* const s, const int op_ret)
 
 void RGWCreateBucket_ObjStore_SWIFT::send_response()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -831,7 +831,7 @@ void RGWCreateBucket_ObjStore_SWIFT::send_response()
 
 void RGWDeleteBucket_ObjStore_SWIFT::send_response()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -892,7 +892,7 @@ static int get_delete_at_param(req_state *s, boost::optional<real_time> &delete_
 
 int RGWPutObj_ObjStore_SWIFT::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -912,7 +912,7 @@ int RGWPutObj_ObjStore_SWIFT::verify_permission()
 
 int RGWPutObj_ObjStore_SWIFT::update_slo_segment_size(rgw_slo_entry& entry) {
 
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1004,7 +1004,7 @@ int RGWPutObj_ObjStore_SWIFT::update_slo_segment_size(rgw_slo_entry& entry) {
 
 int RGWPutObj_ObjStore_SWIFT::get_params()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1119,7 +1119,7 @@ int RGWPutObj_ObjStore_SWIFT::get_params()
 
 void RGWPutObj_ObjStore_SWIFT::send_response()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1353,7 +1353,7 @@ static void bulkdelete_respond(const unsigned num_deleted,
 
 int RGWDeleteObj_ObjStore_SWIFT::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1373,7 +1373,7 @@ int RGWDeleteObj_ObjStore_SWIFT::verify_permission()
 
 int RGWDeleteObj_ObjStore_SWIFT::get_params()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1389,7 +1389,7 @@ int RGWDeleteObj_ObjStore_SWIFT::get_params()
 
 void RGWDeleteObj_ObjStore_SWIFT::send_response()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1506,7 +1506,7 @@ static void dump_object_metadata(const DoutPrefixProvider* dpp, struct req_state
 
 int RGWCopyObj_ObjStore_SWIFT::init_dest_policy()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1521,7 +1521,7 @@ int RGWCopyObj_ObjStore_SWIFT::init_dest_policy()
 
 int RGWCopyObj_ObjStore_SWIFT::get_params()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1559,7 +1559,7 @@ int RGWCopyObj_ObjStore_SWIFT::get_params()
 
 void RGWCopyObj_ObjStore_SWIFT::send_partial_response(off_t ofs)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     start_trace(std::move(ss), {}, s, "rgw_rest_swift.cc RGWCopyObj_ObjStore_SWIFT::send_partial_response", true);
     if(s && s->root_span)
@@ -1601,7 +1601,7 @@ void RGWCopyObj_ObjStore_SWIFT::dump_copy_info()
 
 void RGWCopyObj_ObjStore_SWIFT::send_response()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1630,7 +1630,7 @@ void RGWCopyObj_ObjStore_SWIFT::send_response()
 
 int RGWGetObj_ObjStore_SWIFT::verify_permission()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1650,7 +1650,7 @@ int RGWGetObj_ObjStore_SWIFT::verify_permission()
 
 int RGWGetObj_ObjStore_SWIFT::get_params()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1666,7 +1666,7 @@ int RGWGetObj_ObjStore_SWIFT::get_params()
 
 int RGWGetObj_ObjStore_SWIFT::send_response_data_error()
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -1690,7 +1690,7 @@ int RGWGetObj_ObjStore_SWIFT::send_response_data(bufferlist& bl,
                                                  const off_t bl_ofs,
                                                  const off_t bl_len)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;

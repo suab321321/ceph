@@ -1122,7 +1122,7 @@ bool verify_user_permission(const DoutPrefixProvider* dpp,
                             const rgw::ARN& res,
                             const uint64_t op)
 {
-  #ifdef WITH_JAEGER
+  #ifdef WITH_JAGER
     req_state_span ss;
     string span_name = "";
     span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
@@ -2172,7 +2172,7 @@ bool RGWBucketInfo::empty_sync_policy() const
   return sync_policy->empty();
 }
 
-#ifdef WITH_JAEGER
+#ifdef WITH_JAGER
   Jager_Tracer tracer;
 
   void req_state_span::set_span(Span& span){

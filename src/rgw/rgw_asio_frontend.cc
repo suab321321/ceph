@@ -47,7 +47,14 @@ auto make_stack_allocator() {
   return boost::context::protected_fixedsize_stack{512*1024};
 }
 
-std::once_flag tracerInit;
+#ifdef WITH_JAGER
+std::atomic<bool> jager_tracer_connected(false);
+static inline void init_jager_tracer()
+{
+  if(!jaeger_tracer_connected)
+    jager_tracer_connected = tracer.init_tracer("RGW_Client_Process", "../src/tracerConfig.yaml");
+}
+#endif
 
 template <typename Stream>
 class StreamIO : public rgw::asio::ClientIO {
@@ -140,10 +147,9 @@ void handle_connection(boost::asio::io_context& context,
                        boost::system::error_code& ec,
                        spawn::yield_context yield)
 {
-
-  std::call_once(tracerInit,[](){
-    tracer.init_tracer("RGW_Client_Process", "../src/tracerConfig.yaml");
-  });
+  #ifdef WITH_JAGER
+    init_jager_tracer();
+  #endif
   // limit header to 4k, since we read it all into a single flat_buffer
   static constexpr size_t header_limit = 4096;
   // don't impose a limit on the body, since we read it in pieces
