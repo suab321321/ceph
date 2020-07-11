@@ -1173,3 +1173,4 @@ Description: prometheus alerts for the ceph dashboard
  .
  This package contains alerts used for prometheus to interact with the
  Ceph Dashboard.
+© 2020 GitHub, Inc.

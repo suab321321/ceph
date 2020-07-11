@@ -398,7 +398,30 @@ set(ceph_common_objs
   $<TARGET_OBJECTS:common-objs>
   $<TARGET_OBJECTS:common_mountcephfs_objs>
   $<TARGET_OBJECTS:crush_objs>)
-set(ceph_common_deps
+  
+if(WITH_JAGER)
+  set(ceph_common_deps
+    json_spirit erasure_code arch crc32
+    ${LIB_RESOLV}
+    Boost::thread
+    Boost::system
+    Boost::random
+    Boost::program_options
+    Boost::date_time
+    Boost::iostreams
+    fmt::fmt
+    StdFilesystem::filesystem
+    fmt::fmt
+    ${BLKID_LIBRARIES}
+    ${Backtrace_LIBRARIES}
+    ${BLKIN_LIBRARIES}
+    ${Complete_Jaeger_LIBRARIES}
+    ${CRYPTO_LIBS}
+    ${GSSAPI_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${CMAKE_DL_LIBS})
+else()
+  set(ceph_common_deps
   json_spirit erasure_code arch crc32
   ${LIB_RESOLV}
   Boost::thread
@@ -413,11 +436,12 @@ set(ceph_common_deps
   ${BLKID_LIBRARIES}
   ${Backtrace_LIBRARIES}
   ${BLKIN_LIBRARIES}
-  ${Complete_Jaeger_LIBRARIES}
   ${CRYPTO_LIBS}
   ${GSSAPI_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
   ${CMAKE_DL_LIBS})
+endif()
+
 if(HAVE_UDEV)
   list(APPEND ceph_common_deps ${UDEV_LIBRARIES})
 endif()

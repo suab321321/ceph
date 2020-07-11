@@ -51,7 +51,7 @@ auto make_stack_allocator() {
 std::atomic<bool> jager_tracer_connected(false);
 static inline void init_jager_tracer()
 {
-  if(!jaeger_tracer_connected)
+  if(!jager_tracer_connected)
     jager_tracer_connected = tracer.init_tracer("RGW_Client_Process", "../src/tracerConfig.yaml");
 }
 #endif
