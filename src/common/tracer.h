@@ -24,8 +24,7 @@ class Jager_Tracer{
         this->tracer->Close();
     }
 
-    int init_tracer(const char* tracerName,const char* filePath){
-      try{
+    void init_tracer(const char* tracerName,const char* filePath){
         auto yaml = YAML::LoadFile(filePath);
         auto configuration = jaegertracing::Config::parse(yaml);
 
@@ -38,13 +37,8 @@ class Jager_Tracer{
         tracerName,
         configuration,
         jaegertracing::logging::consoleLogger());
-      }catch(const std::exception& ex){ 
-        return 0; //exception happens when file is not found || yaml format is wrong
-      }
         opentracing::Tracer::InitGlobal(
         std::static_pointer_cast<opentracing::Tracer>(tracer));
-
-        return 1;
     }
     inline void finish_tracer(){
       if(this->tracer)
