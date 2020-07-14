@@ -31,11 +31,11 @@ void RGWSI_BucketIndex_RADOS::init(RGWSI_Zone *zone_svc,
 
 int RGWSI_BucketIndex_RADOS::open_pool(const rgw_pool& pool,
                                        RGWSI_RADOS::Pool *index_pool,
-                                       bool mostly_omap)
+                                       bool mostly_omap, optional_span* parent_span)
 {
   *index_pool = svc.rados->pool(pool);
   return index_pool->open(RGWSI_RADOS::OpenParams()
-                          .set_mostly_omap(mostly_omap));
+                          .set_mostly_omap(mostly_omap), parent_span);
 }
 
 int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_info,
@@ -55,9 +55,7 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_
   const rgw_pool& explicit_pool = bucket_info.bucket.explicit_placement.index_pool;
 
   if (!explicit_pool.empty()) {
-    Span span_2;
-    trace(span_2, this_parent_span, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_pool");
-    return open_pool(explicit_pool, index_pool, false);
+    return open_pool(explicit_pool, index_pool, false, &this_parent_span);
   }
 
   auto& zonegroup = svc.zone->get_zonegroup();
@@ -72,10 +70,7 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_
     ldout(cct, 0) << "could not find placement rule " << *rule << " within zonegroup " << dendl;
     return -EINVAL;
   }
-  Span span_2;
-  trace(span_2, this_parent_span, "svc_bi_rados.cc RGWSI_BucketIndex_RADOS::open_bucket_index_pool");
-  int r = open_pool(iter->second.index_pool, index_pool, true);
-  finish_trace(span_2);
+  int r = open_pool(iter->second.index_pool, index_pool, true, &this_parent_span);
   if (r < 0)
     return r;
 
@@ -354,11 +349,7 @@ int RGWSI_BucketIndex_RADOS::init_index(RGWBucketInfo& bucket_info, optional_spa
     optional_span this_parent_span;
   #endif
   string dir_oid = dir_oid_prefix;
-  #ifdef WITH_JAGER
-    int r = open_bucket_index_pool(bucket_info, &index_pool, &this_parent_span);
-  #else
-    int r = open_bucket_index_pool(bucket_info, &index_pool);
-  #endif
+  int r = open_bucket_index_pool(bucket_info, &index_pool, &this_parent_span);
   if (r < 0) {
     return r;
   }

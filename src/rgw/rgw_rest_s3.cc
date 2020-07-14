@@ -609,6 +609,16 @@ void RGWDeleteObjTags_ObjStore_S3::send_response()
 
 void RGWGetBucketTags_ObjStore_S3::send_response_data(bufferlist& bl)
 {
+  #ifdef WITH_JAGER
+    if(s && s->root_span){
+      s->root_span->SetTag("gateway", "swift");
+      s->root_span->SetTag("success", true);
+    }
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+  #endif
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -638,6 +648,14 @@ void RGWGetBucketTags_ObjStore_S3::send_response_data(bufferlist& bl)
 
 int RGWPutBucketTags_ObjStore_S3::get_params()
 {
+  #ifdef WITH_JAGER
+    if(s && s->root_span)
+      s->root_span->SetTag("gateway","s3");
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+  #endif
   RGWXMLParser parser;
 
   if (!parser.init()){
@@ -685,6 +703,14 @@ int RGWPutBucketTags_ObjStore_S3::get_params()
 
 void RGWPutBucketTags_ObjStore_S3::send_response()
 {
+  #ifdef WITH_JAGER
+    if(s && s->root_span)
+      s->root_span->SetTag("success", true);
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+  #endif
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -694,6 +720,16 @@ void RGWPutBucketTags_ObjStore_S3::send_response()
 
 void RGWDeleteBucketTags_ObjStore_S3::send_response()
 {
+  #ifdef WITH_JAGER
+    if(s && s->root_span){
+      s->root_span->SetTag("gateway", "s3");
+      s->root_span->SetTag("success", true);
+    }
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+  #endif
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);

@@ -352,11 +352,7 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
   obj_op.meta.zones_trace = zones_trace;
   obj_op.meta.modify_tail = true;
 
-  #ifdef WITH_JAGER
-    r = obj_op.write_meta(actual_size, accounted_size, attrs, y, &this_parent_span);
-  #else
-    r = obj_op.write_meta(actual_size, accounted_size, attrs, y);
-  #endif
+  r = obj_op.write_meta(actual_size, accounted_size, attrs, y, &this_parent_span);
   if (r < 0) {
     return r;
   }

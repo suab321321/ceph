@@ -39,7 +39,7 @@ class RGWSI_BucketIndex_RADOS : public RGWSI_BucketIndex
 
   int open_pool(const rgw_pool& pool,
                 RGWSI_RADOS::Pool *index_pool,
-                bool mostly_omap);
+                bool mostly_omap, optional_span* parent_span = NULL);
 
   int open_bucket_index_pool(const RGWBucketInfo& bucket_info,
                             RGWSI_RADOS::Pool *index_pool, optional_span* parent_span = NULL);

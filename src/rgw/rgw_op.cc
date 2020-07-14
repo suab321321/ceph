@@ -1246,7 +1246,12 @@ void RGWDeleteObjTags::execute()
 
 int RGWGetBucketTags::verify_permission()
 {
-
+  #ifdef WITH_JAGER
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+  #endif
   if (!verify_bucket_permission(this, s, rgw::IAM::s3GetBucketTagging)) {
     return -EACCES;
   }
@@ -1256,11 +1261,23 @@ int RGWGetBucketTags::verify_permission()
 
 void RGWGetBucketTags::pre_exec()
 {
+  #ifdef WITH_JAGER
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
 void RGWGetBucketTags::execute() 
 {
+  #ifdef WITH_JAGER
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+  #endif
   auto iter = s->bucket_attrs.find(RGW_ATTR_TAGS);
   if (iter != s->bucket_attrs.end()) {
     has_tags = true;
@@ -1272,11 +1289,25 @@ void RGWGetBucketTags::execute()
 }
 
 int RGWPutBucketTags::verify_permission() {
+  #ifdef WITH_JAGER
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+  #endif
   return verify_bucket_owner_or_policy(s, rgw::IAM::s3PutBucketTagging);
 }
 
 void RGWPutBucketTags::execute() {
-
+  #ifdef WITH_JAGER
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
+  #endif
   op_ret = get_params();
   if (op_ret < 0) 
     return;
@@ -1287,7 +1318,8 @@ void RGWPutBucketTags::execute() {
       ldpp_dout(this, 0) << "forward_request_to_master returned ret=" << op_ret << dendl;
     }
   }
-
+  Span span_1;
+  trace(span_1, this_parent_span, "rgw_op.cc : RGWDeleteBucketTags:retry_raced_bucket_write");
   op_ret = retry_raced_bucket_write(store->getRados(), s, [this] {
     map<string, bufferlist> attrs = s->bucket_attrs;
     attrs[RGW_ATTR_TAGS] = tags_bl;
@@ -1298,16 +1330,37 @@ void RGWPutBucketTags::execute() {
 
 void RGWDeleteBucketTags::pre_exec()
 {
+  #ifdef WITH_JAGER
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+  #endif
   rgw_bucket_object_pre_exec(s);
 }
 
 int RGWDeleteBucketTags::verify_permission()
 {
+  #ifdef WITH_JAGER
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+  #endif
   return verify_bucket_owner_or_policy(s, rgw::IAM::s3PutBucketTagging);
 }
 
 void RGWDeleteBucketTags::execute()
 {
+  #ifdef WITH_JAGER
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str(), true);
+    optional_span this_parent_span(s->stack_span.top());
+  #else
+    optional_span this_parent_span;
+  #endif
   if (!store->svc()->zone->is_meta_master()) {
     bufferlist in_data;
     op_ret = forward_request_to_master(s, nullptr, store, in_data, nullptr);
@@ -1316,7 +1369,8 @@ void RGWDeleteBucketTags::execute()
       return;
     }
   }
-
+  Span span_1;
+  trace(span_1, this_parent_span, "rgw_op.cc : RGWDeleteBucketTags:retry_raced_bucket_write");
   op_ret = retry_raced_bucket_write(store->getRados(), s, [this] {
     map<string, bufferlist> attrs = s->bucket_attrs;
     attrs.erase(RGW_ATTR_TAGS);
@@ -2360,11 +2414,7 @@ void RGWGetObj::execute()
   read_op.params.lastmod = &lastmod;
   read_op.params.obj_size = &s->obj_size;
 
-  #ifdef WITH_JAGER
-    op_ret = read_op.prepare(s->yield, &this_parent_span);
-  #else
-    op_ret = read_op.prepare(s->yield);
-  #endif    
+  op_ret = read_op.prepare(s->yield, &this_parent_span);    
   if (op_ret < 0)
     goto done_err;
   version_id = read_op.state.obj.key.instance;
@@ -2377,6 +2427,9 @@ void RGWGetObj::execute()
     op_ret = 0;
     goto done_err;
   }
+
+  Span span_1;
+  trace(span_1, &this_parent_span. "started torrent");
   /* start gettorrent */
   if (torrent.get_flag())
   {
@@ -2404,6 +2457,7 @@ void RGWGetObj::execute()
     return;
   }
   /* end gettorrent */
+  finish_trace(span_1);
 
   op_ret = rgw_compression_info_from_attrset(attrs, need_decompress, cs_info);
   if (op_ret < 0) {
@@ -2483,11 +2537,7 @@ void RGWGetObj::execute()
   ofs_x = ofs;
   end_x = end;
   filter->fixup_range(ofs_x, end_x);
-  #ifdef WITH_JAGER
-    op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield, &this_parent_span);
-  #else
-    op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield);
-  #endif
+  op_ret = read_op.iterate(ofs_x, end_x, filter, s->yield, &this_parent_span);
 
   if (op_ret >= 0)
     op_ret = filter->flush();
@@ -3648,7 +3698,7 @@ void RGWCreateBucket::execute()
     s->bucket = info.bucket;
   }
     Span span_3;
-    trace(span_3, this_parent_span, "rgw_rados.cc : RGWBucketCtl::link_bucket");
+    trace(span_3, this_parent_span, "rgw_bucket.cc : RGWBucketCtl::link_bucket");
     op_ret = store->ctl()->bucket->link_bucket(s->user->get_id(), s->bucket,
                                             info.creation_time, s->yield, false);
     finish_trace(span_3);
@@ -4308,11 +4358,7 @@ void RGWPutObj::execute()
         s->bucket_owner.get_id(), obj_ctx, obj, olh_epoch,
         s->req_id, this, s->yield);
   }
-  #ifdef WITH_JAGER
-    op_ret = processor->prepare(s->yield, &this_parent_span);
-  #else
-    op_ret = processor->prepare(s->yield);
-  #endif
+  op_ret = processor->prepare(s->yield, &this_parent_span)
   if (op_ret < 0) {
     ldpp_dout(this, 20) << "processor->prepare() returned ret=" << op_ret
 		      << dendl;
@@ -4523,17 +4569,10 @@ void RGWPutObj::execute()
   }
 
   tracepoint(rgw_op, processor_complete_enter, s->req_id.c_str());
-  #ifdef WITH_JAGER
-    op_ret = processor->complete(s->obj_size, etag, &mtime, real_time(), attrs,
-                                (delete_at ? *delete_at : real_time()), if_match, if_nomatch,
-                                (user_data.empty() ? nullptr : &user_data), nullptr, nullptr,
-                                s->yield, &this_parent_span);
-  #else
-    op_ret = processor->complete(s->obj_size, etag, &mtime, real_time(), attrs,
-                                (delete_at ? *delete_at : real_time()), if_match, if_nomatch,
-                                (user_data.empty() ? nullptr : &user_data), nullptr, nullptr,
-                                s->yield);
-  #endif
+  op_ret = processor->complete(s->obj_size, etag, &mtime, real_time(), attrs,
+                              (delete_at ? *delete_at : real_time()), if_match, if_nomatch,
+                              (user_data.empty() ? nullptr : &user_data), nullptr, nullptr,
+                              s->yield, &this_parent_span);
   tracepoint(rgw_op, processor_complete_exit, s->req_id.c_str());
 
   /* produce torrent */

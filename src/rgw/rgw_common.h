@@ -48,6 +48,9 @@
   #include "common/tracer.h"
 #else
   typedef char Span;
+  typedef char optional_span;
+  #define trace(...) ((void)0)
+  #define finish_trace(...) ((void)0)
 #endif
 
 namespace ceph {
@@ -287,13 +290,6 @@ enum HostStyle {
   VirtualStyle = 1,
 };
 
-/** Optional Paramter to function which will be traced */
-struct optional_span{
-  #ifdef WITH_JAGER
-    const Span& span;
-    optional_span(const Span& _span) : span(_span) {}
-  #endif
-};
 
 /** Store error returns for output at a different point in the program */
 struct rgw_err {
@@ -2376,7 +2372,6 @@ extern string camelcase_dash_http_attr(const string& orig);
 extern string lowercase_dash_http_attr(const string& orig);
 
 #ifdef WITH_JAGER
-  extern Jager_Tracer tracer;
   extern std::unordered_map<int, const char*> RGWOpTypeMapper;
 #endif
 
@@ -2470,25 +2465,5 @@ static inline void start_trace(req_state_span&& ss, Span&& sp, req_state* const 
     }
 }
 #endif
-
-static inline void trace(Span& span, const optional_span& parent_span, const char* span_name)
-{
-  #ifdef WITH_JAGER
-    if(parent_span.span)
-    {
-      span = tracer.child_span(span_name, parent_span.span);
-    }
-  #endif
-}
-
-static inline void finish_trace(Span& span)
-{
-  #ifdef WITH_JAGER
-    if(span){
-      Span s = std::move(span);
-      s->Finish();
-    }
-  #endif
-}
 
 #endif

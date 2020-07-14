@@ -337,11 +337,7 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
   list_op.params.ns = RGW_OBJ_NS_MULTIPART;
   list_op.params.filter = &mp_filter;
 
-  #ifdef WITH_JAGER
-    return(list_op.list_objects(max_uploads, objs, common_prefixes, is_truncated, null_yield, &this_parent_span));
-  #else
-    return(list_op.list_objects(max_uploads, objs, common_prefixes, is_truncated, null_yield));
-  #endif
+  return(list_op.list_objects(max_uploads, objs, common_prefixes, is_truncated, null_yield, &this_parent_span));
 }
 
 int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RGWBucketInfo& bucket_info,
@@ -365,13 +361,8 @@ int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RG
   bool is_truncated;
 
   do {
-    #ifdef WITH_JAGER
       ret = list_bucket_multiparts(store, bucket_info, prefix, marker, delim,
           max, &objs, nullptr, &is_truncated, &this_parent_span);
-    #else
-      ret = list_bucket_multiparts(store, bucket_info, prefix, marker, delim,
-				 max, &objs, nullptr, &is_truncated);
-    #endif
     if (ret < 0) {
       ldout(store->ctx(), 0) << __func__ <<
 	" ERROR : calling list_bucket_multiparts; ret=" << ret <<

@@ -1808,22 +1808,7 @@ int RGWRados::Bucket::List::list_objects_ordered(
 
     ent_map_t ent_map;
     ent_map.reserve(read_ahead);
-    #ifdef WITH_JAGER
-      int r = store->cls_bucket_list_ordered(target->get_bucket_info(),
-                shard_id,
-                cur_marker,
-                cur_prefix,
-                params.delim,
-                read_ahead + 1 - count,
-                params.list_versions,
-                attempt,
-                ent_map,
-                &truncated,
-                &cls_filtered,
-                &cur_marker,
-                                              y, NULL, &this_parent_span);
-      #else
-        int r = store->cls_bucket_list_ordered(target->get_bucket_info(),
+    int r = store->cls_bucket_list_ordered(target->get_bucket_info(),
               shard_id,
               cur_marker,
               cur_prefix,
@@ -1835,8 +1820,7 @@ int RGWRados::Bucket::List::list_objects_ordered(
               &truncated,
               &cls_filtered,
               &cur_marker,
-                                            y);
-      #endif
+                                            y, NULL, &this_parent_span);
       if (r < 0) {
         return r;
     }
@@ -2093,29 +2077,17 @@ int RGWRados::Bucket::List::list_objects_unordered(int64_t max_p,
   while (truncated && count <= max) {
     std::vector<rgw_bucket_dir_entry> ent_list;
     ent_list.reserve(read_ahead);
-    #ifdef WITH_JAGER
-      int r = store->cls_bucket_list_unordered(target->get_bucket_info(),
-                  shard_id,
-                  cur_marker,
-                  cur_prefix,
-                  read_ahead,
-                  params.list_versions,
-                  ent_list,
-                  &truncated,
-                  &cur_marker,
-                                                y, NULL, &this_parent_span);
-    #else
-      int r = store->cls_bucket_list_unordered(target->get_bucket_info(),
-                  shard_id,
-                  cur_marker,
-                  cur_prefix,
-                  read_ahead,
-                  params.list_versions,
-                  ent_list,
-                  &truncated,
-                  &cur_marker,
-                                                y);
-    #endif
+
+    int r = store->cls_bucket_list_unordered(target->get_bucket_info(),
+                shard_id,
+                cur_marker,
+                cur_prefix,
+                read_ahead,
+                params.list_versions,
+                ent_list,
+                &truncated,
+                &cur_marker,
+                                              y, NULL, &this_parent_span);
     if (r < 0)
       return r;
 
@@ -2287,19 +2259,12 @@ int RGWRados::create_bucket(const RGWUserInfo& owner, rgw_bucket& bucket,
     if (pquota_info) {
       info.quota = *pquota_info;
     }
-    #ifdef WITH_JAGER
-      int r = svc.bi->init_index(info, &this_parent_span);
-    #else
-      int r = svc.bi->init_index(info);
-    #endif
+    int r = svc.bi->init_index(info, &this_parent_span);
     if (r < 0) {
       return r;
     }
-    #ifdef WITH_JAGER
-      ret = put_linked_bucket_info(info, exclusive, ceph::real_time(), pep_objv, &attrs, true, &this_parent_span);
-    #else
-      ret = put_linked_bucket_info(info, exclusive, ceph::real_time(), pep_objv, &attrs, true);
-    #endif
+
+    ret = put_linked_bucket_info(info, exclusive, ceph::real_time(), pep_objv, &attrs, true, &this_parent_span);
     if (ret == -ECANCELED) {
       ret = -EEXIST;
     }
@@ -3225,10 +3190,7 @@ int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_si
   auto& ioctx = ref.pool.ioctx();
 
   tracepoint(rgw_rados, operate_enter, req_id.c_str());
-  Span span_4;
-  trace(span_4, this_parent_span, "rgw_tools.cc : rgw_rados_operate");
-  r = rgw_rados_operate(ref.pool.ioctx(), ref.obj.oid, &op, null_yield);
-  finish_trace(span_4);
+  r = rgw_rados_operate(ref.pool.ioctx(), ref.obj.oid, &op, null_yield, &this_parent_span);
   tracepoint(rgw_rados, operate_exit, req_id.c_str());
   if (r < 0) { /* we can expect to get -ECANCELED if object was replaced under,
                 or -ENOENT if was removed, or -EEXIST if it did not exist
@@ -3253,17 +3215,10 @@ int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_si
   }
 
   tracepoint(rgw_rados, complete_enter, req_id.c_str());
-  #ifdef WITH_JAGER
-    r = index_op->complete(poolid, epoch, size, accounted_size,
-                          meta.set_mtime, etag, content_type,
-                          storage_class, &acl_bl,
-                          meta.category, meta.remove_objs, meta.user_data, meta.appendable, &this_parent_span);
-  #else
-    r = index_op->complete(poolid, epoch, size, accounted_size,
+  r = index_op->complete(poolid, epoch, size, accounted_size,
                         meta.set_mtime, etag, content_type,
                         storage_class, &acl_bl,
-                        meta.category, meta.remove_objs, meta.user_data, meta.appendable);
-  #endif
+                        meta.category, meta.remove_objs, meta.user_data, meta.appendable, &this_parent_span);
   tracepoint(rgw_rados, complete_exit, req_id.c_str());
   if (r < 0)
     goto done_cancel;
@@ -3380,21 +3335,13 @@ int RGWRados::Object::Write::write_meta(uint64_t size, uint64_t accounted_size,
   bool assume_noent = (meta.if_match == NULL && meta.if_nomatch == NULL);
   int r;
   if (assume_noent) {
-      #ifdef WITH_JAGER
-        r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y, &this_parent_span);
-      #else
-        r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
-      #endif
+      r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y, &this_parent_span);
     if (r == -EEXIST) {
       assume_noent = false;
     }
   }
   if (!assume_noent) {
-      #ifdef WITH_JAGER
-        r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y, &this_parent_span);
-      #else
-        r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y);
-      #endif
+      r = _do_write_meta(size, accounted_size, attrs, assume_noent, meta.modify_tail, (void *)&index_op, y, &this_parent_span);
   }
   return r;
 }
@@ -4528,10 +4475,7 @@ int RGWRados::copy_obj(RGWObjectCtx& obj_ctx,
 
       auto& ioctx = ref.pool.ioctx();
       ioctx.locator_set_key(loc.loc);
-      Span span_3;
-      trace(span_3, this_parent_span, "rgw_tools.cc : rgw_rados_operate");
-      ret = rgw_rados_operate(ioctx, loc.oid, &op, null_yield);
-      finish_trace(span_3);
+      ret = rgw_rados_operate(ioctx, loc.oid, &op, null_yield, &this_parent_span);
       if (ret < 0) {
         goto done_ret;
       }
@@ -4585,10 +4529,7 @@ done_ret:
       ObjectWriteOperation op;
       cls_refcount_put(op, ref_tag, true);
       ref.pool.ioctx().locator_set_key(riter->loc);
-      Span span_4;
-      trace(span_4, this_parent_span, "rgw_tools.cc : rgw_rados_operate");
-      int r = rgw_rados_operate(ref.pool.ioctx(), riter->oid, &op, null_yield);
-      finish_trace(span_4);
+      int r = rgw_rados_operate(ref.pool.ioctx(), riter->oid, &op, null_yield, &this_parent_span);
       if (r < 0) {
         ldpp_dout(dpp, 0) << "ERROR: cleanup after error failed to drop reference on obj=" << *riter << dendl;
       }
@@ -4771,29 +4712,17 @@ int RGWRados::check_bucket_empty(RGWBucketInfo& bucket_info, optional_yield y, o
   do {
     std::vector<rgw_bucket_dir_entry> ent_list;
     ent_list.reserve(NUM_ENTRIES);
-    #ifdef WITH_JAGER
-      int r = cls_bucket_list_unordered(bucket_info,
-                RGW_NO_SHARD,
-                marker,
-                prefix,
-                NUM_ENTRIES,
-                true,
-                ent_list,
-                &is_truncated,
-                &marker,
-                                        y, nullptr, &this_parent_span);
-    #else
-      int r = cls_bucket_list_unordered(bucket_info,
-                RGW_NO_SHARD,
-                marker,
-                prefix,
-                NUM_ENTRIES,
-                true,
-                ent_list,
-                &is_truncated,
-                &marker,
-                                        y);
-    #endif
+
+    int r = cls_bucket_list_unordered(bucket_info,
+              RGW_NO_SHARD,
+              marker,
+              prefix,
+              NUM_ENTRIES,
+              true,
+              ent_list,
+              &is_truncated,
+              &marker,
+                                      y, nullptr, &this_parent_span);
     if (r < 0) {
       return r;
     }
@@ -4831,20 +4760,12 @@ int RGWRados::delete_bucket(RGWBucketInfo& bucket_info, RGWObjVersionTracker& ob
   const rgw_bucket& bucket = bucket_info.bucket;
   RGWSI_RADOS::Pool index_pool;
   map<int, string> bucket_objs;
-  #ifdef WITH_JAGER
-    int r = svc.bi_rados->open_bucket_index(bucket_info, std::nullopt, &index_pool, &bucket_objs, nullptr, &this_parent_span);
-  #else
-    int r = svc.bi_rados->open_bucket_index(bucket_info, std::nullopt, &index_pool, &bucket_objs, nullptr);
-  #endif
+  int r = svc.bi_rados->open_bucket_index(bucket_info, std::nullopt, &index_pool, &bucket_objs, nullptr, &this_parent_span);
   if (r < 0)
     return r;
   
   if (check_empty) {
-    #ifdef WITH_JAGER
-      r = check_bucket_empty(bucket_info, y, &this_parent_span);
-    #else
-      r = check_bucket_empty(bucket_info, y);
-    #endif
+    r = check_bucket_empty(bucket_info, y, &this_parent_span);
     if (r < 0) {
       return r;
     }
@@ -5380,12 +5301,8 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent
   RGWRados::Bucket::UpdateIndex index_op(&bop, obj);
   index_op.set_zones_trace(params.zones_trace);
   index_op.set_bilog_flags(params.bilog_flags);
-  
-  #ifdef WITH_JAGER
-    r = index_op.prepare(CLS_RGW_OP_DEL, &state->write_tag, y, &this_parent_span);
-  #else
-    r = index_op.prepare(CLS_RGW_OP_DEL, &state->write_tag, y);
-  #endif
+
+  r = index_op.prepare(CLS_RGW_OP_DEL, &state->write_tag, y, &this_parent_span);
   if (r < 0)
     return r;
   Span span_8;
@@ -5395,10 +5312,7 @@ int RGWRados::Object::Delete::delete_obj(optional_yield y, optional_span* parent
  
 
   auto& ioctx = ref.pool.ioctx();
-  Span span_9;
-  trace(span_9, this_parent_span, "rgw_tools.cc : rgw_rados_operate");
-  r = rgw_rados_operate(ioctx, ref.obj.oid, &op, null_yield);
-  finish_trace(span_9);
+  r = rgw_rados_operate(ioctx, ref.obj.oid, &op, null_yield, &this_parent_span);
   /* raced with another operation, object state is indeterminate */
   const bool need_invalidate = (r == -ECANCELED);
 
@@ -6190,11 +6104,8 @@ int RGWRados::Object::Read::prepare(optional_yield y, optional_span* parent_span
   finish_trace(span_2);
   state.cur_pool = state.head_obj.pool;
   state.cur_ioctx = &state.io_ctxs[state.cur_pool];
-  #ifdef WITH_JAGER
-    r = store->get_obj_head_ioctx(bucket_info, state.obj, state.cur_ioctx, &this_parent_span);
-  #else
-    r = store->get_obj_head_ioctx(bucket_info, state.obj, state.cur_ioctx);
-  #endif
+
+  r = store->get_obj_head_ioctx(bucket_info, state.obj, state.cur_ioctx, &this_parent_span);
   if (r < 0) {
     return r;
   }
@@ -8682,15 +8593,9 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
   // value - list result for the corresponding oid (shard), it is filled by
   //         the AIO callback
   map<int, string> shard_oids;
-  #ifdef WITH_JAGER
-    int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id,
-            &index_pool, &shard_oids,
-            nullptr, &this_parent_span);
-  #else
-    int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id,
-					&index_pool, &shard_oids,
-					nullptr);
-  #endif
+  int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id,
+          &index_pool, &shard_oids,
+          nullptr, &this_parent_span);
   if (r < 0) {
     return r;
   }
@@ -8953,11 +8858,7 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
   RGWSI_RADOS::Pool index_pool;
 
   map<int, string> oids;
-  #ifdef WITH_JAGER
-    int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id, &index_pool, &oids, nullptr, &this_parent_span);
-  #else
-    int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id, &index_pool, &oids, nullptr);
-  #endif
+  int r = svc.bi_rados->open_bucket_index(bucket_info, shard_id, &index_pool, &oids, nullptr, &this_parent_span);
   if (r < 0)
     return r;
 
@@ -9022,10 +8923,7 @@ int RGWRados::cls_bucket_list_unordered(RGWBucketInfo& bucket_info,
     cls_rgw_bucket_list_op(op, marker, prefix, empty_delimiter,
 			   num_entries,
                            list_versions, &result);
-    Span span_3;
-    trace(span_3, this_parent_span, "rgw_tools.cc : rgw_rados_operate");
-    r = rgw_rados_operate(ioctx, oid, &op, nullptr, null_yield);
-    finish_trace(span_3);
+    r = rgw_rados_operate(ioctx, oid, &op, nullptr, null_yield, &this_parent_span);
     if (r < 0)
       return r;
 
