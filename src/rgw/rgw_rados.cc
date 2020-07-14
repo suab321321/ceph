@@ -3089,10 +3089,7 @@ int RGWRados::Object::Write::_do_write_meta(uint64_t size, uint64_t accounted_si
   if (meta.data) {
     /* if we want to overwrite the data, we also want to overwrite the
        xattrs, so just remove the object */
-    Span span_3;
-    trace(span_3, this_parent_span, "librados.hpp : ObjectWriteOperation::write_full");
-    op.write_full(*meta.data);
-    finish_trace(span_3);
+    op.write_full(*meta.data, &this_parent_span);
   }
 
   string etag;
@@ -8780,8 +8777,6 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
   } // while we haven't provided requested # of result entries
 
   // suggest updates if there are any
-  Span span_2;
-  trace(span_2, this_parent_span, "svc_rados.cc : RGWSI_RADOS::Obj::aio_operate");
   for (auto& miter : updates) {
     if (miter.second.length()) {
       ObjectWriteOperation o;
@@ -8789,11 +8784,10 @@ int RGWRados::cls_bucket_list_ordered(RGWBucketInfo& bucket_info,
       // we don't care if we lose suggested updates, send them off blindly
       AioCompletion *c =
 	librados::Rados::aio_create_completion(nullptr, nullptr);
-      ioctx.aio_operate(miter.first, c, &o);
+      ioctx.aio_operate(miter.first, c, &o, &this_parent_span);
       c->release();
     }
   } // updates loop
-  finish_trace(span_2);
   // determine truncation by checking if all the returned entries are
   // consumed or not
   *is_truncated = false;
@@ -8986,7 +8980,7 @@ check_updates:
       cls_rgw_suggest_changes(o, miter->second);
       // we don't care if we lose suggested updates, send them off blindly
       AioCompletion *c = librados::Rados::aio_create_completion(nullptr, nullptr);
-      ioctx.aio_operate(miter->first, c, &o);
+      ioctx.aio_operate(miter->first, c, &o, &this_parent_span);
       c->release();
     }
   }

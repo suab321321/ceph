@@ -14,6 +14,18 @@
 #include "librados_fwd.hpp"
 #include "rados_types.hpp"
 
+#define WITH_JAGER //will be removed after testing
+
+#ifdef WITH_JAGER
+  #include "../../common/tracer.h"
+  #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#else
+  typedef char Span;
+  typedef char optional_span;
+  #define trace(...) ((void)0)
+  #define finish_trace(...) ((void)0)
+#endif
+
 namespace libradosstriper
 {
   class RadosStriper;
@@ -397,7 +409,7 @@ inline namespace v14_2_0 {
 		const std::string& category); ///< NOTE: category is unused
 
     void write(uint64_t off, const bufferlist& bl);
-    void write_full(const bufferlist& bl);
+    void write_full(const bufferlist& bl, optional_span* parent_span = NULL);
     void writesame(uint64_t off, uint64_t write_len,
 		   const bufferlist& bl);
     void append(const bufferlist& bl);
@@ -1133,10 +1145,10 @@ inline namespace v14_2_0 {
 
     // compound object operations
     int operate(const std::string& oid, ObjectWriteOperation *op);
-    int operate(const std::string& oid, ObjectWriteOperation *op, int flags);
+    int operate(const std::string& oid, ObjectWriteOperation *op, int flags, optional_span* parent_span = NULL);
     int operate(const std::string& oid, ObjectReadOperation *op, bufferlist *pbl);
-    int operate(const std::string& oid, ObjectReadOperation *op, bufferlist *pbl, int flags);
-    int aio_operate(const std::string& oid, AioCompletion *c, ObjectWriteOperation *op);
+    int operate(const std::string& oid, ObjectReadOperation *op, bufferlist *pbl, int flags, optional_span* parent_span = NULL);
+    int aio_operate(const std::string& oid, AioCompletion *c, ObjectWriteOperation *op, optional_span* parent_span = NULL);
     int aio_operate(const std::string& oid, AioCompletion *c, ObjectWriteOperation *op, int flags);
     /**
      * Schedule an async write operation with explicit snapshot parameters

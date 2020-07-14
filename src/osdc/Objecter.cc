@@ -2181,8 +2181,18 @@ void Objecter::resend_mon_ops()
 
 // read | write ---------------------------
 
-void Objecter::op_submit(Op *op, ceph_tid_t *ptid, int *ctx_budget)
+void Objecter::op_submit(Op *op, ceph_tid_t *ptid, int *ctx_budget, optional_span* parent_span)
 {
+  #ifdef WITH_JAGER
+    Span span_1;
+    std::string span_name = "";
+    span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
+  #endif
   shunique_lock rl(rwlock, ceph::acquire_shared);
   ceph_tid_t tid = 0;
   if (!ptid)

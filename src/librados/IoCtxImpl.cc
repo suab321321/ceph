@@ -631,8 +631,18 @@ int librados::IoCtxImpl::writesame(const object_t& oid, bufferlist& bl,
 }
 
 int librados::IoCtxImpl::operate(const object_t& oid, ::ObjectOperation *o,
-				 ceph::real_time *pmtime, int flags)
+				 ceph::real_time *pmtime, int flags, optional_span* parent_span)
 {
+  #ifdef WITH_JAGER
+    Span span_1;
+    std::string span_name = "";
+    span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
+  #endif
   ceph::real_time ut = (pmtime ? *pmtime :
     ceph::real_clock::now());
 
@@ -656,8 +666,8 @@ int librados::IoCtxImpl::operate(const object_t& oid, ::ObjectOperation *o,
 			 << " nspace=" << oloc.nspace << dendl;
   Objecter::Op *objecter_op = objecter->prepare_mutate_op(oid, oloc,
 							  *o, snapc, ut, flags,
-							  oncommit, &ver);
-  objecter->op_submit(objecter_op);
+							  oncommit, &ver, osd_reqid_t(), NULL, &this_parent_span);
+  objecter->op_submit(objecter_op, NULL, NULL, &this_parent_span);
 
   {
     std::unique_lock l{mylock};
@@ -674,8 +684,18 @@ int librados::IoCtxImpl::operate(const object_t& oid, ::ObjectOperation *o,
 int librados::IoCtxImpl::operate_read(const object_t& oid,
 				      ::ObjectOperation *o,
 				      bufferlist *pbl,
-				      int flags)
+				      int flags, optional_span* parent_span)
 {
+  #ifdef WITH_JAGER
+    Span span_1;
+    std::string span_name = "";
+    span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
+  #endif
   if (!o->size())
     return 0;
 
@@ -691,8 +711,8 @@ int librados::IoCtxImpl::operate_read(const object_t& oid,
   ldout(client->cct, 10) << ceph_osd_op_name(op) << " oid=" << oid << " nspace=" << oloc.nspace << dendl;
   Objecter::Op *objecter_op = objecter->prepare_read_op(oid, oloc,
 	                                      *o, snap_seq, pbl, flags,
-	                                      onack, &ver);
-  objecter->op_submit(objecter_op);
+	                                      onack, &ver, NULL, 0, NULL, &this_parent_span);
+  objecter->op_submit(objecter_op, NULL, NULL, &this_parent_span);
 
   {
     std::unique_lock l{mylock};
@@ -741,8 +761,18 @@ int librados::IoCtxImpl::aio_operate_read(const object_t &oid,
 int librados::IoCtxImpl::aio_operate(const object_t& oid,
 				     ::ObjectOperation *o, AioCompletionImpl *c,
 				     const SnapContext& snap_context, int flags,
-                                     const blkin_trace_info *trace_info)
+                                     const blkin_trace_info *trace_info, optional_span* parent_span)
 {
+  #ifdef WITH_JAGER
+    Span span_1;
+    std::string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
+  #endif
   FUNCTRACE(client->cct);
   OID_EVENT_TRACE(oid.name.c_str(), "RADOS_WRITE_OP_BEGIN");
   auto ut = ceph::real_clock::now();
@@ -767,8 +797,8 @@ int librados::IoCtxImpl::aio_operate(const object_t& oid,
   trace.event("init root span");
   Objecter::Op *op = objecter->prepare_mutate_op(
     oid, oloc, *o, snap_context, ut, flags,
-    oncomplete, &c->objver, osd_reqid_t(), &trace);
-  objecter->op_submit(op, &c->tid);
+    oncomplete, &c->objver, osd_reqid_t(), &trace, &this_parent_span);
+  objecter->op_submit(op, &c->tid, NULL, &this_parent_span);
   trace.event("rados operate op submitted");
 
   return 0;

@@ -479,8 +479,18 @@ void librados::ObjectWriteOperation::write(uint64_t off, const bufferlist& bl)
   o->write(off, c);
 }
 
-void librados::ObjectWriteOperation::write_full(const bufferlist& bl)
+void librados::ObjectWriteOperation::write_full(const bufferlist& bl, optional_span* parent_span)
 {
+  #ifdef WITH_JAGER
+    Span span_1;
+    std::string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
+  #endif
   ceph_assert(impl);
   ::ObjectOperation *o = &impl->o;
   bufferlist c = bl;
@@ -1515,12 +1525,22 @@ int librados::IoCtx::operate(const std::string& oid, librados::ObjectWriteOperat
   return io_ctx_impl->operate(obj, &o->impl->o, (ceph::real_time *)o->impl->prt);
 }
 
-int librados::IoCtx::operate(const std::string& oid, librados::ObjectWriteOperation *o, int flags)
+int librados::IoCtx::operate(const std::string& oid, librados::ObjectWriteOperation *o, int flags, optional_span* parent_span)
 {
+  #ifdef WITH_JAGER
+    Span span_1;
+    std::string span_name = "";
+    span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__; 
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
+  #endif
   object_t obj(oid);
   if (unlikely(!o->impl))
     return -EINVAL;
-  return io_ctx_impl->operate(obj, &o->impl->o, (ceph::real_time *)o->impl->prt, translate_flags(flags));
+  return io_ctx_impl->operate(obj, &o->impl->o, (ceph::real_time *)o->impl->prt, translate_flags(flags), &this_parent_span);
 }
 
 int librados::IoCtx::operate(const std::string& oid, librados::ObjectReadOperation *o, bufferlist *pbl)
@@ -1531,22 +1551,42 @@ int librados::IoCtx::operate(const std::string& oid, librados::ObjectReadOperati
   return io_ctx_impl->operate_read(obj, &o->impl->o, pbl);
 }
 
-int librados::IoCtx::operate(const std::string& oid, librados::ObjectReadOperation *o, bufferlist *pbl, int flags)
+int librados::IoCtx::operate(const std::string& oid, librados::ObjectReadOperation *o, bufferlist *pbl, int flags, optional_span* parent_span)
 {
+  #ifdef WITH_JAGER
+    Span span_1;
+    std::string span_name = "";
+    span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
+  #endif
   object_t obj(oid);
   if (unlikely(!o->impl))
     return -EINVAL;
-  return io_ctx_impl->operate_read(obj, &o->impl->o, pbl, translate_flags(flags));
+  return io_ctx_impl->operate_read(obj, &o->impl->o, pbl, translate_flags(flags), &this_parent_span);
 }
 
 int librados::IoCtx::aio_operate(const std::string& oid, AioCompletion *c,
-				 librados::ObjectWriteOperation *o)
+				 librados::ObjectWriteOperation *o, optional_span* parent_span)
 {
+  #ifdef WITH_JAGER
+    Span span_1;
+    std::string span_name = "";
+    span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    if(parent_span)
+      trace(span_1, *parent_span, span_name.c_str());
+    optional_span this_parent_span(span_1);
+  #else
+    optional_span this_parent_span;
+  #endif
   object_t obj(oid);
   if (unlikely(!o->impl))
     return -EINVAL;
   return io_ctx_impl->aio_operate(obj, &o->impl->o, c->pc,
-				  io_ctx_impl->snapc, 0);
+				  io_ctx_impl->snapc, 0, NULL, &this_parent_span);
 }
 int librados::IoCtx::aio_operate(const std::string& oid, AioCompletion *c,
 				 ObjectWriteOperation *o, int flags)

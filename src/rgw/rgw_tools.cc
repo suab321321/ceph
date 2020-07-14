@@ -286,7 +286,7 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
     trace(span_1, *parent_span, span_name.c_str());
   optional_span this_parent_span(span_1);
 #else
-  optional_span this_parentt_span;
+  optional_span this_parent_span;
 #endif
 #ifdef HAVE_BOOST_CONTEXT
   // given a yield_context, call async_operate() to yield the coroutine instead
@@ -306,7 +306,7 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
     dout(20) << "WARNING: blocking librados call" << dendl;
   }
 #endif
-  return ioctx.operate(oid, op, nullptr, flags);
+  return ioctx.operate(oid, op, nullptr, flags, &this_parent_span);
 }
 
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
@@ -341,7 +341,7 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
     dout(20) << "WARNING: blocking librados call" << dendl;
   }
 #endif
-  return ioctx.operate(oid, op, flags);
+  return ioctx.operate(oid, op, flags, &this_parent_span);
 }
 
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,

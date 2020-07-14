@@ -58,6 +58,18 @@
 
 #include "osd/OSDMap.h"
 
+#define WITH_JAGER //for testing will be removed after testing
+
+#ifdef WITH_JAGER
+  #include "../common/tracer.h"
+  #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#else
+  typedef char Span;
+  typedef char optional_span;
+  #define trace(...) ((void)0)
+  #define finish_trace(...) ((void)0)
+#endif
+
 class Context;
 class Messenger;
 class MonClient;
@@ -2706,7 +2718,7 @@ private:
 			      int *ctx_budget = NULL);
   // public interface
 public:
-  void op_submit(Op *op, ceph_tid_t *ptid = NULL, int *ctx_budget = NULL);
+  void op_submit(Op *op, ceph_tid_t *ptid = NULL, int *ctx_budget = NULL, optional_span* parent_span = NULL);
   bool is_active() {
     std::shared_lock l(rwlock);
     return !((!inflight_ops) && linger_ops.empty() &&
@@ -2899,7 +2911,17 @@ public:
     ceph::real_time mtime, int flags,
     Context *oncommit, version_t *objver = NULL,
     osd_reqid_t reqid = osd_reqid_t(),
-    ZTracer::Trace *parent_trace = nullptr) {
+    ZTracer::Trace *parent_trace = nullptr, optional_span* parent_span = NULL) {
+    #ifdef WITH_JAGER
+      Span span_1;
+      std::string span_name = "";
+      span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+      if(parent_span)
+        trace(span_1, *parent_span, span_name.c_str());
+      optional_span this_parent_span(span_1);
+    #else
+      optional_span this_parent_span;
+    #endif
     Op *o = new Op(oid, oloc, std::move(op.ops), flags | global_op_flags |
 		   CEPH_OSD_FLAG_WRITE, oncommit, objver,
 		   nullptr, parent_trace);
@@ -2954,7 +2976,17 @@ public:
     Context *onack, version_t *objver = NULL,
     int *data_offset = NULL,
     uint64_t features = 0,
-    ZTracer::Trace *parent_trace = nullptr) {
+    ZTracer::Trace *parent_trace = nullptr, optional_span* parent_span = NULL) {
+    #ifdef WITH_JAGER
+      Span span_1;
+      std::string span_name = "";
+      span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+      if(parent_span)
+        trace(span_1, *parent_span, span_name.c_str());
+      optional_span this_parent_span(span_1);
+    #else
+      optional_span this_parent_span;
+    #endif
     Op *o = new Op(oid, oloc, std::move(op.ops), flags | global_op_flags |
 		   CEPH_OSD_FLAG_READ, onack, objver,
 		   data_offset, parent_trace);
@@ -3182,7 +3214,17 @@ public:
     uint64_t off, uint64_t len, snapid_t snap, ceph::buffer::list *pbl,
     int flags, Context *onfinish, version_t *objver = NULL,
     ObjectOperation *extra_ops = NULL, int op_flags = 0,
-    ZTracer::Trace *parent_trace = nullptr) {
+    ZTracer::Trace *parent_trace = nullptr, optional_span* parent_span = NULL) {
+    #ifdef WITH_JAGER
+      Span span_1;
+      std::string span_name = "";
+      span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+      if(parent_span)
+        trace(span_1, *parent_span, span_name.c_str());
+      optional_span this_parent_span(span_1);
+    #else
+      optional_span this_parent_span;
+    #endif
     osdc_opvec ops;
     int i = init_ops(ops, 1, extra_ops);
     ops[i].op.op = CEPH_OSD_OP_READ;

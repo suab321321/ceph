@@ -19,48 +19,12 @@ typedef std::unique_ptr<opentracing::Span> Span;
 class Jager_Tracer{
   public:
     Jager_Tracer(){}
-    ~Jager_Tracer(){
-      if(this->tracer)
-        this->tracer->Close();
-    }
+    ~Jager_Tracer();
 
-    bool init_tracer(const char* tracerName,const char* filePath){
-      try{
-        auto yaml = YAML::LoadFile(filePath);
-        auto configuration = jaegertracing::Config::parse(yaml);
-
-        jaegertracing::net::Socket socket;
-        socket.open(AF_INET, SOCK_STREAM);
-        const std::string serverURL = configuration.sampler().kDefaultSamplingServerURL; 
-        socket.connect(serverURL); // this is used to check if the tracer is able to connect with server successfully
-
-        this->tracer = jaegertracing::Tracer::make(
-        tracerName,
-        configuration,
-        jaegertracing::logging::consoleLogger());
-        }catch(...){
-          return false;
-        }
-        opentracing::Tracer::InitGlobal(
-        std::static_pointer_cast<opentracing::Tracer>(tracer));
-        return true;
-    }
-    inline void finish_tracer(){
-      if(this->tracer)
-      	this->tracer->Close();
-    }
-    Span new_span(const char* spanName)const{
-      Span span=opentracing::Tracer::Global()->StartSpan(spanName);
-      return std::move(span);
-    }
-    Span child_span(const char* spanName,const Span& parentSpan)const{
-      Span span = opentracing::Tracer::Global()->StartSpan(spanName, {opentracing::ChildOf(&parentSpan->context())});
-      return std::move(span);
-    }
-    Span followup_span(const char *spanName, const Span& parentSpan)const{
-    Span span = opentracing::Tracer::Global()->StartSpan(spanName, {opentracing::FollowsFrom(&parentSpan->context())});
-    return std::move(span);
-  }
+    bool init_tracer(const char* tracerName,const char* filePath);
+    Span new_span(const char* spanName)const;
+    Span child_span(const char* spanName,const Span& parentSpan)const;
+    Span followup_span(const char *spanName, const Span& parentSpan)const;
 private:
   std::shared_ptr<opentracing::v2::Tracer> tracer = NULL;
 };
@@ -68,7 +32,7 @@ private:
 //will be used throughout ceph to create spans
 extern Jager_Tracer tracer;
 
-// structure to manage spans to trace functions who have access to req_state in /rgw/*
+// structure to manage spans to trace functions who have access to req_state in , defined in req_common.cc*
 struct req_state_span{
     req_state* state = nullptr;
     bool is_inserted = false;

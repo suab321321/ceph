@@ -2173,7 +2173,7 @@ bool RGWBucketInfo::empty_sync_policy() const
 }
 
 #ifdef WITH_JAGER
-  Jager_Tracer tracer;
+  // Jager_Tracer tracer;
 
   void req_state_span::set_span(Span& span){
     this->state->stack_span.push(std::move(span));

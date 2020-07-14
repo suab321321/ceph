@@ -152,11 +152,11 @@ struct librados::IoCtxImpl {
   int getxattrs(const object_t& oid, map<string, bufferlist>& attrset);
   int rmxattr(const object_t& oid, const char *name);
 
-  int operate(const object_t& oid, ::ObjectOperation *o, ceph::real_time *pmtime, int flags=0);
-  int operate_read(const object_t& oid, ::ObjectOperation *o, bufferlist *pbl, int flags=0);
+  int operate(const object_t& oid, ::ObjectOperation *o, ceph::real_time *pmtime, int flags=0, optional_span* parent_span = NULL);
+  int operate_read(const object_t& oid, ::ObjectOperation *o, bufferlist *pbl, int flags=0, optional_span* parent_span = NULL);
   int aio_operate(const object_t& oid, ::ObjectOperation *o,
 		  AioCompletionImpl *c, const SnapContext& snap_context,
-		  int flags, const blkin_trace_info *trace_info = nullptr);
+		  int flags, const blkin_trace_info *trace_info = nullptr, optional_span* parent_span = NULL);
   int aio_operate_read(const object_t& oid, ::ObjectOperation *o,
 		       AioCompletionImpl *c, int flags, bufferlist *pbl, const blkin_trace_info *trace_info = nullptr);
 

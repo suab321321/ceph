@@ -2427,37 +2427,38 @@ void RGWGetObj::execute()
     op_ret = 0;
     goto done_err;
   }
-
-  Span span_1;
-  trace(span_1, &this_parent_span. "started torrent");
-  /* start gettorrent */
-  if (torrent.get_flag())
   {
-    attr_iter = attrs.find(RGW_ATTR_CRYPT_MODE);
-    if (attr_iter != attrs.end() && attr_iter->second.to_str() == "SSE-C-AES256") {
-      ldpp_dout(this, 0) << "ERROR: torrents are not supported for objects "
-          "encrypted with SSE-C" << dendl;
-      op_ret = -EINVAL;
-      goto done_err;
-    }
-    torrent.init(s, store);
-    op_ret = torrent.get_torrent_file(read_op, total_len, bl, obj);
-    if (op_ret < 0)
+    Span span_1;
+    trace(span_1, this_parent_span, "started torrent");
+  /* start gettorrent */
+    if (torrent.get_flag())
     {
-      ldpp_dout(this, 0) << "ERROR: failed to get_torrent_file ret= " << op_ret
-                       << dendl;
-      goto done_err;
+      attr_iter = attrs.find(RGW_ATTR_CRYPT_MODE);
+      if (attr_iter != attrs.end() && attr_iter->second.to_str() == "SSE-C-AES256") {
+        ldpp_dout(this, 0) << "ERROR: torrents are not supported for objects "
+            "encrypted with SSE-C" << dendl;
+        op_ret = -EINVAL;
+        goto done_err;
+      }
+      torrent.init(s, store);
+      op_ret = torrent.get_torrent_file(read_op, total_len, bl, obj);
+      if (op_ret < 0)
+      {
+        ldpp_dout(this, 0) << "ERROR: failed to get_torrent_file ret= " << op_ret
+                        << dendl;
+        goto done_err;
+      }
+      op_ret = send_response_data(bl, 0, total_len);
+      if (op_ret < 0)
+      {
+        ldpp_dout(this, 0) << "ERROR: failed to send_response_data ret= " << op_ret << dendl;
+        goto done_err;
+      }
+      return;
     }
-    op_ret = send_response_data(bl, 0, total_len);
-    if (op_ret < 0)
-    {
-      ldpp_dout(this, 0) << "ERROR: failed to send_response_data ret= " << op_ret << dendl;
-      goto done_err;
-    }
-    return;
-  }
   /* end gettorrent */
   finish_trace(span_1);
+  }
 
   op_ret = rgw_compression_info_from_attrset(attrs, need_decompress, cs_info);
   if (op_ret < 0) {
@@ -4358,7 +4359,7 @@ void RGWPutObj::execute()
         s->bucket_owner.get_id(), obj_ctx, obj, olh_epoch,
         s->req_id, this, s->yield);
   }
-  op_ret = processor->prepare(s->yield, &this_parent_span)
+  op_ret = processor->prepare(s->yield, &this_parent_span);
   if (op_ret < 0) {
     ldpp_dout(this, 20) << "processor->prepare() returned ret=" << op_ret
 		      << dendl;
