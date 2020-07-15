@@ -347,69 +347,40 @@ if(WITH_SEASTAR)
   add_subdirectory(crimson)
 endif()
 
-if(WITH_JAGER)
 set(libcommon_files
-    ${CMAKE_BINARY_DIR}/src/include/ceph_ver.h
-    ceph_ver.c
-    global/global_context.cc
-    xxHash/xxhash.c
-    common/error_code.cc
-    common/tracer.cc
-    log/Log.cc
-    mon/MonCap.cc
-    mon/MonClient.cc
-    mon/MonMap.cc
-    mon/MonSub.cc
-    mon/error_code.cc
-    mgr/MgrClient.cc
-    mon/PGMap.cc
-    mgr/ServiceMap.cc
-    osd/ECMsgTypes.cc
-    osd/HitSet.cc
-    osd/OSDMap.cc
-    osd/OSDMapMapping.cc
-    osd/osd_types.cc
-    osd/error_code.cc
-    osd/PGPeeringEvent.cc
-    osd/OpRequest.cc
-    osd/ClassHandler.cc
-    osd/osd_op_util.cc
-    osdc/Striper.cc
-    osdc/Objecter.cc
-    osdc/error_code.cc
-    librbd/Features.cc
-    ${mds_files})
-else()
-  set(libcommon_files
-  ${CMAKE_BINARY_DIR}/src/include/ceph_ver.h
-  ceph_ver.c
-  global/global_context.cc
-  xxHash/xxhash.c
-  common/error_code.cc
-  log/Log.cc
-  mon/MonCap.cc
-  mon/MonClient.cc
-  mon/MonMap.cc
-  mon/MonSub.cc
-  mon/error_code.cc
-  mgr/MgrClient.cc
-  mon/PGMap.cc
-  mgr/ServiceMap.cc
-  osd/ECMsgTypes.cc
-  osd/HitSet.cc
-  osd/OSDMap.cc
-  osd/OSDMapMapping.cc
-  osd/osd_types.cc
-  osd/error_code.cc
-  osd/PGPeeringEvent.cc
-  osd/OpRequest.cc
-  osd/ClassHandler.cc
-  osd/osd_op_util.cc
-  osdc/Striper.cc
-  osdc/Objecter.cc
-  osdc/error_code.cc
-  librbd/Features.cc
-  ${mds_files})
+${CMAKE_BINARY_DIR}/src/include/ceph_ver.h
+ceph_ver.c
+global/global_context.cc
+xxHash/xxhash.c
+common/error_code.cc
+log/Log.cc
+mon/MonCap.cc
+mon/MonClient.cc
+mon/MonMap.cc
+mon/MonSub.cc
+mon/error_code.cc
+mgr/MgrClient.cc
+mon/PGMap.cc
+mgr/ServiceMap.cc
+osd/ECMsgTypes.cc
+osd/HitSet.cc
+osd/OSDMap.cc
+osd/OSDMapMapping.cc
+osd/osd_types.cc
+osd/error_code.cc
+osd/PGPeeringEvent.cc
+osd/OpRequest.cc
+osd/ClassHandler.cc
+osd/osd_op_util.cc
+osdc/Striper.cc
+osdc/Objecter.cc
+osdc/error_code.cc
+librbd/Features.cc
+${mds_files})
+
+if(WITH_JAGER)
+  file(GLOB jager_tracing_file "common/tracer.cc")
+  list(APPEND libcommon_files ${jager_tracing_file})
 endif()
 
 set_source_files_properties(ceph_ver.c
