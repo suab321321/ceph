@@ -2514,6 +2514,10 @@ std::vector<Option> get_global_options() {
     .set_default(true)
     .set_description("flush FileStore journal contents during clean OSD shutdown"),
 
+    Option("osd_compact_on_start", Option::TYPE_BOOL, Option::LEVEL_ADVANCED)
+    .set_default(false)
+    .set_description("compact OSD's object store's OMAP on start"),
+
     Option("osd_os_flags", Option::TYPE_UINT, Option::LEVEL_DEV)
     .set_default(0)
     .set_description("flags to skip filestore omap or journal initialization"),
@@ -8560,6 +8564,18 @@ std::vector<Option> get_mds_client_options() {
     .set_default(false)
     .set_description("pass default_permisions to FUSE on mount")
     .set_flag(Option::FLAG_STARTUP),
+
+    Option("fuse_splice_read", Option::TYPE_BOOL, Option::LEVEL_ADVANCED)
+    .set_default(true)
+    .set_description("enable splice read to reduce the memory copies"),
+
+    Option("fuse_splice_write", Option::TYPE_BOOL, Option::LEVEL_ADVANCED)
+    .set_default(true)
+    .set_description("enable splice write to reduce the memory copies"),
+
+    Option("fuse_splice_move", Option::TYPE_BOOL, Option::LEVEL_ADVANCED)
+    .set_default(true)
+    .set_description("enable splice move to reduce the memory copies"),
 
     Option("fuse_big_writes", Option::TYPE_BOOL, Option::LEVEL_ADVANCED)
     .set_default(true)

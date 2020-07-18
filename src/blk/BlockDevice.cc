@@ -73,9 +73,7 @@ uint64_t IOContext::get_num_ios() const
   // that to the bytes value.
   uint64_t ios = 0;
 #if defined(HAVE_LIBAIO) || defined(HAVE_POSIXAIO)
-  for (auto& p : pending_aios) {
-    ios += p.iov.size();
-  }
+  ios += pending_aios.size();
 #endif
 #ifdef HAVE_SPDK
   ios += total_nseg;
@@ -135,11 +133,7 @@ BlockDevice *BlockDevice::create(CephContext* cct, const string& path,
   if (r == 1) {
     return new HMSMRDevice(cct, cb, cbpriv, d_cb, d_cbpriv);
   }
-  if (r < 0) {
-    derr << __func__ << " zbc_device_is_zoned(" << path << ") failed: "
-	 << cpp_strerror(r) << dendl;
-    goto out_fail;
-  }
+  ceph_assertf(r >= 0, "zbc_device_is_zoned(%s) failed: %d", path.c_str(), r);
 #endif
   if (type == "kernel") {
     return new KernelDevice(cct, cb, cbpriv, d_cb, d_cbpriv);
@@ -155,7 +149,6 @@ BlockDevice *BlockDevice::create(CephContext* cct, const string& path,
 
   derr << __func__ << " unknown backend " << type << dendl;
 
-out_fail:
   ceph_abort();
   return NULL;
 }
