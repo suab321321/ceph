@@ -40,6 +40,12 @@
 
 int RGWListBuckets_ObjStore_SWIFT::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   prefix = s->info.args.get("prefix");
   marker = s->info.args.get("marker");
   end_marker = s->info.args.get("end_marker");
@@ -162,6 +168,12 @@ static void dump_account_metadata(struct req_state * const s,
 
 void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret) {
     set_req_state_err(s, op_ret);
   } else if (!has_buckets && s->format == RGW_FORMAT_PLAIN) {
@@ -193,6 +205,11 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_begin(bool has_buckets)
 
 void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList&& buckets)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+
   if (wants_reversed) {
     /* Just store in the reversal buffer. Its content will be handled later,
      * in send_response_end(). */
@@ -204,6 +221,12 @@ void RGWListBuckets_ObjStore_SWIFT::handle_listing_chunk(rgw::sal::RGWBucketList
 
 void RGWListBuckets_ObjStore_SWIFT::send_response_data(rgw::sal::RGWBucketList& buckets)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (! sent_data) {
     return;
   }
@@ -222,6 +245,11 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_data(rgw::sal::RGWBucketList& 
 
 void RGWListBuckets_ObjStore_SWIFT::dump_bucket_entry(const rgw::sal::RGWBucket& obj)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+
   s->formatter->open_object_section("container");
   s->formatter->dump_string("name", obj.get_name());
 
@@ -239,6 +267,12 @@ void RGWListBuckets_ObjStore_SWIFT::dump_bucket_entry(const rgw::sal::RGWBucket&
 
 void RGWListBuckets_ObjStore_SWIFT::send_response_data_reversed(rgw::sal::RGWBucketList& buckets)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (! sent_data) {
     return;
   }
@@ -265,6 +299,12 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_data_reversed(rgw::sal::RGWBuc
 
 void RGWListBuckets_ObjStore_SWIFT::send_response_end()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (wants_reversed) {
     for (auto& buckets : reverse_buffer) {
       send_response_data_reversed(buckets);
@@ -294,6 +334,12 @@ void RGWListBuckets_ObjStore_SWIFT::send_response_end()
 
 int RGWListBucket_ObjStore_SWIFT::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   prefix = s->info.args.get("prefix");
   marker = s->info.args.get("marker");
   end_marker = s->info.args.get("end_marker");
@@ -345,6 +391,12 @@ static void dump_container_metadata(struct req_state *,
 
 void RGWListBucket_ObjStore_SWIFT::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   vector<rgw_bucket_dir_entry>::iterator iter = objs.begin();
   map<string, bool>::iterator pref_iter = common_prefixes.begin();
 
@@ -697,6 +749,12 @@ static int get_swift_versioning_settings(
 
 int RGWCreateBucket_ObjStore_SWIFT::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   bool has_policy;
   uint32_t policy_rw_mask = 0;
 
@@ -741,6 +799,12 @@ static inline int handle_metadata_errors(req_state* const s, const int op_ret)
 
 void RGWCreateBucket_ObjStore_SWIFT::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   const auto meta_ret = handle_metadata_errors(s, op_ret);
   if (meta_ret != op_ret) {
     op_ret = meta_ret;
@@ -761,6 +825,13 @@ void RGWCreateBucket_ObjStore_SWIFT::send_response()
 
 void RGWDeleteBucket_ObjStore_SWIFT::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+  set_span_tag(s->root_span, "success", "true");
+
   int r = op_ret;
   if (!r)
     r = STATUS_NO_CONTENT;
@@ -811,6 +882,12 @@ static int get_delete_at_param(req_state *s, boost::optional<real_time> &delete_
 
 int RGWPutObj_ObjStore_SWIFT::verify_permission()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   op_ret = RGWPutObj_ObjStore::verify_permission();
 
   /* We have to differentiate error codes depending on whether user is
@@ -824,6 +901,11 @@ int RGWPutObj_ObjStore_SWIFT::verify_permission()
 }
 
 int RGWPutObj_ObjStore_SWIFT::update_slo_segment_size(rgw_slo_entry& entry) {
+
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
 
   int r = 0;
   const string& path = entry.path;
@@ -911,6 +993,12 @@ int RGWPutObj_ObjStore_SWIFT::update_slo_segment_size(rgw_slo_entry& entry) {
 
 int RGWPutObj_ObjStore_SWIFT::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   if (s->has_bad_meta) {
     return -EINVAL;
   }
@@ -1018,6 +1106,12 @@ int RGWPutObj_ObjStore_SWIFT::get_params()
 
 void RGWPutObj_ObjStore_SWIFT::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   const auto meta_ret = handle_metadata_errors(s, op_ret);
   if (meta_ret) {
     op_ret = meta_ret;
@@ -1244,6 +1338,12 @@ static void bulkdelete_respond(const unsigned num_deleted,
 
 int RGWDeleteObj_ObjStore_SWIFT::verify_permission()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   op_ret = RGWDeleteObj_ObjStore::verify_permission();
 
   /* We have to differentiate error codes depending on whether user is
@@ -1258,6 +1358,12 @@ int RGWDeleteObj_ObjStore_SWIFT::verify_permission()
 
 int RGWDeleteObj_ObjStore_SWIFT::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   const string& mm = s->info.args.get("multipart-manifest");
   multipart_delete = (mm.compare("delete") == 0);
 
@@ -1266,6 +1372,12 @@ int RGWDeleteObj_ObjStore_SWIFT::get_params()
 
 void RGWDeleteObj_ObjStore_SWIFT::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   int r = op_ret;
 
   if (multipart_delete) {
@@ -1375,6 +1487,12 @@ static void dump_object_metadata(const DoutPrefixProvider* dpp, struct req_state
 
 int RGWCopyObj_ObjStore_SWIFT::init_dest_policy()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   dest_policy.create_default(s->user->get_id(), s->user->get_display_name());
 
   return 0;
@@ -1382,6 +1500,12 @@ int RGWCopyObj_ObjStore_SWIFT::init_dest_policy()
 
 int RGWCopyObj_ObjStore_SWIFT::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   if_mod = s->info.env->get("HTTP_IF_MODIFIED_SINCE");
   if_unmod = s->info.env->get("HTTP_IF_UNMODIFIED_SINCE");
   if_match = s->info.env->get("HTTP_COPY_IF_MATCH");
@@ -1412,6 +1536,12 @@ int RGWCopyObj_ObjStore_SWIFT::get_params()
 
 void RGWCopyObj_ObjStore_SWIFT::send_partial_response(off_t ofs)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (! sent_header) {
     if (! op_ret)
       op_ret = STATUS_CREATED;
@@ -1448,6 +1578,12 @@ void RGWCopyObj_ObjStore_SWIFT::dump_copy_info()
 
 void RGWCopyObj_ObjStore_SWIFT::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (! sent_header) {
     string content_type;
     if (! op_ret)
@@ -1469,6 +1605,12 @@ void RGWCopyObj_ObjStore_SWIFT::send_response()
 
 int RGWGetObj_ObjStore_SWIFT::verify_permission()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   op_ret = RGWGetObj_ObjStore::verify_permission();
 
   /* We have to differentiate error codes depending on whether user is
@@ -1483,6 +1625,12 @@ int RGWGetObj_ObjStore_SWIFT::verify_permission()
 
 int RGWGetObj_ObjStore_SWIFT::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "swift");
+
   const string& mm = s->info.args.get("multipart-manifest");
   skip_manifest = (mm.compare("get") == 0);
 
@@ -1491,6 +1639,12 @@ int RGWGetObj_ObjStore_SWIFT::get_params()
 
 int RGWGetObj_ObjStore_SWIFT::send_response_data_error()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   std::string error_content;
   op_ret = error_handler(op_ret, &error_content);
   if (! op_ret) {
@@ -1507,6 +1661,12 @@ int RGWGetObj_ObjStore_SWIFT::send_response_data(bufferlist& bl,
                                                  const off_t bl_ofs,
                                                  const off_t bl_len)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   string content_type;
 
   if (sent_header) {

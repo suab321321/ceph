@@ -160,6 +160,11 @@ int RGWGetObj_ObjStore_S3Website::send_response_data_error()
 
 int RGWGetObj_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
   // for multisite sync requests, only read the slo manifest itself, rather than
   // all of the data from its parts. the parts will sync as separate objects
   skip_manifest = s->info.args.exists(RGW_SYS_PARAM_PREFIX "sync-manifest");
@@ -175,6 +180,11 @@ int RGWGetObj_ObjStore_S3::get_params()
 
 int RGWGetObj_ObjStore_S3::send_response_data_error()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
   bufferlist bl;
   return send_response_data(bl, 0 , 0);
 }
@@ -213,6 +223,12 @@ inline bool str_has_cntrl(const char* s) {
 int RGWGetObj_ObjStore_S3::send_response_data(bufferlist& bl, off_t bl_ofs,
 					      off_t bl_len)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   const char *content_type = NULL;
   string content_type_str;
   map<string, string> response_attrs;
@@ -437,6 +453,11 @@ send_data:
 
 int RGWGetObj_ObjStore_S3::get_decrypt_filter(std::unique_ptr<RGWGetObj_Filter> *filter, RGWGetObj_Filter* cb, bufferlist* manifest_bl)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+
   if (skip_decrypt) { // bypass decryption for multisite sync requests
     return 0;
   }
@@ -499,6 +520,13 @@ int RGWGetObj_ObjStore_S3::override_range_hdr(const rgw::auth::StrategyRegistry&
 
 void RGWGetObjTags_ObjStore_S3::send_response_data(bufferlist& bl)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   dump_errno(s);
   end_header(s, this, "application/xml");
   dump_start(s);
@@ -525,6 +553,12 @@ void RGWGetObjTags_ObjStore_S3::send_response_data(bufferlist& bl)
 
 int RGWPutObjTags_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   RGWXMLParser parser;
 
   if (!parser.init()){
@@ -566,6 +600,12 @@ int RGWPutObjTags_ObjStore_S3::get_params()
 
 void RGWPutObjTags_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -576,6 +616,12 @@ void RGWPutObjTags_ObjStore_S3::send_response()
 
 void RGWDeleteObjTags_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   int r = op_ret;
   if (r == -ENOENT)
     r = 0;
@@ -589,6 +635,13 @@ void RGWDeleteObjTags_ObjStore_S3::send_response()
 
 void RGWGetBucketTags_ObjStore_S3::send_response_data(bufferlist& bl)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -618,6 +671,12 @@ void RGWGetBucketTags_ObjStore_S3::send_response_data(bufferlist& bl)
 
 int RGWPutBucketTags_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   RGWXMLParser parser;
 
   if (!parser.init()){
@@ -665,6 +724,12 @@ int RGWPutBucketTags_ObjStore_S3::get_params()
 
 void RGWPutBucketTags_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -674,6 +739,13 @@ void RGWPutBucketTags_ObjStore_S3::send_response()
 
 void RGWDeleteBucketTags_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -1155,6 +1227,13 @@ struct ReplicationConfiguration {
 
 void RGWGetBucketReplication_ObjStore_S3::send_response_data()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -1230,6 +1309,13 @@ int RGWPutBucketReplication_ObjStore_S3::get_params()
 
 void RGWPutBucketReplication_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -1239,12 +1325,24 @@ void RGWPutBucketReplication_ObjStore_S3::send_response()
 
 void RGWDeleteBucketReplication_ObjStore_S3::update_sync_policy(rgw_sync_policy_info *policy)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   policy->groups.erase(enabled_group_id);
   policy->groups.erase(disabled_group_id);
 }
 
 void RGWDeleteBucketReplication_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -1254,6 +1352,12 @@ void RGWDeleteBucketReplication_ObjStore_S3::send_response()
 
 void RGWListBuckets_ObjStore_S3::send_response_begin(bool has_buckets)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -1272,6 +1376,12 @@ void RGWListBuckets_ObjStore_S3::send_response_begin(bool has_buckets)
 
 void RGWListBuckets_ObjStore_S3::send_response_data(rgw::sal::RGWBucketList& buckets)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (!sent_data)
     return;
 
@@ -1437,6 +1547,11 @@ void RGWGetUsage_ObjStore_S3::send_response()
 
 int RGWListBucket_ObjStore_S3::get_common_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+
   list_versions = s->info.args.exists("versions");
   prefix = s->info.args.get("prefix");
 
@@ -1468,6 +1583,12 @@ int RGWListBucket_ObjStore_S3::get_common_params()
 
 int RGWListBucket_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   int ret = get_common_params();
   if (ret < 0) {
     return ret;
@@ -1500,6 +1621,12 @@ return 0;
 
 void RGWListBucket_ObjStore_S3::send_common_versioned_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (!s->bucket_tenant.empty()) {
     s->formatter->dump_string("Tenant", s->bucket_tenant);
   }
@@ -1530,6 +1657,12 @@ void RGWListBucket_ObjStore_S3::send_common_versioned_response()
 
 void RGWListBucket_ObjStore_S3::send_versioned_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   s->formatter->open_object_section_in_ns("ListVersionsResult", XMLNS_AWS_S3);
   if (strcasecmp(encoding_type.c_str(), "url") == 0) {
     s->formatter->dump_string("EncodingType", "url");
@@ -1610,6 +1743,12 @@ void RGWListBucket_ObjStore_S3::send_versioned_response()
 
 void RGWListBucket_ObjStore_S3::send_common_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (!s->bucket_tenant.empty()) {
     s->formatter->dump_string("Tenant", s->bucket_tenant);
   }
@@ -1639,6 +1778,12 @@ void RGWListBucket_ObjStore_S3::send_common_response()
 
 void RGWListBucket_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret < 0) {
     set_req_state_err(s, op_ret);
   }
@@ -1901,6 +2046,13 @@ void RGWGetBucketLocation_ObjStore_S3::send_response()
 
 void RGWGetBucketVersioning_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -1953,6 +2105,12 @@ struct ver_config_status {
 
 int RGWSetBucketVersioning_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   int r = 0;
   bufferlist data;
   std::tie(r, data) =
@@ -2017,6 +2175,12 @@ int RGWSetBucketVersioning_ObjStore_S3::get_params()
 
 void RGWSetBucketVersioning_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -2143,6 +2307,13 @@ static void dump_bucket_metadata(struct req_state *s, rgw::sal::RGWBucket* bucke
 
 void RGWStatBucket_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret >= 0) {
     dump_bucket_metadata(s, bucket.get());
   }
@@ -2219,6 +2390,12 @@ public:
 
 int RGWCreateBucket_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   RGWAccessControlPolicy_S3 s3policy(s->cct);
   bool relaxed_names = s->cct->_conf->rgw_relaxed_s3_bucket_names;
 
@@ -2293,6 +2470,12 @@ int RGWCreateBucket_ObjStore_S3::get_params()
 
 void RGWCreateBucket_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret == -ERR_BUCKET_EXISTS)
     op_ret = 0;
   if (op_ret)
@@ -2317,6 +2500,13 @@ void RGWCreateBucket_ObjStore_S3::send_response()
 
 void RGWDeleteBucket_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   int r = op_ret;
   if (!r)
     r = STATUS_NO_CONTENT;
@@ -2341,6 +2531,12 @@ static inline void map_qs_metadata(struct req_state* s)
 
 int RGWPutObj_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (!s->length)
     return -ERR_LENGTH_REQUIRED;
 
@@ -2526,6 +2722,11 @@ int RGWPutObj_ObjStore_S3::get_params()
 
 int RGWPutObj_ObjStore_S3::get_data(bufferlist& bl)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+
   const int ret = RGWPutObj_ObjStore::get_data(bl);
   if (ret == 0) {
     const int ret_auth = do_aws4_auth_completion();
@@ -2550,6 +2751,12 @@ static int get_success_retcode(int code)
 
 void RGWPutObj_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret) {
     set_req_state_err(s, op_ret);
     dump_errno(s);
@@ -2633,6 +2840,11 @@ int RGWPutObj_ObjStore_S3::get_decrypt_filter(
     map<string, bufferlist>& attrs,
     bufferlist* manifest_bl)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+
   std::map<std::string, std::string> crypt_http_responses_unused;
 
   int res = 0;
@@ -2659,6 +2871,11 @@ int RGWPutObj_ObjStore_S3::get_encrypt_filter(
     std::unique_ptr<rgw::putobj::DataProcessor> *filter,
     rgw::putobj::DataProcessor *cb)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+
   int res = 0;
   if (!multipart_upload_id.empty()) {
     RGWMPObj mp(s->object->get_name(), multipart_upload_id);
@@ -3223,6 +3440,12 @@ int RGWPostObj_ObjStore_S3::get_encrypt_filter(
 
 int RGWDeleteObj_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   const char *if_unmod = s->info.env->get("HTTP_X_AMZ_DELETE_IF_UNMODIFIED_SINCE");
 
   if (s->system_request) {
@@ -3251,6 +3474,12 @@ int RGWDeleteObj_ObjStore_S3::get_params()
 
 void RGWDeleteObj_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   int r = op_ret;
   if (r == -ENOENT)
     r = 0;
@@ -3268,6 +3497,11 @@ void RGWDeleteObj_ObjStore_S3::send_response()
 
 int RGWCopyObj_ObjStore_S3::init_dest_policy()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+
   RGWAccessControlPolicy_S3 s3policy(s->cct);
 
   /* build a policy for the target object */
@@ -3282,6 +3516,12 @@ int RGWCopyObj_ObjStore_S3::init_dest_policy()
 
 int RGWCopyObj_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if_mod = s->info.env->get("HTTP_X_AMZ_COPY_IF_MODIFIED_SINCE");
   if_unmod = s->info.env->get("HTTP_X_AMZ_COPY_IF_UNMODIFIED_SINCE");
   if_match = s->info.env->get("HTTP_X_AMZ_COPY_IF_MATCH");
@@ -3330,6 +3570,11 @@ int RGWCopyObj_ObjStore_S3::get_params()
 
 int RGWCopyObj_ObjStore_S3::check_storage_class(const rgw_placement_rule& src_placement)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+
   if (src_placement == s->dest_placement) {
     /* can only copy object into itself if replacing attrs */
     s->err.message = "This copy request is illegal because it is trying to copy "
@@ -3343,6 +3588,12 @@ int RGWCopyObj_ObjStore_S3::check_storage_class(const rgw_placement_rule& src_pl
 
 void RGWCopyObj_ObjStore_S3::send_partial_response(off_t ofs)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (! sent_header) {
     if (op_ret)
     set_req_state_err(s, op_ret);
@@ -3367,6 +3618,12 @@ void RGWCopyObj_ObjStore_S3::send_partial_response(off_t ofs)
 
 void RGWCopyObj_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (!sent_header)
     send_partial_response(0);
 
@@ -3382,6 +3639,13 @@ void RGWCopyObj_ObjStore_S3::send_response()
 
 void RGWGetACLs_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -3393,6 +3657,12 @@ void RGWGetACLs_ObjStore_S3::send_response()
 
 int RGWPutACLs_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   int ret =  RGWPutACLs_ObjStore::get_params();
   if (ret >= 0) {
     const int ret_auth = do_aws4_auth_completion();
@@ -3416,6 +3686,11 @@ int RGWPutACLs_ObjStore_S3::get_policy_from_state(rgw::sal::RGWRadosStore *store
 						  struct req_state *s,
 						  stringstream& ss)
 {
+  req_state_span ss_1;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss_1), {}, s, span_name.c_str());
+
   RGWAccessControlPolicy_S3 s3policy(s->cct);
 
   // bucket-* canned acls do not apply to bucket
@@ -3435,6 +3710,12 @@ int RGWPutACLs_ObjStore_S3::get_policy_from_state(rgw::sal::RGWRadosStore *store
 
 void RGWPutACLs_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -3505,6 +3786,13 @@ void RGWDeleteLC_ObjStore_S3::send_response()
 
 void RGWGetCORS_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret) {
     if (op_ret == -ENOENT)
       set_req_state_err(s, ERR_NO_SUCH_CORS_CONFIGURATION);
@@ -3528,6 +3816,12 @@ void RGWGetCORS_ObjStore_S3::send_response()
 
 int RGWPutCORS_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   RGWCORSXMLParser_S3 parser(s->cct);
   RGWCORSConfiguration_S3 *cors_config;
 
@@ -3596,6 +3890,12 @@ int RGWPutCORS_ObjStore_S3::get_params()
 
 void RGWPutCORS_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -3605,6 +3905,13 @@ void RGWPutCORS_ObjStore_S3::send_response()
 
 void RGWDeleteCORS_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   int r = op_ret;
   if (!r || r == -ENOENT)
     r = STATUS_NO_CONTENT;
@@ -3721,6 +4028,12 @@ void RGWSetRequestPayment_ObjStore_S3::send_response()
 
 int RGWInitMultipart_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   RGWAccessControlPolicy_S3 s3policy(s->cct);
   op_ret = create_s3_policy(s, store, s3policy, s->owner);
   if (op_ret < 0)
@@ -3733,6 +4046,12 @@ int RGWInitMultipart_ObjStore_S3::get_params()
 
 void RGWInitMultipart_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -3761,6 +4080,11 @@ void RGWInitMultipart_ObjStore_S3::send_response()
 
 int RGWInitMultipart_ObjStore_S3::prepare_encryption(map<string, bufferlist>& attrs)
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+
   int res = 0;
   res = rgw_s3_prepare_encrypt(s, attrs, nullptr, nullptr, crypt_http_responses);
   return res;
@@ -3768,6 +4092,12 @@ int RGWInitMultipart_ObjStore_S3::prepare_encryption(map<string, bufferlist>& at
 
 int RGWCompleteMultipart_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   int ret = RGWCompleteMultipart_ObjStore::get_params();
   if (ret < 0) {
     return ret;
@@ -3780,6 +4110,12 @@ int RGWCompleteMultipart_ObjStore_S3::get_params()
 
 void RGWCompleteMultipart_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -3814,6 +4150,13 @@ void RGWCompleteMultipart_ObjStore_S3::send_response()
 
 void RGWAbortMultipart_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+  set_span_tag(s->root_span, "success", "true");
+
   int r = op_ret;
   if (!r)
     r = STATUS_NO_CONTENT;
@@ -3825,6 +4168,13 @@ void RGWAbortMultipart_ObjStore_S3::send_response()
 
 void RGWListMultipart_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -3877,6 +4227,13 @@ void RGWListMultipart_ObjStore_S3::send_response()
 
 void RGWListBucketMultiparts_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret < 0)
     set_req_state_err(s, op_ret);
   dump_errno(s);
@@ -4198,6 +4555,12 @@ void RGWGetBucketObjectLock_ObjStore_S3::send_response()
 
 int RGWPutObjRetention_ObjStore_S3::get_params()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "gateway", "s3");
+
   const char *bypass_gov_header = s->info.env->get("HTTP_X_AMZ_BYPASS_GOVERNANCE_RETENTION");
   if (bypass_gov_header) {
     std::string bypass_gov_decoded = url_decode(bypass_gov_header);
@@ -4211,6 +4574,12 @@ int RGWPutObjRetention_ObjStore_S3::get_params()
 
 void RGWPutObjRetention_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+
   if (op_ret) {
     set_req_state_err(s, op_ret);
   }
@@ -4220,6 +4589,13 @@ void RGWPutObjRetention_ObjStore_S3::send_response()
 
 void RGWGetObjRetention_ObjStore_S3::send_response()
 {
+  req_state_span ss;
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  start_trace(std::move(ss), {}, s, span_name.c_str());
+  set_span_tag(s->root_span, "success", "true");
+  set_span_tag(s->root_span, "gateway", "s3");
+
   if (op_ret) {
     set_req_state_err(s, op_ret);
   }

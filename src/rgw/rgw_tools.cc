@@ -35,11 +35,16 @@ static std::map<std::string, std::string>* ext_mime_map;
 
 int rgw_init_ioctx(librados::Rados *rados, const rgw_pool& pool,
                    librados::IoCtx& ioctx, bool create,
-		   bool mostly_omap)
-{
+		   bool mostly_omap, const Span& parent_span)
+{ 
+  Span span_1 = trace(parent_span, "rgw_tools.cc : rados->ioctx_create");
   int r = rados->ioctx_create(pool.name.c_str(), ioctx);
+  finish_trace(span_1);
+
+  Span span_2 = trace(parent_span, "rgw_tools.cc :rados->pool_create");
   if (r == -ENOENT && create) {
     r = rados->pool_create(pool.name.c_str());
+  finish_trace(span_2);
     if (r == -ERANGE) {
       dout(0)
         << __func__
@@ -64,6 +69,7 @@ int rgw_init_ioctx(librados::Rados *rados, const rgw_pool& pool,
 
     if (mostly_omap) {
       // set pg_autoscale_bias
+      Span span_3 = trace(parent_span, "rados->mon_command:rgw_rados_pool_autoscale_bias");
       bufferlist inbl;
       float bias = g_conf().get_val<double>("rgw_rados_pool_autoscale_bias");
       int r = rados->mon_command(
@@ -71,10 +77,12 @@ int rgw_init_ioctx(librados::Rados *rados, const rgw_pool& pool,
 	pool.name + "\", \"var\": \"pg_autoscale_bias\", \"val\": \"" +
 	stringify(bias) + "\"}",
 	inbl, NULL, NULL);
+      finish_trace(span_3);
       if (r < 0) {
 	dout(10) << __func__ << " warning: failed to set pg_autoscale_bias on "
 		 << pool.name << dendl;
       }
+      Span span_4 = trace(parent_span, "rados->mon_command:rgw_rados_pool_autoscale_bias");
       // set pg_num_min
       int min = g_conf().get_val<uint64_t>("rgw_rados_pool_pg_num_min");
       r = rados->mon_command(
@@ -82,17 +90,20 @@ int rgw_init_ioctx(librados::Rados *rados, const rgw_pool& pool,
 	pool.name + "\", \"var\": \"pg_num_min\", \"val\": \"" +
 	stringify(min) + "\"}",
 	inbl, NULL, NULL);
+      finish_trace(span_4);
       if (r < 0) {
 	dout(10) << __func__ << " warning: failed to set pg_num_min on "
 		 << pool.name << dendl;
       }
       // set recovery_priority
+      Span span_5 = trace(parent_span, "rgw_rados_pool_recovery_priority");
       int p = g_conf().get_val<uint64_t>("rgw_rados_pool_recovery_priority");
       r = rados->mon_command(
 	"{\"prefix\": \"osd pool set\", \"pool\": \"" +
 	pool.name + "\", \"var\": \"recovery_priority\": \"" +
 	stringify(p) + "\"}",
 	inbl, NULL, NULL);
+      finish_trace(span_5);
       if (r < 0) {
 	dout(10) << __func__ << " warning: failed to set recovery_priority on "
 		 << pool.name << dendl;
@@ -248,8 +259,13 @@ thread_local bool is_asio_thread = false;
 
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       librados::ObjectReadOperation *op, bufferlist* pbl,
-                      int flags, optional_yield y)
+                      int flags, optional_yield y, const Span& parent_span)
 {
+  std::string span_name = "";
+  span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  Span span_1 = trace(parent_span, span_name.c_str());
+  const Span& this_parent_span(span_1);
+
 #ifdef HAVE_BOOST_CONTEXT
   // given a yield_context, call async_operate() to yield the coroutine instead
   // of blocking
@@ -268,19 +284,25 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
     dout(20) << "WARNING: blocking librados call" << dendl;
   }
 #endif
+  Span span_2 = trace(this_parent_span, "librados_cxx.cc IoCtx::operate()");
   return ioctx.operate(oid, op, nullptr, flags);
 }
 
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       librados::ObjectReadOperation *op, bufferlist* pbl,
-                      optional_yield y)
+                      optional_yield y, const Span& parent_span)
 {
-  return rgw_rados_operate(ioctx, oid, op, pbl, 0, y);
+  return rgw_rados_operate(ioctx, oid, op, pbl, 0, y, parent_span);
 }
 
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
-                      librados::ObjectWriteOperation *op, int flags, optional_yield y)
+                      librados::ObjectWriteOperation *op, int flags, optional_yield y, const Span& parent_span)
 {
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;   
+  Span span_1 = trace(parent_span, span_name.c_str());
+  const Span& this_parent_span(span_1);
+
 #ifdef HAVE_BOOST_CONTEXT
   if (y) {
     auto& context = y.get_io_context();
@@ -293,13 +315,14 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
     dout(20) << "WARNING: blocking librados call" << dendl;
   }
 #endif
+  Span span_2 = trace(this_parent_span, "librados_cxx.cc IoCtx::operate()");
   return ioctx.operate(oid, op, flags);
 }
 
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
-                      librados::ObjectWriteOperation *op, optional_yield y)
+                      librados::ObjectWriteOperation *op, optional_yield y, const Span& parent_span)
 {
-  return rgw_rados_operate(ioctx, oid, op, 0, y);
+  return rgw_rados_operate(ioctx, oid, op, 0, y, parent_span);
 }
 
 int rgw_rados_notify(librados::IoCtx& ioctx, const std::string& oid,

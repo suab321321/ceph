@@ -321,8 +321,13 @@ bool rgw_bucket_object_check_filter(const string& oid)
   return rgw_obj_key::oid_to_key_in_ns(oid, &key, ns);
 }
 
-int rgw_remove_object(rgw::sal::RGWRadosStore *store, const RGWBucketInfo& bucket_info, const rgw_bucket& bucket, rgw_obj_key& key)
+int rgw_remove_object(rgw::sal::RGWRadosStore *store, const RGWBucketInfo& bucket_info, const rgw_bucket& bucket, rgw_obj_key& key, const Span& parent_span)
 {
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  Span span_1 = trace(parent_span, span_name.c_str());
+  const Span& this_parent_span(span_1);
+
   RGWObjectCtx rctx(store);
 
   if (key.instance.empty()) {
@@ -331,7 +336,7 @@ int rgw_remove_object(rgw::sal::RGWRadosStore *store, const RGWBucketInfo& bucke
 
   rgw_obj obj(bucket, key);
 
-  return store->getRados()->delete_obj(rctx, bucket_info, obj, bucket_info.versioning_status());
+  return store->getRados()->delete_obj(rctx, bucket_info, obj, bucket_info.versioning_status(), 0, ceph::real_time(), nullptr, this_parent_span);
 }
 
 /* xxx dang */
@@ -3216,8 +3221,13 @@ int RGWBucketCtl::read_bucket_entrypoint_info(const rgw_bucket& bucket,
 int RGWBucketCtl::store_bucket_entrypoint_info(const rgw_bucket& bucket,
                                                RGWBucketEntryPoint& info,
                                                optional_yield y,
-                                               const Bucket::PutParams& params)
+                                               const Bucket::PutParams& params, const Span& parent_span)
 {
+  std::string span_name="";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  Span span_1 = trace(parent_span, span_name.c_str());
+  const Span& this_parent_span(span_1);
+
   return bm_handler->call([&](RGWSI_Bucket_EP_Ctx& ctx) {
     return svc.bucket->store_bucket_entrypoint_info(ctx,
                                                     RGWSI_Bucket::get_entrypoint_meta_key(bucket),
@@ -3226,7 +3236,7 @@ int RGWBucketCtl::store_bucket_entrypoint_info(const rgw_bucket& bucket,
                                                     params.mtime,
                                                     params.attrs,
                                                     params.objv_tracker,
-                                                    y);
+                                                    y, this_parent_span);
   });
 }
 
@@ -3318,7 +3328,7 @@ int RGWBucketCtl::do_store_bucket_instance_info(RGWSI_Bucket_BI_Ctx& ctx,
                                                 const rgw_bucket& bucket,
                                                 RGWBucketInfo& info,
                                                 optional_yield y,
-                                                const BucketInstance::PutParams& params)
+                                                const BucketInstance::PutParams& params, const Span& parent_span)
 {
   if (params.objv_tracker) {
     info.objv_tracker = *params.objv_tracker;
@@ -3331,16 +3341,21 @@ int RGWBucketCtl::do_store_bucket_instance_info(RGWSI_Bucket_BI_Ctx& ctx,
                                                 params.exclusive,
                                                 params.mtime,
                                                 params.attrs,
-                                                y);
+                                                y, parent_span);
 }
 
 int RGWBucketCtl::store_bucket_instance_info(const rgw_bucket& bucket,
                                             RGWBucketInfo& info,
                                             optional_yield y,
-                                            const BucketInstance::PutParams& params)
+                                            const BucketInstance::PutParams& params, const Span& parent_span)
 {
+  std::string span_name="";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+  Span span_1 = trace(parent_span, span_name.c_str());
+  const Span& this_parent_span(span_1);
+
   return bmi_handler->call([&](RGWSI_Bucket_BI_Ctx& ctx) {
-    return do_store_bucket_instance_info(ctx, bucket, info, y, params);
+    return do_store_bucket_instance_info(ctx, bucket, info, y, params, this_parent_span);
   });
 }
 
@@ -3456,14 +3471,22 @@ int RGWBucketCtl::convert_old_bucket_info(RGWSI_Bucket_X_Ctx& ctx,
 int RGWBucketCtl::set_bucket_instance_attrs(RGWBucketInfo& bucket_info,
                                             map<string, bufferlist>& attrs,
                                             RGWObjVersionTracker *objv_tracker,
-                                            optional_yield y)
+                                            optional_yield y, const Span& parent_span)
 {
+  std::string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__; 
+  Span span_1 = trace(parent_span, span_name.c_str());
+  const Span& this_parent_span(span_1);
+
   return call([&](RGWSI_Bucket_X_Ctx& ctx) {
     rgw_bucket& bucket = bucket_info.bucket;
 
     if (!bucket_info.has_instance_obj) {
       /* an old bucket object, need to convert it */
+        Span span_2 = trace(this_parent_span, "rgw_bucket.cc : RGWBucketCtl::convert_old_bucket_info");
         int ret = convert_old_bucket_info(ctx, bucket, y);
+        finish_trace(span_2);
+
         if (ret < 0) {
           ldout(cct, 0) << "ERROR: failed converting old bucket info: " << ret << dendl;
           return ret;
@@ -3476,7 +3499,7 @@ int RGWBucketCtl::set_bucket_instance_attrs(RGWBucketInfo& bucket_info,
                                          y,
                                          BucketInstance::PutParams().set_attrs(&attrs)
                                                                     .set_objv_tracker(objv_tracker)
-                                                                    .set_orig_info(&bucket_info));
+                                                                    .set_orig_info(&bucket_info), this_parent_span);
     });
 }
 
