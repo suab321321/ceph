@@ -153,6 +153,11 @@ public:
   int get_ret() const { return op_ret; }
 
   virtual int init_processing() {
+    req_state_span ss;
+    string span_name = "";
+    span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
+    start_trace(std::move(ss), {}, s, span_name.c_str());
+
     if (dialect_handler->supports_quota()) {
       op_ret = init_quota();
       if (op_ret < 0)
