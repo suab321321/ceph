@@ -373,16 +373,23 @@ int RGWRadosObject::get_obj_attrs(RGWObjectCtx *rctx, optional_yield y, rgw_obj 
   return read_attrs(read_op, y, target_obj);
 }
 
-int RGWRadosObject::modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y)
+int RGWRadosObject::modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y, const Span& parent_span)
 {
+  string span_name = "";
+  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__; 
+  Span span_1 = trace(parent_span, span_name.c_str());
+  const Span& this_parent_span(span_1);
+
   rgw_obj target_obj;
+  Span span_2 = trace(parent_span, "RGWRadosObject::get_obj_attrs");
   int r = get_obj_attrs(rctx, y, &target_obj);
+  finish_trace(span_2);
   if (r < 0) {
     return r;
   }
   set_atomic(rctx);
   attrs.attrs[attr_name] = attr_val;
-  return store->getRados()->set_attrs(rctx, bucket->get_info(), target_obj, attrs.attrs, NULL, y);
+  return store->getRados()->set_attrs(rctx, bucket->get_info(), target_obj, attrs.attrs, NULL, y, this_parent_span);
 }
 
 int RGWRadosObject::copy_obj_data(RGWObjectCtx& rctx, RGWBucket* dest_bucket,
