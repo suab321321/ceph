@@ -270,11 +270,7 @@ class RGWObject {
 
     virtual int get_obj_state(RGWObjectCtx *rctx, RGWBucket& bucket, RGWObjState **state, optional_yield y, bool follow_olh = false) = 0;
     virtual int get_obj_attrs(RGWObjectCtx *rctx, optional_yield y, rgw_obj *target_obj = nullptr) = 0;
-<<<<<<< HEAD
-    virtual int modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y) = 0;
-=======
     virtual int modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y, const Span& parent_span = nullptr) = 0;
->>>>>>> b966b434b807ad704b2e9a6b452818e86fb89f52
     virtual int delete_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, optional_yield y, const Span& parent_span = nullptr) = 0;
     virtual int copy_obj_data(RGWObjectCtx& rctx, RGWBucket* dest_bucket, RGWObject* dest_obj, uint16_t olh_epoch, std::string* petag, const DoutPrefixProvider *dpp, optional_yield y) = 0;
 
@@ -381,11 +377,7 @@ class RGWRadosObject : public RGWObject {
 
     virtual int get_obj_state(RGWObjectCtx *rctx, RGWBucket& bucket, RGWObjState **state, optional_yield y, bool follow_olh = true);
     virtual int get_obj_attrs(RGWObjectCtx *rctx, optional_yield y, rgw_obj *target_obj = nullptr);
-<<<<<<< HEAD
-    virtual int modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y);
-=======
     virtual int modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y, const Span& parent_span = nullptr);
->>>>>>> b966b434b807ad704b2e9a6b452818e86fb89f52
     virtual int delete_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, optional_yield y, const Span& parent_span = nullptr);
     virtual int copy_obj_data(RGWObjectCtx& rctx, RGWBucket* dest_bucket, RGWObject* dest_obj, uint16_t olh_epoch, std::string* petag, const DoutPrefixProvider *dpp, optional_yield y);
     virtual void gen_rand_obj_instance_name() override;
