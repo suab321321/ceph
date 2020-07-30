@@ -269,7 +269,7 @@ class RGWObject {
     const std::string &get_name() const { return key.name; }
 
     virtual int get_obj_state(RGWObjectCtx *rctx, RGWBucket& bucket, RGWObjState **state, optional_yield y, bool follow_olh = false) = 0;
-    virtual int get_obj_attrs(RGWObjectCtx *rctx, optional_yield y, rgw_obj *target_obj = nullptr) = 0;
+    virtual int get_obj_attrs(RGWObjectCtx *rctx, optional_yield y, rgw_obj *target_obj = nullptr, const Span& parent_span = nullptr) = 0;
     virtual int modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y, const Span& parent_span = nullptr) = 0;
     virtual int delete_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, optional_yield y, const Span& parent_span = nullptr) = 0;
     virtual int copy_obj_data(RGWObjectCtx& rctx, RGWBucket* dest_bucket, RGWObject* dest_obj, uint16_t olh_epoch, std::string* petag, const DoutPrefixProvider *dpp, optional_yield y) = 0;
@@ -376,7 +376,7 @@ class RGWRadosObject : public RGWObject {
     virtual void set_prefetch_data(RGWObjectCtx *rctx);
 
     virtual int get_obj_state(RGWObjectCtx *rctx, RGWBucket& bucket, RGWObjState **state, optional_yield y, bool follow_olh = true);
-    virtual int get_obj_attrs(RGWObjectCtx *rctx, optional_yield y, rgw_obj *target_obj = nullptr);
+    virtual int get_obj_attrs(RGWObjectCtx *rctx, optional_yield y, rgw_obj *target_obj = nullptr, const Span& parent_span = nullptr);
     virtual int modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y, const Span& parent_span = nullptr);
     virtual int delete_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, optional_yield y, const Span& parent_span = nullptr);
     virtual int copy_obj_data(RGWObjectCtx& rctx, RGWBucket* dest_bucket, RGWObject* dest_obj, uint16_t olh_epoch, std::string* petag, const DoutPrefixProvider *dpp, optional_yield y);
@@ -386,7 +386,7 @@ class RGWRadosObject : public RGWObject {
     }
 
   private:
-    int read_attrs(RGWRados::Object::Read &read_op, optional_yield y, rgw_obj *target_obj = nullptr);
+    int read_attrs(RGWRados::Object::Read &read_op, optional_yield y, rgw_obj *target_obj = nullptr, const Span& parent_span = nullptr);
 };
 
 class RGWRadosBucket : public RGWBucket {
