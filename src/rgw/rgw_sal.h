@@ -270,8 +270,8 @@ class RGWObject {
 
     virtual int get_obj_state(RGWObjectCtx *rctx, RGWBucket& bucket, RGWObjState **state, optional_yield y, bool follow_olh = false) = 0;
     virtual int get_obj_attrs(RGWObjectCtx *rctx, optional_yield y, rgw_obj *target_obj = nullptr) = 0;
-    virtual int modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y) = 0;
-    virtual int delete_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, optional_yield y) = 0;
+    virtual int modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y, const Span& parent_span = nullptr) = 0;
+    virtual int delete_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, optional_yield y, const Span& parent_span = nullptr) = 0;
     virtual int copy_obj_data(RGWObjectCtx& rctx, RGWBucket* dest_bucket, RGWObject* dest_obj, uint16_t olh_epoch, std::string* petag, const DoutPrefixProvider *dpp, optional_yield y) = 0;
 
     ceph::real_time get_mtime(void) const { return mtime; }
@@ -377,8 +377,8 @@ class RGWRadosObject : public RGWObject {
 
     virtual int get_obj_state(RGWObjectCtx *rctx, RGWBucket& bucket, RGWObjState **state, optional_yield y, bool follow_olh = true);
     virtual int get_obj_attrs(RGWObjectCtx *rctx, optional_yield y, rgw_obj *target_obj = nullptr);
-    virtual int modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y);
-    virtual int delete_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, optional_yield y);
+    virtual int modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y, const Span& parent_span = nullptr);
+    virtual int delete_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, optional_yield y, const Span& parent_span = nullptr);
     virtual int copy_obj_data(RGWObjectCtx& rctx, RGWBucket* dest_bucket, RGWObject* dest_obj, uint16_t olh_epoch, std::string* petag, const DoutPrefixProvider *dpp, optional_yield y);
     virtual void gen_rand_obj_instance_name() override;
     virtual std::unique_ptr<RGWObject> clone() {
@@ -458,7 +458,7 @@ class RGWRadosBucket : public RGWBucket {
     virtual int link(RGWUser* new_user, optional_yield y) override;
     virtual int unlink(RGWUser* new_user, optional_yield y) override;
     virtual int chown(RGWUser* new_user, RGWUser* old_user, optional_yield y) override;
-    virtual int put_instance_info(bool exclusive, ceph::real_time mtime) override;
+    virtual int put_instance_info(bool exclusive, ceph::real_time mtime, const Span& parent_span = nullptr) override;
     virtual bool is_owner(RGWUser* user) override;
     virtual int check_empty(optional_yield y, const Span& this_parent_span = nullptr) override;
     virtual int check_quota(RGWQuotaInfo& user_quota, RGWQuotaInfo& bucket_quota, uint64_t obj_size) override;
