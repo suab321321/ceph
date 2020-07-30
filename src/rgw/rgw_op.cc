@@ -1193,6 +1193,10 @@ void RGWDeleteObjTags::execute()
 
 int RGWGetBucketTags::verify_permission()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
 
   if (!verify_bucket_permission(this, s, rgw::IAM::s3GetBucketTagging)) {
     return -EACCES;
@@ -1203,11 +1207,21 @@ int RGWGetBucketTags::verify_permission()
 
 void RGWGetBucketTags::pre_exec()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+
   rgw_bucket_object_pre_exec(s);
 }
 
 void RGWGetBucketTags::execute() 
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+
   auto iter = s->bucket_attrs.find(RGW_ATTR_TAGS);
   if (iter != s->bucket_attrs.end()) {
     has_tags = true;
@@ -1219,10 +1233,21 @@ void RGWGetBucketTags::execute()
 }
 
 int RGWPutBucketTags::verify_permission() {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+
   return verify_bucket_owner_or_policy(s, rgw::IAM::s3PutBucketTagging);
 }
 
 void RGWPutBucketTags::execute() {
+
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+  const Span& this_parent_span(s->stack_span.top());
 
   op_ret = get_params();
   if (op_ret < 0) 
@@ -1235,26 +1260,42 @@ void RGWPutBucketTags::execute() {
     }
   }
 
-  op_ret = retry_raced_bucket_write(store->getRados(), s, [this] {
+  op_ret = retry_raced_bucket_write(store->getRados(), s, [this, &this_parent_span] {
     map<string, bufferlist> attrs = s->bucket_attrs;
     attrs[RGW_ATTR_TAGS] = tags_bl;
-    return store->ctl()->bucket->set_bucket_instance_attrs(s->bucket->get_info(), attrs, &s->bucket->get_info().objv_tracker, s->yield);
+    return store->ctl()->bucket->set_bucket_instance_attrs(s->bucket->get_info(), attrs, &s->bucket->get_info().objv_tracker, s->yield, this_parent_span);
   });
 
 }
 
 void RGWDeleteBucketTags::pre_exec()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+
   rgw_bucket_object_pre_exec(s);
 }
 
 int RGWDeleteBucketTags::verify_permission()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+
   return verify_bucket_owner_or_policy(s, rgw::IAM::s3PutBucketTagging);
 }
 
 void RGWDeleteBucketTags::execute()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+  const Span& this_parent_span(s->stack_span.top());
+
   if (!store->svc()->zone->is_meta_master()) {
     bufferlist in_data;
     op_ret = forward_request_to_master(s, nullptr, store, in_data, nullptr);
@@ -1264,10 +1305,10 @@ void RGWDeleteBucketTags::execute()
     }
   }
 
-  op_ret = retry_raced_bucket_write(store->getRados(), s, [this] {
+  op_ret = retry_raced_bucket_write(store->getRados(), s, [this, &this_parent_span] {
     map<string, bufferlist> attrs = s->bucket_attrs;
     attrs.erase(RGW_ATTR_TAGS);
-    op_ret = store->ctl()->bucket->set_bucket_instance_attrs(s->bucket->get_info(), attrs, &s->bucket->get_info().objv_tracker, s->yield);
+    op_ret = store->ctl()->bucket->set_bucket_instance_attrs(s->bucket->get_info(), attrs, &s->bucket->get_info().objv_tracker, s->yield, this_parent_span);
     if (op_ret < 0) {
       ldpp_dout(this, 0) << "RGWDeleteBucketTags() failed to remove RGW_ATTR_TAGS on bucket="
 			 << s->bucket->get_name()
