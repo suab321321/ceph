@@ -4791,6 +4791,11 @@ void RGWPutMetadataObject::execute()
 
 int RGWDeleteObj::handle_slo_manifest(bufferlist& bl)
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+
   RGWSLOInfo slo_info;
   auto bliter = bl.cbegin();
   try {
@@ -4840,6 +4845,11 @@ int RGWDeleteObj::handle_slo_manifest(bufferlist& bl)
 
 int RGWDeleteObj::verify_permission()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+
   int op_ret = get_params();
   if (op_ret) {
     return op_ret;
@@ -4900,11 +4910,21 @@ int RGWDeleteObj::verify_permission()
 
 void RGWDeleteObj::pre_exec()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
   rgw_bucket_object_pre_exec(s);
 }
 
 void RGWDeleteObj::execute()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+  const Span& this_parent_span(s->stack_span.top());
+
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
     return;
@@ -4992,10 +5012,12 @@ void RGWDeleteObj::execute()
     s->object->set_atomic(s->obj_ctx);
 
     bool ver_restored = false;
+    Span span_1 = trace(this_parent_span, "rgw_rados.cc : RGWRados::swift_versoning_restore");
     op_ret = store->getRados()->swift_versioning_restore(*obj_ctx, s->bucket_owner.get_id(),
 							 s->bucket.get(),
 							 s->object.get(),
 							 ver_restored, this);
+    finish_trace(span_1);
     if (op_ret < 0) {
       return;
     }
@@ -5019,7 +5041,7 @@ void RGWDeleteObj::execute()
       del_op.params.unmod_since = unmod_since;
       del_op.params.high_precision_time = s->system_request; /* system request uses high precision time */
 
-      op_ret = del_op.delete_obj(s->yield);
+      op_ret = del_op.delete_obj(s->yield, this_parent_span);
       if (op_ret >= 0) {
         delete_marker = del_op.result.delete_marker;
         version_id = del_op.result.version_id;
