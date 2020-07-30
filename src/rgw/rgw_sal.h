@@ -64,7 +64,7 @@ class RGWStore : public DoutPrefixProvider {
 			    bool obj_lock_enabled,
 			    bool *existed,
 			    req_info& req_info,
-			    std::unique_ptr<RGWBucket>* bucket) = 0;
+			    std::unique_ptr<RGWBucket>* bucket, const Span& parent_span = nullptr) = 0;
     virtual RGWBucketList* list_buckets(void) = 0;
 
     virtual void finalize(void)=0;
@@ -499,7 +499,7 @@ class RGWRadosStore : public RGWStore {
 			    bool obj_lock_enabled,
 			    bool *existed,
 			    req_info& req_info,
-			    std::unique_ptr<RGWBucket>* bucket);
+			    std::unique_ptr<RGWBucket>* bucket, const Span& parent_span = nullptr) override;
     virtual RGWBucketList* list_buckets(void) { return new RGWBucketList(); }
 
     void setRados(RGWRados * st) { rados = st; }

@@ -2946,6 +2946,11 @@ int RGWGetBucketLocation::verify_permission()
 
 int RGWCreateBucket::verify_permission()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+  const Span& this_parent_span(s->stack_span.top());
   /* This check is mostly needed for S3 that doesn't support account ACL.
    * Swift doesn't allow to delegate any permission to an anonymous user,
    * so it will become an early exit in such case. */
@@ -2975,9 +2980,11 @@ int RGWCreateBucket::verify_permission()
   if (s->user->get_max_buckets()) {
     rgw::sal::RGWBucketList buckets;
     string marker;
+    Span span_1 = trace(this_parent_span, "rgw_bucket.cc : rgw_read_user_buckets");
     op_ret = rgw_read_user_buckets(store, s->user->get_id(), buckets,
 				   marker, string(), s->user->get_max_buckets(),
 				   false);
+    finish_trace(span_1);
     if (op_ret < 0) {
       return op_ret;
     }
@@ -2994,6 +3001,11 @@ int forward_request_to_master(struct req_state *s, obj_version *objv,
                               rgw::sal::RGWRadosStore *store, bufferlist& in_data,
                               JSONParser *jp, req_info *forward_info)
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+
   if (!store->svc()->zone->get_master_conn()) {
     ldpp_dout(s, 0) << "rest connection is invalid" << dendl;
     return -EINVAL;
@@ -3018,6 +3030,10 @@ int forward_request_to_master(struct req_state *s, obj_version *objv,
 
 void RGWCreateBucket::pre_exec()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
   rgw_bucket_object_pre_exec(s);
 }
 
@@ -3189,6 +3205,12 @@ static void filter_out_website(std::map<std::string, ceph::bufferlist>& add_attr
 
 void RGWCreateBucket::execute()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+  const Span& this_parent_span(s->stack_span.top());
+
   buffer::list aclbl;
   buffer::list corsbl;
   bool existed;
@@ -3232,7 +3254,9 @@ void RGWCreateBucket::execute()
 
   /* we need to make sure we read bucket info, it's not read before for this
    * specific request */
+  Span span_1 = trace(this_parent_span, "rgw_sal.cc : RGWRadosStore::get_bucket");
   op_ret = store->get_bucket(s->user, s->bucket_tenant, s->bucket_name, &s->bucket);
+  finish_trace(span_1);
   if (op_ret < 0 && op_ret != -ENOENT)
     return;
   s->bucket_exists = (op_ret != -ENOENT);
@@ -3308,7 +3332,7 @@ void RGWCreateBucket::execute()
 				info.swift_ver_location,
 				pquota_info, attrs, info, ep_objv,
 				true, obj_lock_enabled, &s->bucket_exists, s->info,
-				&s->bucket);
+				&s->bucket, this_parent_span);
 
   /* continue if EEXIST and create_bucket will fail below.  this way we can
    * recover from a partial create by retrying it. */
@@ -3332,8 +3356,10 @@ void RGWCreateBucket::execute()
     }
   }
 
+  Span span_3 = trace(this_parent_span, "rgw_bucket.cc : RGWBucketCtl::link_bucket");
   op_ret = store->ctl()->bucket->link_bucket(s->user->get_id(), s->bucket->get_bi(),
                                           s->bucket->get_creation_time(), s->yield, false);
+  finish_trace(span_3);
   if (op_ret && !existed && op_ret != -EEXIST) {
     /* if it exists (or previously existed), don't remove it! */
     op_ret = store->ctl()->bucket->unlink_bucket(s->user->get_id(), s->bucket->get_bi(), s->yield);
