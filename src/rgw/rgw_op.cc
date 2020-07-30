@@ -2839,6 +2839,11 @@ void RGWStatBucket::execute()
 
 int RGWListBucket::verify_permission()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+
   op_ret = get_params();
   if (op_ret < 0) {
     return op_ret;
@@ -2864,6 +2869,10 @@ int RGWListBucket::verify_permission()
 
 int RGWListBucket::parse_max_keys()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
   // Bound max value of max-keys to configured value for security
   // Bound min value of max-keys to '0'
   // Some S3 clients explicitly send max-keys=0 to detect if the bucket is
@@ -2875,11 +2884,21 @@ int RGWListBucket::parse_max_keys()
 
 void RGWListBucket::pre_exec()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
   rgw_bucket_object_pre_exec(s);
 }
 
 void RGWListBucket::execute()
 {
+  req_state_span ss;
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
+  const Span& this_parent_span(s->stack_span.top());
+
   if (!s->bucket_exists) {
     op_ret = -ERR_NO_SUCH_BUCKET;
     return;
@@ -2893,7 +2912,7 @@ void RGWListBucket::execute()
   }
 
   if (need_container_stats()) {
-    op_ret = s->bucket->update_container_stats();
+    op_ret = s->bucket->update_container_stats(this_parent_span);
   }
 
   RGWRados::Bucket target(store->getRados(), s->bucket->get_info());
@@ -2909,7 +2928,7 @@ void RGWListBucket::execute()
   list_op.params.list_versions = list_versions;
   list_op.params.allow_unordered = allow_unordered;
 
-  op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield);
+  op_ret = list_op.list_objects(max, &objs, &common_prefixes, &is_truncated, s->yield, this_parent_span);
   if (op_ret >= 0) {
     next_marker = list_op.get_next_marker();
   }
