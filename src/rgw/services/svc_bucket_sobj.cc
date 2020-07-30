@@ -242,9 +242,9 @@ int RGWSI_Bucket_SObj::store_bucket_entrypoint_info(RGWSI_Bucket_EP_Ctx& ctx,
                                                     RGWObjVersionTracker *objv_tracker,
                                                     optional_yield y, const Span& parent_span)
 {
-  std::string span_name="";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   bufferlist bl;
@@ -491,9 +491,9 @@ int RGWSI_Bucket_SObj::store_bucket_instance_info(RGWSI_Bucket_BI_Ctx& ctx,
                                                   map<string, bufferlist> *pattrs,
                                                   optional_yield y, const Span& parent_span)
 {
-  std::string span_name="";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;  
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer,  __FILENAME__, "function",  __PRETTY_FUNCTION__);  
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   bufferlist bl;

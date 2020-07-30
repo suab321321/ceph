@@ -1845,9 +1845,9 @@ static http_op op_from_method(const char *method)
 int RGWHandler_REST::init_permissions(RGWOp* op)
 {
   req_state_span ss;
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  start_trace(std::move(ss), {}, s, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
 
   if (op->get_type() == RGW_OP_CREATE_BUCKET) {
     // We don't need user policies in case of STS token returned by AssumeRole, hence the check for user type
@@ -1875,9 +1875,9 @@ int RGWHandler_REST::init_permissions(RGWOp* op)
 int RGWHandler_REST::read_permissions(RGWOp* op_obj)
 {
   req_state_span ss;
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  start_trace(std::move(ss), {}, s, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
 
   bool only_bucket = false;
 

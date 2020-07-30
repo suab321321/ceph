@@ -4,6 +4,7 @@
 #define SIGNED_RIGHT_SHIFT_IS 1
 #define ARITHMETIC_RIGHT_SHIFT 1
 
+#include<cstring>
 #include <arpa/inet.h>
 #include <yaml-cpp/yaml.h>
 
@@ -81,6 +82,16 @@ static inline void set_span_tag(Span& span, const char* key, const char* value)
 {
   if(span)
     span->SetTag(key, value);
+}
+
+//function returning span_name
+static inline void get_span_name(char* buffer, const char* p1, const char* p2, const char* p3)
+{
+  strcpy(buffer, p1);
+  strcat(buffer, " ");
+  strcat(buffer,p2);
+  strcat(buffer, " ");
+  strcat(buffer,p3);
 }
 
 #endif

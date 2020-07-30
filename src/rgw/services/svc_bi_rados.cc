@@ -41,9 +41,9 @@ int RGWSI_BucketIndex_RADOS::open_pool(const rgw_pool& pool,
 int RGWSI_BucketIndex_RADOS::open_bucket_index_pool(const RGWBucketInfo& bucket_info,
                                                     RGWSI_RADOS::Pool *index_pool, const Span& parent_span)
 {
-  std::string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   const rgw_pool& explicit_pool = bucket_info.bucket.explicit_placement.index_pool;
@@ -174,9 +174,9 @@ int RGWSI_BucketIndex_RADOS::open_bucket_index(const RGWBucketInfo& bucket_info,
                                                map<int, string> *bucket_instance_ids, const Span& parent_span)
 {
   string bucket_oid_base;
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
 
   int shard_id = _shard_id.value_or(-1);
   int ret = open_bucket_index_base(bucket_info, index_pool, &bucket_oid_base);
@@ -330,9 +330,9 @@ int RGWSI_BucketIndex_RADOS::cls_bucket_head(const RGWBucketInfo& bucket_info,
 int RGWSI_BucketIndex_RADOS::init_index(RGWBucketInfo& bucket_info, const Span& parent_span)
 {
   string bucket_oid_base;
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   RGWSI_RADOS::Pool index_pool;

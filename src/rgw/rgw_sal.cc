@@ -40,9 +40,9 @@ namespace rgw::sal {
 int RGWRadosUser::list_buckets(const string& marker, const string& end_marker,
 			       uint64_t max, bool need_stats, RGWBucketList &buckets, const Span& parent_span)
 {
-  std::string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   RGWUserBuckets ulist;
@@ -90,9 +90,9 @@ RGWObject *RGWRadosBucket::create_object(const rgw_obj_key &key)
 
 int RGWRadosBucket::remove_bucket(bool delete_children, std::string prefix, std::string delimiter, optional_yield y, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   int ret;
@@ -230,9 +230,9 @@ int RGWRadosBucket::sync_user_stats()
 
 int RGWRadosBucket::update_container_stats(const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;   
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);   
+  Span span_1 = trace(parent_span, buffer);
 
   int ret;
   map<std::string, RGWBucketEnt> m;
@@ -375,9 +375,9 @@ int RGWRadosObject::get_obj_attrs(RGWObjectCtx *rctx, optional_yield y, rgw_obj 
 
 int RGWRadosObject::modify_obj_attrs(RGWObjectCtx *rctx, const char *attr_name, bufferlist& attr_val, optional_yield y, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__; 
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__); 
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   rgw_obj target_obj;
@@ -569,9 +569,9 @@ int RGWRadosStore::create_bucket(RGWUser& u, const rgw_bucket& b,
 				 req_info& req_info,
 				 std::unique_ptr<RGWBucket>* bucket_out, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;   
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);   
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   int ret;

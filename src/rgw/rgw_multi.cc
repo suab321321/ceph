@@ -195,9 +195,9 @@ int list_multipart_parts(rgw::sal::RGWRadosStore *store, struct req_state *s,
 			 bool assume_unsorted)
 {
   req_state_span ss;
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  start_trace(std::move(ss), {}, s, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  start_trace(std::move(ss), {}, s, buffer);
   return list_multipart_parts(store, s->bucket->get_info(), s->cct, upload_id,
 			      meta_oid, num_parts, marker, parts,
 			      next_marker, truncated, assume_unsorted);
@@ -207,9 +207,9 @@ int abort_multipart_upload(rgw::sal::RGWRadosStore *store, CephContext *cct,
 			   RGWObjectCtx *obj_ctx, RGWBucketInfo& bucket_info,
 			   RGWMPObj& mp_obj, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span ,span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   rgw_obj meta_obj;
@@ -307,9 +307,9 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
 			   vector<rgw_bucket_dir_entry> *objs,
 			   map<string, bool> *common_prefixes, bool *is_truncated, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   RGWRados::Bucket target(store->getRados(), bucket_info);
@@ -328,9 +328,9 @@ int list_bucket_multiparts(rgw::sal::RGWRadosStore *store, RGWBucketInfo& bucket
 int abort_bucket_multiparts(rgw::sal::RGWRadosStore *store, CephContext *cct, RGWBucketInfo& bucket_info,
 				string& prefix, string& delim, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   constexpr int max = 1000;

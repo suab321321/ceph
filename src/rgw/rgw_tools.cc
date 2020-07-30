@@ -261,9 +261,9 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       librados::ObjectReadOperation *op, bufferlist* pbl,
                       int flags, optional_yield y, const Span& parent_span)
 {
-  std::string span_name = "";
-  span_name = span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
 #ifdef HAVE_BOOST_CONTEXT
@@ -298,9 +298,9 @@ int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
 int rgw_rados_operate(librados::IoCtx& ioctx, const std::string& oid,
                       librados::ObjectWriteOperation *op, int flags, optional_yield y, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;   
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);   
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
 #ifdef HAVE_BOOST_CONTEXT

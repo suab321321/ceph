@@ -202,9 +202,9 @@ int AtomicObjectProcessor::process_first_chunk(bufferlist&& data,
 
 int AtomicObjectProcessor::prepare(optional_yield y, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   uint64_t max_head_chunk_size;
@@ -300,9 +300,9 @@ int AtomicObjectProcessor::complete(size_t accounted_size,
                                     rgw_zone_set *zones_trace,
                                     bool *pcanceled, optional_yield y, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   int r = writer.drain();
@@ -384,9 +384,9 @@ int MultipartObjectProcessor::process_first_chunk(bufferlist&& data,
 
 int MultipartObjectProcessor::prepare_head(const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   const uint64_t default_stripe_size = store->ctx()->_conf->rgw_obj_stripe_size;
@@ -452,9 +452,9 @@ int MultipartObjectProcessor::complete(size_t accounted_size,
                                        rgw_zone_set *zones_trace,
                                        bool *pcanceled, optional_yield y, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
   int r = writer.drain();
   if (r < 0) {
@@ -642,9 +642,9 @@ int AppendObjectProcessor::complete(size_t accounted_size, const string &etag, c
                                     const string *user_data, rgw_zone_set *zones_trace, bool *pcanceled,
                                     optional_yield y, const Span& parent_span)
 {
-  string span_name = "";
-  span_name = span_name+__FILENAME__+" function:"+__PRETTY_FUNCTION__;
-  Span span_1 = trace(parent_span, span_name.c_str());
+  char buffer[1000];
+  get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
+  Span span_1 = trace(parent_span, buffer);
   const Span& this_parent_span(span_1);
 
   int r = writer.drain();
