@@ -1113,7 +1113,7 @@ void RGWGetObjTags::execute()
 
   s->object->set_atomic(s->obj_ctx);
 
-  op_ret = s->object->get_obj_attrs(s->obj_ctx, s->yield, this_parent_span);
+  op_ret = s->object->get_obj_attrs(s->obj_ctx, s->yield, NULL, this_parent_span);
   if (op_ret < 0) {
     ldpp_dout(this, 0) << "ERROR: failed to get obj attrs, obj=" << s->object
         << " ret=" << op_ret << dendl;
@@ -1161,7 +1161,7 @@ void RGWPutObjTags::execute()
   char buffer[1000];
   get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
   start_trace(std::move(ss), {}, s, buffer);
-  const Span this_parent_span(s->stack_span.top());
+  const Span& this_parent_span(s->stack_span.top());
 
   op_ret = get_params();
   if (op_ret < 0)
@@ -3085,6 +3085,7 @@ void RGWDeleteBucketWebsite::execute()
   char buffer[1000];
   get_span_name(buffer , __FILENAME__,  "function",   __PRETTY_FUNCTION__);
   start_trace(std::move(ss), {}, s, buffer);
+  const Span& this_parent_span(s->stack_span.top());
 
   if (!store->svc()->zone->is_meta_master()) {
     bufferlist in_data;
@@ -5184,7 +5185,7 @@ void RGWDeleteObj::execute()
   bool check_obj_lock = s->object->have_instance() && s->bucket->get_info().obj_lock_enabled();
 
   if (!rgw::sal::RGWObject::empty(s->object.get())) {
-    op_ret = s->object->get_obj_attrs(s->obj_ctx, s->yield);
+    op_ret = s->object->get_obj_attrs(s->obj_ctx, s->yield, NULL, this_parent_span);
     if (op_ret < 0) {
       if (need_object_expiration() || multipart_delete) {
         return;
