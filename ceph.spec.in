@@ -134,6 +134,11 @@ BuildRequires:	gperf
 BuildRequires:  cmake > 3.5
 BuildRequires:	cryptsetup
 BuildRequires:	fuse-devel
+%if 0%{?rhel} == 7
+# devtoolset offers newer make and valgrind-devel, but the old ones are good
+# enough.
+BuildRequires:	devtoolset-8-gcc-c++ >= 8.3.1-3.1
+%else
 BuildRequires:	gcc-c++
 BuildRequires:	gdbm
 %if 0%{with tcmalloc}

@@ -5,6 +5,7 @@
 #define ARITHMETIC_RIGHT_SHIFT 1
 
 #include<cstring>
+#include<atomic>
 #include <arpa/inet.h>
 #include <yaml-cpp/yaml.h>
 
