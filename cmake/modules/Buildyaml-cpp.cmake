@@ -2,7 +2,6 @@ function(build_yamlcpp)
 
   include(Findyaml-cpp)
   find_yamlcpp()
-  message(STATUS "HEY THERE")
   message(STATUS ${yaml-cpp})
   if(NOT TARGET yaml-cpp)
     set(yaml-cpp_DOWNLOAD_DIR "${CMAKE_SOURCE_DIR}/src/jaegertracing")

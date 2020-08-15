@@ -1,6 +1,6 @@
 function(find_jaegertracing)
-    find_file(jaegertracing_INCLUDE_DIRS jaegertracing/Tracer.h PATHS "${CMAKE_BINARY_DIR}/external/include" NO_DEFAULT_PATH)
-    find_library(jaegertracing_LIBRARIES libjaegertracing.so "${CMAKE_BINARY_DIR}/external/lib" NO_DEFAULT_PATH)
+    find_file(jaegertracing_INCLUDE_DIRS jaegertracing/Tracer.h)
+    find_library(jaegertracing_LIBRARIES libjaegertracing.so)
 
     if(EXISTS ${jaegertracing_INCLUDE_DIRS} AND EXISTS ${jaegertracing_LIBRARIES})
         message(STATUS "FOUND " ${jaegertracing_INCLUDE_DIRS} " " ${jaegertracing_LIBRARIES})
@@ -13,5 +13,4 @@ function(find_jaegertracing)
         )
     endif()
 endfunction(find_jaegertracing)
-
 
