@@ -7,10 +7,9 @@
 # cmake/modules/BuildBoost.cmake
 
 function(build_jaeger)
-  include(Findjaeger)
-  find_jaegertracing()
-  message(STATUS ${Jaeger})
-  if(NOT TARGET Jaeger)
+  find_package(Jaeger)
+  if(NOT ${Jaeger_FOUND})
+    set(Jaeger_FOUND false PARENT_SCOPE)
     set(Jaeger_DOWNLOAD_DIR "${CMAKE_SOURCE_DIR}/src/jaegertracing")
     set(Jaeger_SOURCE_DIR "${CMAKE_SOURCE_DIR}/src/jaegertracing/jaeger-client-cpp")
     set(Jaeger_INSTALL_DIR "${CMAKE_BINARY_DIR}/external")
@@ -58,6 +57,7 @@ function(build_jaeger)
         DEPENDS "${dependencies}"
         )
   else()
-    message(STATUS "Pre-installed_JaegerTracer")
+    set(Jaeger_FOUND true PARENT_SCOPE)
+    message(STATUS "PREINSTALLED JaegerTracer")
   endif()
 endfunction()
