@@ -15,19 +15,19 @@
 
 typedef std::unique_ptr<opentracing::Span> Span;
 
-struct Jager_Tracer{
-    Jager_Tracer(){}
-    ~Jager_Tracer();
+struct Jaeger_Tracer{
+    Jaeger_Tracer(){}
+    ~Jaeger_Tracer();
   std::shared_ptr<opentracing::v2::Tracer> tracer = NULL;
 };
 
 //will be used throughout ceph to create spans
-extern Jager_Tracer tracer;
-extern std::atomic<bool> jager_initialized;
+extern Jaeger_Tracer tracer;
+extern std::atomic<bool> jaeger_initialized;
 
 
 static inline void init_tracer(const char* tracerName,const char* filePath){
-      if(jager_initialized) return;
+      if(jaeger_initialized) return;
 
       try{
           auto yaml = YAML::LoadFile(filePath);
@@ -45,7 +45,7 @@ static inline void init_tracer(const char* tracerName,const char* filePath){
       }catch(...) {return;}
       opentracing::Tracer::InitGlobal(
       std::static_pointer_cast<opentracing::Tracer>(tracer.tracer));
-      jager_initialized = true;
+      jaeger_initialized = true;
   }
 
 static inline Span new_span(const char* span_name){
