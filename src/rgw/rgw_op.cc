@@ -3559,7 +3559,8 @@ void RGWDeleteBucket::execute(const Span& parent_span)
   return;
 }
 
-int RGWPutObj::init_processing() {
+int RGWPutObj::init_processing(const Span& parent_span) {
+  Span span = child_span(__PRETTY_FUNCTION__, parent_span);
   copy_source = url_decode(s->info.env->get("HTTP_X_AMZ_COPY_SOURCE", ""));
   copy_source_range = s->info.env->get("HTTP_X_AMZ_COPY_SOURCE_RANGE");
   map<string, bufferlist> src_attrs;
@@ -3608,7 +3609,7 @@ int RGWPutObj::init_processing() {
                                  copy_source_tenant_name,
                                  copy_source_bucket_name,
                                  copy_source_bucket_info,
-                                 NULL, s->yield, &src_attrs);
+                                 NULL, s->yield, &src_attrs, span);
     if (ret < 0) {
       ldpp_dout(this, 5) << __func__ << "(): get_bucket_info() returned ret=" << ret << dendl;
       return ret;
@@ -3649,10 +3650,10 @@ int RGWPutObj::init_processing() {
     }
 
   } /* copy_source */
-  return RGWOp::init_processing();
+  return RGWOp::init_processing(span);
 }
 
-int RGWPutObj::verify_permission(const Span& parent_span = nullptr)
+int RGWPutObj::verify_permission(const Span& parent_span)
 {
   Span span = child_span(__PRETTY_FUNCTION__, parent_span);
 

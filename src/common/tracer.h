@@ -35,7 +35,7 @@ static inline void init_tracer(const char* tracerName,const char* filePath){
 
           jaegertracing::net::Socket socket;
           socket.open(AF_INET, SOCK_STREAM);
-          const std::string serverURL = configuration.sampler().kDefaultSamplingServerURL; 
+          const std::string serverURL = configuration.sampler().samplingServerURL();
           socket.connect(serverURL); // this is used to check if the tracer is able to connect with server successfully
 
           tracer.tracer = jaegertracing::Tracer::make(

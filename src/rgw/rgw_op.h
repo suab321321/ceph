@@ -1184,7 +1184,7 @@ public:
     policy.set_ctx(s->cct);
   }
 
-  virtual int init_processing() override;
+  virtual int init_processing(const Span& parent_span = nullptr) override;
 
   void emplace_attr(std::string&& key, buffer::list&& bl) {
     attrs.emplace(std::move(key), std::move(bl)); /* key and bl are r-value refs */

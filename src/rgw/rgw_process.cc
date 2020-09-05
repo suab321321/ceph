@@ -93,8 +93,10 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
 {
   RGWOpType type = op->get_type();
   Span span = new_span(op->name());
-  if(type>0)
+  if(type>0){
     set_span_tag(span, "operation_type", op->name());
+    set_span_tag(span, "operation_id", s->req_id.c_str());
+  }
   s->root_span = std::move(span);
 
   ldpp_dout(op, 2) << "init permissions" << dendl;
